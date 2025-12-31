@@ -1,0 +1,13 @@
+{
+	"name": "vps-metadata-server",
+	"main": "src/index.ts",
+	"compatibility_date": "2023-10-30",
+	"vars": {
+		"GITHUB_OWNER": "YOUR_GITHUB_USERNAME",
+		"GITHUB_REPO": "YOUR_REPO_NAME",
+		"GITHUB_BRANCH": "main"
+	},
+	"observability": {
+		"enabled": true
+	}
+}

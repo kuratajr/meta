@@ -1,0 +1,7 @@
+{
+    "hostname": "vps-static-01",
+    "role": "web-server",
+    "ssh_keys": [
+        "ssh-rsa AAAAB3Nza..."
+    ]
+}
