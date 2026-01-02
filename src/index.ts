@@ -5,12 +5,11 @@ export interface Env {
     GITHUB_TOKEN: string;
 }
 
-async function fetchGithubFile(path: string, env: Env): Promise<any | null> {
+async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
     const url = `https://raw.githubusercontent.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/${env.GITHUB_BRANCH}/${path}`;
 
-    // Create a timeout controller to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
         const response = await fetch(url, {
@@ -23,14 +22,12 @@ async function fetchGithubFile(path: string, env: Env): Promise<any | null> {
         });
 
         clearTimeout(timeoutId);
-
         if (response.status === 404) return null;
         if (!response.ok) return null;
 
-        return await response.json();
+        return isJson ? await response.json() : await response.text();
     } catch (error) {
         clearTimeout(timeoutId);
-        console.error(`Error fetching ${path}:`, error);
         return null;
     }
 }
@@ -38,45 +35,53 @@ async function fetchGithubFile(path: string, env: Env): Promise<any | null> {
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
+        const hostname = url.searchParams.get('hostname');
 
-        if (url.pathname === '/config') {
-            const hostname = url.searchParams.get('hostname');
-
-            if (!hostname) {
-                return new Response(JSON.stringify({ error: "Hostname is required" }), {
-                    status: 400,
-                    headers: { "Content-Type": "application/json" }
-                });
-            }
-
+        if (url.pathname === '/config' && hostname) {
             try {
-                // Run both fetches in parallel to maximize speed
-                const [globalConfig, nodeConfig] = await Promise.all([
+                // 1. Fetch Global and Node JSON (Parallel)
+                const [globalConfig, nodeJson] = await Promise.all([
                     fetchGithubFile('configs/global.json', env),
                     fetchGithubFile(`configs/${hostname}.json`, env)
                 ]);
 
-                // Merge Configs
-                const finalConfig = {
-                    ...(globalConfig || {}),
-                    ...(nodeConfig || {}),
-                    hostname: hostname
-                };
+                if (!nodeJson) {
+                    return new Response(JSON.stringify({ error: "Node config not found" }), { status: 404 });
+                }
 
-                return new Response(JSON.stringify(finalConfig, null, 2), {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Cache-Control": "public, max-age=60" // Cache for 1 minute at the edge
+                const mergedConfig = { ...(globalConfig || {}), ...nodeJson, hostname };
+
+                // 2. Check if Template exists
+                if (mergedConfig.template) {
+                    const templatePath = `templates/${mergedConfig.template}.sh`;
+                    let templateContent = await fetchGithubFile(templatePath, env, false);
+
+                    if (templateContent) {
+                        // Injection Engine: replace {{VAR}} with mergedConfig[var]
+                        templateContent = templateContent.replace(/{{(\w+)}}/g, (match: string, key: string) => {
+                            const value = mergedConfig[key.toLowerCase()] || mergedConfig[key];
+                            return value !== undefined ? value : match;
+                        });
+
+                        return new Response(templateContent, {
+                            headers: {
+                                "Content-Type": "text/x-shellscript",
+                                "Cache-Control": "public, max-age=60"
+                            }
+                        });
                     }
-                });
-            } catch (error: any) {
-                return new Response(JSON.stringify({ error: "Internal Server Error" }), {
-                    status: 500,
+                }
+
+                // Fallback to JSON if no template or error
+                return new Response(JSON.stringify(mergedConfig, null, 2), {
                     headers: { "Content-Type": "application/json" }
                 });
+
+            } catch (error: any) {
+                return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
             }
         }
 
-        return new Response("VPS Metadata Server (Optimized).", { status: 200 });
+        return new Response("VPS Metadata Server - Smart Templates Ready.", { status: 200 });
     },
 };
