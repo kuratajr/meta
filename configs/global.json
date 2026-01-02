@@ -1,7 +1,6 @@
 {
-    "dns": [
-        "8.8.8.8",
-        "1.1.1.1"
-    ],
-    "ntp": "pool.ntp.org"
+    "template": "ubuntu-vm",
+    "tailscale_key": "U2FsdGVkX1/o0pWjHtwD4H1OvqZRyEQs7ZoecSZmHSy1c3X/SWPiPyT2IxErGs7rmTx0YpXsmc78eXjPV7BTK+RLP/5bbZMnK3o16+WuJCg=",
+    "secret_password": "YOUR_SECRET_HERE",
+    "user_data": "#cloud-config\npassword: ubuntu\nchpasswd: { expire: False }\nssh_pwauth: True"
 }
