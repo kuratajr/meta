@@ -17,7 +17,12 @@ async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): 
             headers: {
                 "Authorization": `token ${env.GITHUB_TOKEN}`,
                 "Accept": "application/vnd.github.v3.raw",
-                "User-Agent": "Cloudflare-Worker"
+                "User-Agent": "Cloudflare-Worker",
+                "Cache-Control": "no-cache"
+            },
+            cf: {
+                cacheTtl: 0, // Disable Cloudflare edge caching for this request
+                cacheEverything: false
             }
         });
 
@@ -75,7 +80,9 @@ export default {
                         return new Response(templateContent, {
                             headers: {
                                 "Content-Type": "text/x-shellscript",
-                                "Cache-Control": "public, max-age=60"
+                                "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                                "Pragma": "no-cache",
+                                "Expires": "0"
                             }
                         });
                     }
@@ -83,7 +90,12 @@ export default {
 
                 // Fallback to JSON if no template or error
                 return new Response(JSON.stringify(mergedConfig, null, 2), {
-                    headers: { "Content-Type": "application/json" }
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    }
                 });
 
             } catch (error: any) {
