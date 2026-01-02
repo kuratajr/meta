@@ -3,6 +3,7 @@ export interface Env {
     GITHUB_REPO: string;
     GITHUB_BRANCH: string;
     GITHUB_TOKEN: string;
+    CONFIG_KV: KVNamespace; // Binding for Cloudflare KV
 }
 
 async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
@@ -21,7 +22,7 @@ async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): 
                 "Cache-Control": "no-cache"
             },
             cf: {
-                cacheTtl: 0, // Disable Cloudflare edge caching for this request
+                cacheTtl: 0,
                 cacheEverything: false
             }
         });
@@ -44,34 +45,46 @@ export default {
 
         if (url.pathname === '/config' && hostname) {
             try {
-                // 1. Fetch Global and Node JSON (Parallel)
-                const [globalConfig, nodeJson] = await Promise.all([
-                    fetchGithubFile('configs/global.json', env),
-                    fetchGithubFile(`configs/${hostname}.json`, env)
-                ]);
+                // 1. Fetch Node Config from KV first (Instant Updates)
+                let nodeJson: any = null;
+                const kvData = await env.CONFIG_KV.get(`node:${hostname}`);
+                if (kvData) {
+                    try {
+                        nodeJson = JSON.parse(kvData);
+                    } catch (e) {
+                        console.error("Failed to parse KV JSON", e);
+                    }
+                }
 
-                // Final merged config (Hostname always added)
+                // 2. Fetch from GitHub if not in KV or to get Global (Parallel)
+                const githubTasks: Promise<any>[] = [fetchGithubFile('configs/global.json', env)];
+                if (!nodeJson) {
+                    githubTasks.push(fetchGithubFile(`configs/${hostname}.json`, env));
+                }
+
+                const [globalConfig, githubNodeJson] = await Promise.all(githubTasks);
+
+                // Priority: KV > GitHub Node > Global
                 const mergedConfig = {
                     ...(globalConfig || {}),
+                    ...(githubNodeJson || {}),
                     ...(nodeJson || {}),
                     hostname
                 };
 
-                // If no config found at all (both null/empty), return error
-                if (Object.keys(mergedConfig).length <= 1) { // only has hostname
-                    return new Response(JSON.stringify({ error: "No configuration found (Global or Node specific)" }), {
+                if (Object.keys(mergedConfig).length <= 1) {
+                    return new Response(JSON.stringify({ error: "No configuration found" }), {
                         status: 404,
                         headers: { "Content-Type": "application/json" }
                     });
                 }
 
-                // 2. Check if Template exists
+                // 3. Process Template
                 if (mergedConfig.template) {
                     const templatePath = `templates/${mergedConfig.template}.sh`;
                     let templateContent = await fetchGithubFile(templatePath, env, false);
 
                     if (templateContent) {
-                        // Injection Engine: replace {{VAR}} with mergedConfig[var]
                         templateContent = templateContent.replace(/{{(\w+)}}/g, (match: string, key: string) => {
                             const value = mergedConfig[key.toLowerCase()] || mergedConfig[key];
                             return value !== undefined ? value : match;
@@ -80,7 +93,7 @@ export default {
                         return new Response(templateContent, {
                             headers: {
                                 "Content-Type": "text/x-shellscript",
-                                "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                                "Cache-Control": "no-store, no-cache, must-revalidate",
                                 "Pragma": "no-cache",
                                 "Expires": "0"
                             }
@@ -88,13 +101,10 @@ export default {
                     }
                 }
 
-                // Fallback to JSON if no template or error
                 return new Response(JSON.stringify(mergedConfig, null, 2), {
                     headers: {
                         "Content-Type": "application/json",
-                        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-                        "Pragma": "no-cache",
-                        "Expires": "0"
+                        "Cache-Control": "no-store, no-cache, must-revalidate"
                     }
                 });
 
@@ -103,6 +113,6 @@ export default {
             }
         }
 
-        return new Response("VPS Metadata Server - Smart Templates Ready.", { status: 200 });
+        return new Response("VPS Metadata Server - Hybrid Mode Ready.", { status: 200 });
     },
 };
