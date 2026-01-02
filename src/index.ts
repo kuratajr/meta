@@ -45,30 +45,36 @@ export default {
 
         if (url.pathname === '/config' && hostname) {
             try {
-                // 1. Fetch Node Config from KV first (Instant Updates)
-                let nodeJson: any = null;
-                const kvData = await env.CONFIG_KV.get(`node:${hostname}`);
-                if (kvData) {
-                    try {
-                        nodeJson = JSON.parse(kvData);
-                    } catch (e) {
-                        console.error("Failed to parse KV JSON", e);
-                    }
+                // 1. Fetch Node and Global Config from KV (Instant Updates)
+                const [kvNodeData, kvGlobalData] = await Promise.all([
+                    env.CONFIG_KV.get(`node:${hostname}`),
+                    env.CONFIG_KV.get('global')
+                ]);
+
+                let kvNodeJson: any = null;
+                let kvGlobalJson: any = null;
+
+                if (kvNodeData) {
+                    try { kvNodeJson = JSON.parse(kvNodeData); } catch (e) { }
+                }
+                if (kvGlobalData) {
+                    try { kvGlobalJson = JSON.parse(kvGlobalData); } catch (e) { }
                 }
 
-                // 2. Fetch from GitHub if not in KV or to get Global (Parallel)
+                // 2. Fetch from GitHub (Only if not fully covered by KV, or always for base Global)
                 const githubTasks: Promise<any>[] = [fetchGithubFile('configs/global.json', env)];
-                if (!nodeJson) {
+                if (!kvNodeJson) {
                     githubTasks.push(fetchGithubFile(`configs/${hostname}.json`, env));
                 }
 
-                const [globalConfig, githubNodeJson] = await Promise.all(githubTasks);
+                const [gitGlobalJson, gitNodeJson] = await Promise.all(githubTasks);
 
-                // Priority: KV > GitHub Node > Global
+                // Priority: KV Node > Git Node > KV Global > Git Global
                 const mergedConfig = {
-                    ...(globalConfig || {}),
-                    ...(githubNodeJson || {}),
-                    ...(nodeJson || {}),
+                    ...(gitGlobalJson || {}),
+                    ...(kvGlobalJson || {}),
+                    ...(gitNodeJson || {}),
+                    ...(kvNodeJson || {}),
                     hostname
                 };
 
