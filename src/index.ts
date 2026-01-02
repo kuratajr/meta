@@ -45,11 +45,20 @@ export default {
                     fetchGithubFile(`configs/${hostname}.json`, env)
                 ]);
 
-                if (!nodeJson) {
-                    return new Response(JSON.stringify({ error: "Node config not found" }), { status: 404 });
-                }
+                // Final merged config (Hostname always added)
+                const mergedConfig = {
+                    ...(globalConfig || {}),
+                    ...(nodeJson || {}),
+                    hostname
+                };
 
-                const mergedConfig = { ...(globalConfig || {}), ...nodeJson, hostname };
+                // If no config found at all (both null/empty), return error
+                if (Object.keys(mergedConfig).length <= 1) { // only has hostname
+                    return new Response(JSON.stringify({ error: "No configuration found (Global or Node specific)" }), {
+                        status: 404,
+                        headers: { "Content-Type": "application/json" }
+                    });
+                }
 
                 // 2. Check if Template exists
                 if (mergedConfig.template) {
