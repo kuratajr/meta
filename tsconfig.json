@@ -5,17 +5,14 @@
         "lib": [
             "esnext"
         ],
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
+        "skipLibCheck": true,
         "strict": true,
         "allowJs": true,
-        "checkJs": false,
         "noEmit": true,
-        "isolatedModules": true,
+        "resolveJsonModule": true,
         "types": [
-            "@cloudflare/workers-types"
+            "@cloudflare/workers-types/2023-07-01"
         ]
-    },
-    "include": [
-        "src/**/*"
-    ]
+    }
 }

@@ -10,7 +10,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251225.0",
-    "wrangler": "^4.54.0"
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "wrangler": "^3.101.0"
   }
 }
