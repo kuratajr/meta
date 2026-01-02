@@ -87,8 +87,15 @@ export default {
 
                 // 3. Process Template
                 if (mergedConfig.template) {
-                    const templatePath = `templates/${mergedConfig.template}.sh`;
-                    let templateContent = await fetchGithubFile(templatePath, env, false);
+                    const templateName = mergedConfig.template;
+
+                    // Check KV for template first
+                    let templateContent = await env.CONFIG_KV.get(`template:${templateName}`);
+
+                    // If not in KV, fallback to GitHub
+                    if (!templateContent) {
+                        templateContent = await fetchGithubFile(`templates/${templateName}.sh`, env, false);
+                    }
 
                     if (templateContent) {
                         templateContent = templateContent.replace(/{{(\w+)}}/g, (match: string, key: string) => {
