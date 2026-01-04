@@ -38,6 +38,13 @@ async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): 
     }
 }
 
+function resolvePlaceholders(text: string, config: any): string {
+    return text.replace(/{{([\w:.-]+)}}/g, (match: string, key: string) => {
+        const value = config[key] !== undefined ? config[key] : (config[key.toLowerCase()] !== undefined ? config[key.toLowerCase()] : undefined);
+        return value !== undefined ? String(value) : match;
+    });
+}
+
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
@@ -70,13 +77,20 @@ export default {
                 const [gitGlobalJson, gitNodeJson] = await Promise.all(githubTasks);
 
                 // Priority: KV Node > Git Node > KV Global > Git Global
-                const mergedConfig = {
+                const mergedConfig: any = {
                     ...(gitGlobalJson || {}),
                     ...(kvGlobalJson || {}),
                     ...(gitNodeJson || {}),
                     ...(kvNodeJson || {}),
                     hostname
                 };
+
+                // 2.5 Resolve placeholders within the configuration itself (e.g. KV values in user_data)
+                for (const key in mergedConfig) {
+                    if (typeof mergedConfig[key] === 'string') {
+                        mergedConfig[key] = resolvePlaceholders(mergedConfig[key], mergedConfig);
+                    }
+                }
 
                 if (Object.keys(mergedConfig).length <= 1) {
                     return new Response(JSON.stringify({ error: "No configuration found" }), {
@@ -98,10 +112,7 @@ export default {
                     }
 
                     if (templateContent) {
-                        templateContent = templateContent.replace(/{{(\w+)}}/g, (match: string, key: string) => {
-                            const value = mergedConfig[key.toLowerCase()] || mergedConfig[key];
-                            return value !== undefined ? value : match;
-                        });
+                        templateContent = resolvePlaceholders(templateContent, mergedConfig);
 
                         return new Response(templateContent, {
                             headers: {
