@@ -76,7 +76,6 @@ export default {
 
                 const [gitGlobalJson, gitNodeJson] = await Promise.all(githubTasks);
 
-                // Priority: KV Node > Git Node > KV Global > Git Global
                 const mergedConfig: any = {
                     ...(gitGlobalJson || {}),
                     ...(kvGlobalJson || {}),
@@ -85,33 +84,51 @@ export default {
                     hostname
                 };
 
-                // 2.5 Resolve placeholders within the configuration itself (e.g. KV values in user_data)
-                for (const key in mergedConfig) {
-                    if (typeof mergedConfig[key] === 'string') {
-                        mergedConfig[key] = resolvePlaceholders(mergedConfig[key], mergedConfig);
-                    }
-                }
-
-                if (Object.keys(mergedConfig).length <= 1) {
-                    return new Response(JSON.stringify({ error: "No configuration found" }), {
-                        status: 404,
-                        headers: { "Content-Type": "application/json" }
-                    });
-                }
-
-                // 3. Process Template
+                // 2.3 Fetch stand-alone KV keys (for placeholders not in JSON config)
                 if (mergedConfig.template) {
                     const templateName = mergedConfig.template;
-
-                    // Check KV for template first
                     let templateContent = await env.CONFIG_KV.get(`template:${templateName}`);
-
-                    // If not in KV, fallback to GitHub
                     if (!templateContent) {
                         templateContent = await fetchGithubFile(`templates/${templateName}.sh`, env, false);
                     }
 
                     if (templateContent) {
+                        // Scan for placeholders in config values and template
+                        const placeholderSet = new Set<string>();
+                        const scanRegex = /{{([\w:.-]+)}}/g;
+                        const scanText = (text: string) => {
+                            let match;
+                            while ((match = scanRegex.exec(text)) !== null) {
+                                placeholderSet.add(match[1]);
+                            }
+                        };
+
+                        // Scan everything to find missing keys
+                        for (const key in mergedConfig) {
+                            if (typeof mergedConfig[key] === 'string') scanText(mergedConfig[key]);
+                        }
+                        scanText(templateContent);
+
+                        // Fetch keys that aren't in mergedConfig already
+                        const keysToFetch = Array.from(placeholderSet).filter(k =>
+                            mergedConfig[k] === undefined && mergedConfig[k.toLowerCase()] === undefined
+                        );
+
+                        if (keysToFetch.length > 0) {
+                            const kvResults = await Promise.all(keysToFetch.map(k => env.CONFIG_KV.get(k)));
+                            keysToFetch.forEach((k, i) => {
+                                if (kvResults[i] !== null) mergedConfig[k] = kvResults[i];
+                            });
+                        }
+
+                        // 2.5 Resolve placeholders within the configuration itself (e.g. KV values in user_data)
+                        for (const key in mergedConfig) {
+                            if (typeof mergedConfig[key] === 'string') {
+                                mergedConfig[key] = resolvePlaceholders(mergedConfig[key], mergedConfig);
+                            }
+                        }
+
+                        // 3. Process Template
                         templateContent = resolvePlaceholders(templateContent, mergedConfig);
 
                         return new Response(templateContent, {
