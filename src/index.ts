@@ -68,19 +68,58 @@ export default {
                     try { kvGlobalJson = JSON.parse(kvGlobalData); } catch (e) { }
                 }
 
-                // 2. Fetch from GitHub (Only if not fully covered by KV, or always for base Global)
-                const githubTasks: Promise<any>[] = [fetchGithubFile('configs/global.json', env)];
-                if (!kvNodeJson) {
-                    githubTasks.push(fetchGithubFile(`configs/${hostname}.json`, env));
+                // 1.5 Fetch Central Group Mappings
+                const groupsMappingData = await env.CONFIG_KV.get('groups');
+                let centralGroupName: string | null = null;
+                if (groupsMappingData) {
+                    try {
+                        const groups = JSON.parse(groupsMappingData);
+                        if (Array.isArray(groups)) {
+                            for (const g of groups) {
+                                const nodeList = (g.listnode || "").split(',').map((s: string) => s.trim());
+                                if (nodeList.includes(hostname)) {
+                                    centralGroupName = g.config;
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) { }
                 }
 
-                const [gitGlobalJson, gitNodeJson] = await Promise.all(githubTasks);
+                // 2. Fetch from GitHub (Node and Global)
+                const [gitGlobalJson, gitNodeJson] = await Promise.all([
+                    fetchGithubFile('configs/global.json', env),
+                    fetchGithubFile(`configs/${hostname}.json`, env)
+                ]);
 
+                // 2.1 Determine Group
+                const nodePart: any = {
+                    ...(gitNodeJson || {}),
+                    ...(kvNodeJson || {})
+                };
+                const groupName = nodePart.group || nodePart.GROUP || centralGroupName;
+
+                let gitGroupJson: any = null;
+                let kvGroupJson: any = null;
+
+                if (groupName) {
+                    const [kvGroupData, gitGroupData] = await Promise.all([
+                        env.CONFIG_KV.get(`group:${groupName}`),
+                        fetchGithubFile(`configs/groups/${groupName}.json`, env)
+                    ]);
+                    if (kvGroupData) {
+                        try { kvGroupJson = JSON.parse(kvGroupData); } catch (e) { }
+                    }
+                    gitGroupJson = gitGroupData;
+                }
+
+                // 2.2 Hierarchical Merge: Global < Group < Node
                 const mergedConfig: any = {
                     ...(gitGlobalJson || {}),
                     ...(kvGlobalJson || {}),
-                    ...(gitNodeJson || {}),
-                    ...(kvNodeJson || {}),
+                    ...(gitGroupJson || {}),
+                    ...(kvGroupJson || {}),
+                    ...nodePart,
                     hostname
                 };
 
