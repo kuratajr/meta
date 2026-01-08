@@ -1,6 +1,21 @@
 {
-    "template": "ubuntu-vm",
-    "tailscale_key": "U2FsdGVkX1/o0pWjHtwD4H1OvqZRyEQs7ZoecSZmHSy1c3X/SWPiPyT2IxErGs7rmTx0YpXsmc78eXjPV7BTK+RLP/5bbZMnK3o16+WuJCg=",
-    "secret_password": "YOUR_SECRET_HERE",
-    "user_data": "#cloud-config\npassword: ubuntu\nchpasswd: { expire: False }\nssh_pwauth: True"
+    "template": "ubuntu",
+    "USER_DATA": "#cloud-config\npassword: debian\nchpasswd: { expire: False }\nssh_pwauth: True",
+    "META_DATA": "instance-id: id-$WORKSPACE_SLUG\nlocal-hostname: $WORKSPACE_SLUG",
+    "OS_NAME": "ubuntu",
+    "OS_VERSION": "ubuntu24.img",
+    "OS_URL": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg.qcow2",
+    "OS_SIZE": "20G",
+    "OS_TEMPLATE": "{{ostemplate:linux}}",
+    "OS_VARIANT": "ubuntu24.04",
+    "VNC_PORT": "5900",
+    "PU_VNC_PORT": "8080",
+    "CLOUD_INIT_PATH": "/home/os/init/",
+    "VM_API_PATH": "/home/os/script/vm-api",
+    "VM_NAME": "$WORKSPACE_SLUG",
+    "LIST_PORT": "hostfwd=tcp::2222-:22",
+    "VCPUS": "8",
+    "CORES": "8",
+    "MEMORY": "30720",
+    "UUID": "$(uuidgen)"
 }

@@ -1,7 +1,14 @@
 #!/bin/bash
 
 # Template for Ubuntu VM with QEMU and Nix
-# Variables available: {{HOSTNAME}}, {{TAILSCALE_KEY}}, {{USER_DATA}}, {{SECRET_PASSWORD}}
+
+VM_NAME="{{VM_NAME}}"
+VCPUS="{{VCPUS}}"
+CORES="{{CORES}}"
+MEMORY="{{MEMORY}}"
+OS_VARIANT="{{OS_VARIANT}}"                        # Dùng: osinfo-query os để xem list
+VM_UUID="{{UUID}}"
+LIST_PORT="{{LIST_PORT}}"
 
 echo "Checking qemu-kvm..."
 nix-shell -p qemu_kvm --run "qemu-kvm --version" || { echo "Error running qemu-kvm via nix-shell. Exiting..."; exit 1; }
@@ -30,54 +37,96 @@ fi
 echo "Installing necessary packages..."
 nix-env -iA nixpkgs.unzip nixpkgs.python3 nixpkgs.git nixpkgs.axel nixpkgs.curl nixpkgs.lsb-release nixpkgs.gnupg nixpkgs.gzip
 
-if [ ! -f "noble-server-cloudimg-amd64.img" ]; then
-  echo "Downloading base image..."
-  wget https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+
+# Định nghĩa biến
+export MASTER_API_KEY="{{P_KEY}}"
+
+# --- PHẦN XỬ LÝ ĐƯỜNG DẪN OS ---
+OS_DIR="/home/os/{{OS_NAME}}"
+IMAGE_NAME="{{OS_VERSION}}"
+FULL_PATH="$OS_DIR/$IMAGE_NAME"
+
+mkdir -p "$OS_DIR"
+
+
+if [ ! -f "$FULL_PATH" ]; then
+  echo "Không tìm thấy ảnh của $OS_NAME tại $FULL_PATH. Đang tải bản OS mặc định..."
+  wget {{OS_URL}} -O "$FULL_PATH"
 else
-  echo "Found base image."
+  echo "Đã tìm thấy ảnh của $OS_NAME tại: $FULL_PATH"
 fi
 
-raw_path=$(realpath "noble-server-cloudimg-amd64.img")
-qemu-img resize "$raw_path" 46G
+echo "Đang thay đổi kích thước ảnh tại $FULL_PATH..."
+qemu-img resize "$FULL_PATH" {{OS_SIZE}}
 
-echo "Downloading OVMF.fd..."
-curl -L -o OVMF.fd https://github.com/clearlinux/common/raw/refs/heads/master/OVMF.fd
-chmod 644 ./OVMF.fd
+CLOUD_INIT_PATH="{{CLOUD_INIT_PATH}}"
+
+echo "Đang tải OVMF vào {{OVMF_PATH}}..."
+curl -L -o "$CLOUD_INIT_PATH/OVMF.fd" https://github.com/clearlinux/common/raw/refs/heads/master/OVMF.fd
+chmod 644 "$CLOUD_INIT_PATH/OVMF.fd"
+
+
+
+FILES_TO_CLEAN=("$CLOUD_INIT_PATH/user-data" "$CLOUD_INIT_PATH/meta-data" "$CLOUD_INIT_PATH/seed.img")
+
+echo "Cleaning up old configuration files..."
+for file in "${FILES_TO_CLEAN[@]}"; do
+  if [ -f "$file" ]; then
+    rm "$file"
+    echo "Deleted: $file"
+  fi
+done
+
 
 # Tạo user-data (Injected from JSON)
-cat > user-data <<EOF
+cat > "$CLOUD_INIT_PATH/user-data" <<EOF
 {{USER_DATA}}
 EOF
 
-# Tạo meta-data
-if [ ! -f "seed.img" ]; then
-  echo "Creating meta-data for {{HOSTNAME}}"
-  cat > meta-data <<EOF
-instance-id: id-{{HOSTNAME}}
-local-hostname: {{HOSTNAME}}
+echo "Creating meta-data with hostname: $WORKSPACE_SLUG"
+cat > "$CLOUD_INIT_PATH/meta-data" <<EOF
+{{META_DATA}}
 EOF
-  nix-shell -p cloud-utils --run 'cloud-localds seed.img user-data meta-data'
+
+# Tạo seed.img  cloud-localds
+nix-shell -p cloud-utils --run "cloud-localds \"$CLOUD_INIT_PATH/seed.img\" \"$CLOUD_INIT_PATH/user-data\" \"$CLOUD_INIT_PATH/meta-data\""
+
+
+echo "Done! All files have been refreshed."
+
+echo "========================================="
+echo "              SUCCESS!"
+echo "========================================="
+
+echo "script by fb.com/thoai.ngoxuan" >> /home/user/myapp/readme.txt
+echo "GZ by kuratajr" >> /home/user/myapp/readme.txt
+echo "Init latest" >> /home/user/myapp/readme.txt
+
+echo "Starting VM and noVNC..."
+pkill -f novnc_proxy
+pkill -f vm-api
+
+# 1. Quản lý noVNC
+if [ ! -d 'noVNC' ]; then
+  git clone https://github.com/novnc/noVNC.git
 fi
+ln -sf vnc.html ./noVNC/emulator.html
+ln -sf vnc.html ./noVNC/index.html
 
-echo "Setting up Tailscale..."
-DECRYPTED_STRING="{{TAILSCALE_KEY}}"
-SECRET_PASSWORD="{{SECRET_PASSWORD}}"
+# 2. Khởi chạy các dịch vụ nền bằng nohup
+echo 'Starting noVNC proxy...'
+nohup ./noVNC/utils/novnc_proxy --vnc localhost:{{VNC_PORT}} --listen 0.0.0.0:{{PU_VNC_PORT}} > novnc.log 2>&1 &
 
-NEW_KEY=$(echo "${DECRYPTED_STRING}" | openssl enc -aes-256-cbc -d -base64 -pbkdf2 -pass pass:"${SECRET_PASSWORD}")
+echo 'Starting VM-API...'
+# Đảm bảo file có quyền thực thi
+chmod +x /home/os/script/vm-api
+nohup /home/os/script/vm-api > vm-api.log 2>&1 &
 
-# ... (Rest of your tailscale and SSH logic) ...
+qemu-img resize --shrink "$FULL_PATH" "{{OS_SIZE}}"
 
-# Final VM Execution
-nix-shell -p qemu_kvm -p python3 -p git -p novnc --run '
-./noVNC/utils/novnc_proxy --vnc localhost:5900 --listen 0.0.0.0:8080 &
+virsh --connect qemu:///session destroy "$VM_NAME" 2>/dev/null || true
+virsh --connect qemu:///session undefine "$VM_NAME" 2>/dev/null || true
 
-nohup qemu-kvm \
-  -cpu host,+topoext,hv_relaxed,hv_spinlocks=0x1fff,hv-passthrough,+pae,+nx,kvm=on,+svm \
-  -smp 8,cores=8 \
-  -m 30G \
-  -enable-kvm \
-  -hda noble-server-cloudimg-amd64.img \
-  -drive if=pflash,format=raw,readonly=off,file=./OVMF.fd \
-  -drive file=./seed.img,format=raw,if=virtio \
-  -vnc :0 > /dev/null 2>&1
-'
+{{OS_TEMPLATE}}
+
+echo "VM started in the background."
