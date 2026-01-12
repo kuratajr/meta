@@ -102,32 +102,35 @@ export const DASHBOARD_HTML = `
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Tables */
+        /* Tables & Scrolling */
         .table-container { 
             background: var(--glass); 
             border: 1px solid var(--glass-border); 
             border-radius: 1.5rem;
-            overflow: hidden;
+            max-height: calc(100vh - 400px);
+            overflow-y: auto;
+            position: relative;
         }
 
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 1.2rem; background: rgba(255,255,255,0.03); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        thead { position: sticky; top: 0; z-index: 10; background: #111827; }
+        th { text-align: left; padding: 1.2rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
         td { padding: 1.2rem; border-bottom: 1px solid var(--glass-border); }
 
         /* Controls */
         .btn {
-            padding: 0.6rem;
+            padding: 0.5rem 0.8rem;
             border-radius: 0.8rem;
             border: none;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             transition: all 0.2s;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 100%;
-            text-align: center;
+            min-width: 65px;
+            white-space: nowrap;
         }
 
         .btn-p { background: var(--primary); color: white; }
@@ -141,12 +144,12 @@ export const DASHBOARD_HTML = `
         .btn-destroy { background: var(--danger); color: white; }
         .btn-destroy:hover { filter: brightness(1.1); }
 
-        /* Action Grid */
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-            width: 220px;
+        /* Action Flex Row */
+        .action-flex {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+            flex-wrap: nowrap;
         }
 
         .tag {
@@ -165,6 +168,7 @@ export const DASHBOARD_HTML = `
             border-radius: 0.5rem;
             font-size: 0.85rem;
             outline: none;
+            cursor: pointer;
             width: 100%;
         }
 
@@ -260,7 +264,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th>Hostname (Node)</th><th>Cloud Host</th><th style="width: 140px;">Group</th><th style="width: 240px;">Control Center</th></tr></thead>
+                    <thead><tr><th style="width: 20%;">Hostname (Node)</th><th style="width: 35%;">Cloud Host</th><th style="width: 15%;">Group</th><th>Control Center</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -400,7 +404,7 @@ export const DASHBOARD_HTML = `
                             </select>
                         </td>
                         <td>
-                            <div class="action-grid">
+                            <div class="action-flex">
                                 <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
@@ -474,7 +478,6 @@ export const DASHBOARD_HTML = `
         async function fetchNodeInfo(hostname) {
             document.getElementById('loader').style.display = 'block';
             try {
-                // The worker proxy now automatically appends ?vm=hostname
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=nodeinfo\`);
                 const data = await res.text();
                 
@@ -504,7 +507,6 @@ export const DASHBOARD_HTML = `
 
             document.getElementById('loader').style.display = 'block';
             try {
-                // The worker proxy now automatically appends ?vm=hostname
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=\${action}\`);
                 const data = await res.text();
                 alert(\`Action [\${action}] requested for [\${hostname}].\\n\\nResponse: \` + data);
