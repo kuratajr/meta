@@ -540,4 +540,4 @@ export const DASHBOARD_HTML = `
     </script>
 </body>
 </html>
-\`;
+`;
