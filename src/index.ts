@@ -68,6 +68,14 @@ export default {
                     try { kvGlobalJson = JSON.parse(kvGlobalData); } catch (e) { }
                 }
 
+                // 1.2 Fetch Centralized Registry
+                const registryData = await env.CONFIG_KV.get('registry');
+                const registryJson: Record<string, string> = registryData ? JSON.parse(registryData) : {};
+                const registryConfig: Record<string, string> = {};
+                for (const [key, value] of Object.entries(registryJson)) {
+                    registryConfig[`host:${key}`] = value;
+                }
+
                 // 1.5 Fetch Central Group Mappings
                 const groupsMappingData = await env.CONFIG_KV.get('groups');
                 let centralGroupName: string | null = null;
@@ -113,13 +121,14 @@ export default {
                     gitGroupJson = gitGroupData;
                 }
 
-                // 2.2 Hierarchical Merge: Global < Group < Node
+                // 2.2 Hierarchical Merge: Global < Group < Node < Registry
                 const mergedConfig: any = {
                     ...(gitGlobalJson || {}),
                     ...(kvGlobalJson || {}),
                     ...(gitGroupJson || {}),
                     ...(kvGroupJson || {}),
                     ...nodePart,
+                    ...registryConfig,
                     hostname
                 };
 
@@ -190,6 +199,30 @@ export default {
 
             } catch (error: any) {
                 return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
+            }
+        }
+
+        if (url.pathname === '/register' && request.method === 'POST') {
+            try {
+                const body: any = await request.json();
+                const { hostname: regHostname, host: regHost } = body;
+
+                if (!regHostname || !regHost) {
+                    return new Response(JSON.stringify({ error: "Missing hostname or host" }), { status: 400 });
+                }
+
+                // Atomic update (Fetch -> Modify -> Save)
+                const registryData = await env.CONFIG_KV.get('registry');
+                const registryJson = registryData ? JSON.parse(registryData) : {};
+                registryJson[regHostname] = regHost;
+
+                await env.CONFIG_KV.put('registry', JSON.stringify(registryJson));
+
+                return new Response(JSON.stringify({ success: true, message: `Registered ${regHostname}` }), {
+                    headers: { "Content-Type": "application/json" }
+                });
+            } catch (error: any) {
+                return new Response(JSON.stringify({ error: "Failed to register node" }), { status: 500 });
             }
         }
 
