@@ -116,13 +116,17 @@ export const DASHBOARD_HTML = `
 
         /* Controls */
         .btn {
-            padding: 0.6rem 1.2rem;
+            padding: 0.5rem 1rem;
             border-radius: 0.8rem;
             border: none;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
         }
 
         .btn-p { background: var(--primary); color: white; }
@@ -135,6 +139,13 @@ export const DASHBOARD_HTML = `
         .btn-start:hover { filter: brightness(1.1); }
         .btn-destroy { background: var(--danger); color: white; }
         .btn-destroy:hover { filter: brightness(1.1); }
+
+        .action-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
 
         .tag {
             background: rgba(99, 102, 241, 0.2);
@@ -152,6 +163,7 @@ export const DASHBOARD_HTML = `
             border-radius: 0.5rem;
             font-size: 0.85rem;
             outline: none;
+            cursor: pointer;
         }
 
         /* Modal */
@@ -246,7 +258,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th>Hostname</th><th>Host Link</th><th>Group Assignment</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Hostname</th><th>Host Link</th><th style="width: 150px;">Group</th><th>Actions Control</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -379,14 +391,14 @@ export const DASHBOARD_HTML = `
 
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
-                        <td style="font-size: 0.8rem; opacity: 0.7; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">\${data.registry[h]}</td>
+                        <td style="font-size: 0.8rem; opacity: 0.7; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</td>
                         <td>
-                            <select onchange="updateNodeGroup('\${h}', this.value)">
+                            <select style="width: 100%;" onchange="updateNodeGroup('\${h}', this.value)">
                                 \${groupOptions}
                             </select>
                         </td>
                         <td>
-                            <div style="display:flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <div class="action-group">
                                 <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
@@ -489,9 +501,10 @@ export const DASHBOARD_HTML = `
 
             document.getElementById('loader').style.display = 'block';
             try {
+                // The worker proxy now automatically appends ?vm=hostname
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=\${action}\`);
                 const data = await res.text();
-                alert(\`Action \${action} sent to \${hostname}. Response: \` + data);
+                alert(\`Action [\${action}] requested for [\${hostname}].\\n\\nResponse: \` + data);
             } catch (e) {
                 alert(\`Failed to execute \${action} on \${hostname}\`);
             }
