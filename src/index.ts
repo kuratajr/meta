@@ -255,13 +255,17 @@ export default {
             const templates = keys.filter((k: string) => k.startsWith('template:'));
             const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
             const nodeConfigs = keys.filter((k: string) => k.startsWith('node:'));
+            const certConfigs = keys.filter((k: string) => k.startsWith('cert:'));
+            const hasGlobal = keys.includes('global');
 
             return new Response(JSON.stringify({
                 registry: registryData ? JSON.parse(registryData) : {},
                 groups: groupsMappingData ? JSON.parse(groupsMappingData) : [],
                 templates,
                 groupConfigs,
-                nodeConfigs
+                nodeConfigs,
+                certConfigs,
+                hasGlobal
             }), { headers: { "Content-Type": "application/json" } });
         }
 

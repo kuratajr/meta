@@ -178,6 +178,7 @@ export const DASHBOARD_HTML = `
             <div class="nav-item" onclick="showSection('groups')">Group Mappings</div>
             <div class="nav-item" onclick="showSection('templates')">Shell Templates</div>
             <div class="nav-item" onclick="showSection('configs')">KV Configs (JSON)</div>
+            <div class="nav-item" onclick="showSection('system')">Global & Security</div>
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
             <div style="font-size: 0.8rem; opacity: 0.6;">System Status</div>
@@ -241,6 +242,20 @@ export const DASHBOARD_HTML = `
                 </div>
             </div>
         </div>
+
+        <!-- Section: System -->
+        <div id="section-system" class="section">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h3 style="margin-bottom:1rem; opacity:0.7;">Global Configuration</h3>
+                    <div id="global-config-area"></div>
+                </div>
+                <div>
+                     <h3 style="margin-bottom:1rem; opacity:0.7;">Certificates & Keys</h3>
+                     <div id="list-cert-configs" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Modal -->
@@ -248,7 +263,7 @@ export const DASHBOARD_HTML = `
         <div class="modal-content">
             <h2 id="modal-title">Edit Configuration</h2>
             <div id="modal-key-input" style="display: none;">
-                <label>Key Name (e.g. template:new-vps or group:webnana)</label>
+                <label>Key Name (e.g. template:new-vps or cert:domain.com)</label>
                 <input type="text" id="new-key-name" placeholder="Enter full key name...">
             </div>
             <textarea id="editor"></textarea>
@@ -273,7 +288,7 @@ export const DASHBOARD_HTML = `
             
             // Show create button for certain sections
             const btn = document.getElementById('btn-create');
-            btn.style.display = (id === 'templates' || id === 'configs') ? 'block' : 'none';
+            btn.style.display = (id === 'templates' || id === 'configs' || id === 'system') ? 'block' : 'none';
         }
 
         async function refreshData() {
@@ -285,7 +300,7 @@ export const DASHBOARD_HTML = `
                 // Stats
                 document.getElementById('stat-nodes').innerText = Object.keys(data.registry).length;
                 document.getElementById('stat-groups').innerText = data.groups.length;
-                document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length);
+                document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length + data.certConfigs.length + (data.hasGlobal ? 1 : 0));
 
                 // Nodes Registry
                 const nBody = document.querySelector('#table-nodes tbody');
@@ -332,6 +347,23 @@ export const DASHBOARD_HTML = `
                 nodeC.innerHTML = '';
                 data.nodeConfigs.forEach(c => {
                     nodeC.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
+                        <span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button>
+                    </div>\`;
+                });
+
+                // System Section
+                const gArea = document.getElementById('global-config-area');
+                gArea.innerHTML = data.hasGlobal ? \`
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>global.json</span>
+                        <button class="btn btn-p" onclick="editKV('global')">Configure</button>
+                    </div>
+                \` : '<p style="opacity:0.5;">No global configuration found.</p>';
+
+                const cList = document.getElementById('list-cert-configs');
+                cList.innerHTML = '';
+                data.certConfigs.forEach(c => {
+                    cList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
                         <span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button>
                     </div>\`;
                 });
@@ -394,4 +426,4 @@ export const DASHBOARD_HTML = `
     </script>
 </body>
 </html>
-`;
+\`;
