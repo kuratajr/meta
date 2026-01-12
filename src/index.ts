@@ -245,13 +245,23 @@ export default {
         }
 
         if (url.pathname === '/api/data' && request.method === 'GET') {
-            const [registryData, groupsMappingData] = await Promise.all([
+            const [registryData, groupsMappingData, allKeys] = await Promise.all([
                 env.CONFIG_KV.get('registry'),
-                env.CONFIG_KV.get('groups')
+                env.CONFIG_KV.get('groups'),
+                env.CONFIG_KV.list()
             ]);
+
+            const keys = allKeys.keys.map((k: { name: string }) => k.name);
+            const templates = keys.filter((k: string) => k.startsWith('template:'));
+            const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
+            const nodeConfigs = keys.filter((k: string) => k.startsWith('node:'));
+
             return new Response(JSON.stringify({
                 registry: registryData ? JSON.parse(registryData) : {},
-                groups: groupsMappingData ? JSON.parse(groupsMappingData) : []
+                groups: groupsMappingData ? JSON.parse(groupsMappingData) : [],
+                templates,
+                groupConfigs,
+                nodeConfigs
             }), { headers: { "Content-Type": "application/json" } });
         }
 
