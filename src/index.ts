@@ -305,7 +305,7 @@ export default {
             try {
                 // Remove protocol if present in host
                 let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-                const nodeUrl = `https://${sanitizedHost}/api/${endpoint}`;
+                const nodeUrl = `https://31465-${sanitizedHost}/api/${endpoint}`;
 
                 console.log(`[Proxy] Routing to: ${nodeUrl}`);
 
