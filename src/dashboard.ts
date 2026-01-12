@@ -116,17 +116,18 @@ export const DASHBOARD_HTML = `
 
         /* Controls */
         .btn {
-            padding: 0.5rem 1rem;
+            padding: 0.6rem;
             border-radius: 0.8rem;
             border: none;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             transition: all 0.2s;
-            display: inline-flex;
+            display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 80px;
+            width: 100%;
+            text-align: center;
         }
 
         .btn-p { background: var(--primary); color: white; }
@@ -140,11 +141,12 @@ export const DASHBOARD_HTML = `
         .btn-destroy { background: var(--danger); color: white; }
         .btn-destroy:hover { filter: brightness(1.1); }
 
-        .action-group {
-            display: flex;
-            gap: 0.4rem;
-            flex-wrap: wrap;
-            align-items: center;
+        /* Action Grid */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            width: 220px;
         }
 
         .tag {
@@ -159,11 +161,11 @@ export const DASHBOARD_HTML = `
             background: #0f172a;
             color: #818cf8;
             border: 1px solid var(--glass-border);
-            padding: 0.4rem;
+            padding: 0.5rem;
             border-radius: 0.5rem;
             font-size: 0.85rem;
             outline: none;
-            cursor: pointer;
+            width: 100%;
         }
 
         /* Modal */
@@ -243,8 +245,8 @@ export const DASHBOARD_HTML = `
         <div class="header">
             <h1 id="section-title">Inventory & Registry</h1>
             <div style="display: flex; gap: 1rem;">
-                <button class="btn btn-s" onclick="refreshData()">Sync Data</button>
-                <button class="btn btn-p" id="btn-create" style="display: none;" onclick="openCreateModal()">+ Create New</button>
+                <button class="btn btn-s" style="width: auto; padding: 0.6rem 1.2rem;" onclick="refreshData()">Sync Data</button>
+                <button class="btn btn-p" id="btn-create" style="display: none; width: auto; padding: 0.6rem 1.2rem;" onclick="openCreateModal()">+ Create New</button>
             </div>
         </div>
 
@@ -258,7 +260,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th>Hostname</th><th>Host Link</th><th style="width: 150px;">Group</th><th>Actions Control</th></tr></thead>
+                    <thead><tr><th>Hostname (Node)</th><th>Cloud Host</th><th style="width: 140px;">Group</th><th style="width: 240px;">Control Center</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -273,7 +275,7 @@ export const DASHBOARD_HTML = `
                 </table>
             </div>
             <div style="margin-top: 2rem;">
-                <button class="btn btn-p" onclick="editKV('groups')">Edit Central Mapping JSON</button>
+                <button class="btn btn-p" style="width: auto; padding: 0.8rem 2rem;" onclick="editKV('groups')">Edit Central Mapping JSON</button>
             </div>
         </div>
 
@@ -326,8 +328,8 @@ export const DASHBOARD_HTML = `
                 <pre id="info-content" style="max-height: 500px; overflow: auto;"></pre>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
-                <button class="btn btn-s" onclick="closeModal()">Close</button>
-                <button class="btn btn-p" id="modal-save-btn" onclick="saveData()">Update KV</button>
+                <button class="btn btn-s" style="width: auto; padding: 0.6rem 1.5rem;" onclick="closeModal()">Close</button>
+                <button class="btn btn-p" id="modal-save-btn" style="width: auto; padding: 0.6rem 1.5rem;" onclick="saveData()">Update KV</button>
             </div>
         </div>
     </div>
@@ -391,14 +393,14 @@ export const DASHBOARD_HTML = `
 
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
-                        <td style="font-size: 0.8rem; opacity: 0.7; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</td>
+                        <td style="font-size: 0.8rem; opacity: 0.6; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</td>
                         <td>
-                            <select style="width: 100%;" onchange="updateNodeGroup('\${h}', this.value)">
+                            <select onchange="updateNodeGroup('\${h}', this.value)">
                                 \${groupOptions}
                             </select>
                         </td>
                         <td>
-                            <div class="action-group">
+                            <div class="action-grid">
                                 <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
@@ -412,9 +414,9 @@ export const DASHBOARD_HTML = `
                 mBody.innerHTML = '';
                 groupsData.forEach(g => {
                     mBody.innerHTML += \`<tr>
-                        <td style="color:var(--accent);">\${g.config}</td>
+                        <td style="color:var(--accent); font-weight:600;">\${g.config}</td>
                         <td style="font-size:0.85rem; opacity:0.8;">\${g.listnode}</td>
-                        <td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit Config</button></td>
+                        <td style="width: 100px;"><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Config</button></td>
                     </tr>\`;
                 });
 
@@ -430,16 +432,16 @@ export const DASHBOARD_HTML = `
                 const gList = document.getElementById('list-group-configs');
                 gList.innerHTML = '';
                 data.groupConfigs.forEach(c => {
-                    gList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
-                        <span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button>
+                    gList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;">
+                        <span>\${c}</span><button class="btn btn-s" style="width: 80px;" onclick="editKV('\${c}')">Edit</button>
                     </div>\`;
                 });
 
                 const nodeC = document.getElementById('list-node-configs');
                 nodeC.innerHTML = '';
                 data.nodeConfigs.forEach(c => {
-                    nodeC.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
-                        <span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button>
+                    nodeC.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;">
+                        <span>\${c}</span><button class="btn btn-s" style="width: 80px;" onclick="editKV('\${c}')">Edit</button>
                     </div>\`;
                 });
 
@@ -447,15 +449,15 @@ export const DASHBOARD_HTML = `
                 gArea.innerHTML = data.hasGlobal ? \`
                     <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
                         <span>global.json</span>
-                        <button class="btn btn-p" onclick="editKV('global')">Configure</button>
+                        <button class="btn btn-p" style="width: 120px;" onclick="editKV('global')">Configure</button>
                     </div>
                 \` : '<p style="opacity:0.5;">No global configuration found.</p>';
 
                 const cList = document.getElementById('list-cert-configs');
                 cList.innerHTML = '';
                 data.certConfigs.forEach(c => {
-                    cList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;">
-                        <span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button>
+                    cList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;">
+                        <span>\${c}</span><button class="btn btn-s" style="width: 80px;" onclick="editKV('\${c}')">Edit</button>
                     </div>\`;
                 });
 
@@ -472,6 +474,7 @@ export const DASHBOARD_HTML = `
         async function fetchNodeInfo(hostname) {
             document.getElementById('loader').style.display = 'block';
             try {
+                // The worker proxy now automatically appends ?vm=hostname
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=nodeinfo\`);
                 const data = await res.text();
                 
@@ -489,14 +492,14 @@ export const DASHBOARD_HTML = `
                 document.getElementById('info-content').innerText = output || 'No data returned from node.';
                 document.getElementById('modal').style.display = 'flex';
             } catch (e) {
-                alert('Connection to node failed. Check if node is online.');
+                alert('Connection to node failed.');
             }
             document.getElementById('loader').style.display = 'none';
         }
 
         async function runNodeAction(hostname, action) {
             if (action === 'destroy') {
-                if (!confirm(\`Are you sure you want to DESTROY node \${hostname}? This action cannot be undone.\`)) return;
+                if (!confirm(\`Are you sure you want to DESTROY node [\${hostname}]?\\nThis cannot be undone.\`)) return;
             }
 
             document.getElementById('loader').style.display = 'block';

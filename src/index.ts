@@ -303,15 +303,20 @@ export default {
             }
 
             try {
-                // Remove protocol if present in host
+                // Ensure correct host format with 31465 prefix
                 let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-                const nodeUrl = `https://31465-${sanitizedHost}/api/${endpoint}`;
+                if (!sanitizedHost.startsWith('31465-')) {
+                    sanitizedHost = '31465-' + sanitizedHost;
+                }
+
+                // Construct the target URL with VM parameter
+                const nodeUrl = `https://${sanitizedHost}/api/${endpoint}?vm=${hostname}`;
 
                 console.log(`[Proxy] Routing to: ${nodeUrl}`);
 
                 const nodeResponse = await fetch(nodeUrl, {
                     headers: { "X-API-Key": "diamon" },
-                    signal: AbortSignal.timeout(10000) // 10s timeout
+                    signal: AbortSignal.timeout(15000) // Slightly longer timeout
                 });
                 const data = await nodeResponse.text();
                 return new Response(data, {
