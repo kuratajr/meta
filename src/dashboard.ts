@@ -129,6 +129,8 @@ export const DASHBOARD_HTML = `
         .btn-p:hover { filter: brightness(1.1); transform: scale(1.02); }
         .btn-s { background: rgba(255,255,255,0.1); color: white; }
         .btn-s:hover { background: rgba(255,255,255,0.2); }
+        .btn-info { background: #3b82f6; color: white; }
+        .btn-info:hover { filter: brightness(1.1); }
 
         .tag {
             background: rgba(99, 102, 241, 0.2);
@@ -176,6 +178,17 @@ export const DASHBOARD_HTML = `
             animation: pulse 2s infinite;
         }
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+        pre {
+            background: #0f172a;
+            color: #10b981;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--glass-border);
+        }
     </style>
 </head>
 <body>
@@ -268,7 +281,7 @@ export const DASHBOARD_HTML = `
         </div>
     </main>
 
-    <!-- Modal -->
+    <!-- Generic Modal -->
     <div class="modal" id="modal">
         <div class="modal-content">
             <h2 id="modal-title">Edit Configuration</h2>
@@ -276,10 +289,15 @@ export const DASHBOARD_HTML = `
                 <label>Key Name (e.g. template:new-vps or cert:domain.com)</label>
                 <input type="text" id="new-key-name" placeholder="Enter full key name...">
             </div>
-            <textarea id="editor"></textarea>
-            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+            <div id="editor-container">
+                <textarea id="editor"></textarea>
+            </div>
+            <div id="info-container" style="display: none;">
+                <pre id="info-content"></pre>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
                 <button class="btn btn-s" onclick="closeModal()">Close</button>
-                <button class="btn btn-p" onclick="saveData()">Update KV</button>
+                <button class="btn btn-p" id="modal-save-btn" onclick="saveData()">Update KV</button>
             </div>
         </div>
     </div>
@@ -338,7 +356,12 @@ export const DASHBOARD_HTML = `
                                 \${groupOptions}
                             </select>
                         </td>
-                        <td><button class="btn btn-s" onclick="editKV('node:\${h}')">Override</button></td>
+                        <td>
+                            <div style="display:flex; gap: 0.5rem;">
+                                <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
+                                <button class="btn btn-s" onclick="editKV('node:\${h}')">Override</button>
+                            </div>
+                        </td>
                     </tr>\`;
                 }
 
@@ -401,6 +424,32 @@ export const DASHBOARD_HTML = `
             document.getElementById('loader').style.display = 'none';
         }
 
+        async function fetchNodeInfo(hostname) {
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=nodeinfo\`);
+                const data = await res.text();
+                
+                document.getElementById('modal-title').innerText = \`Node Info: \${hostname}\`;
+                document.getElementById('modal-key-input').style.display = 'none';
+                document.getElementById('editor-container').style.display = 'none';
+                document.getElementById('info-container').style.display = 'block';
+                document.getElementById('modal-save-btn').style.display = 'none';
+                
+                let output = data;
+                try {
+                    // Try to format if it's JSON
+                    output = JSON.stringify(JSON.parse(data), null, 2);
+                } catch(e) {}
+                
+                document.getElementById('info-content').innerText = output;
+                document.getElementById('modal').style.display = 'flex';
+            } catch (e) {
+                alert('Error fetching node info');
+            }
+            document.getElementById('loader').style.display = 'none';
+        }
+
         async function updateNodeGroup(hostname, newGroupName) {
             document.getElementById('loader').style.display = 'block';
             
@@ -436,6 +485,9 @@ export const DASHBOARD_HTML = `
             isNew = false;
             document.getElementById('modal-title').innerText = 'Editing ' + key;
             document.getElementById('modal-key-input').style.display = 'none';
+            document.getElementById('editor-container').style.display = 'block';
+            document.getElementById('info-container').style.display = 'none';
+            document.getElementById('modal-save-btn').style.display = 'block';
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${key}\`);
@@ -450,6 +502,9 @@ export const DASHBOARD_HTML = `
             isNew = true;
             document.getElementById('modal-title').innerText = 'Create New Configuration';
             document.getElementById('modal-key-input').style.display = 'block';
+            document.getElementById('editor-container').style.display = 'block';
+            document.getElementById('info-container').style.display = 'none';
+            document.getElementById('modal-save-btn').style.display = 'block';
             document.getElementById('new-key-name').value = '';
             document.getElementById('editor').value = '{}';
             document.getElementById('modal').style.display = 'flex';
@@ -485,4 +540,4 @@ export const DASHBOARD_HTML = `
     </script>
 </body>
 </html>
-`;
+\`;

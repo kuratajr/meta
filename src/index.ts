@@ -285,6 +285,37 @@ export default {
             });
         }
 
+        if (url.pathname === '/api/node-proxy' && request.method === 'GET') {
+            const hostname = url.searchParams.get('hostname');
+            const endpoint = url.searchParams.get('endpoint'); // e.g., 'nodeinfo', 'start', 'stop'
+
+            if (!hostname || !endpoint) {
+                return new Response(JSON.stringify({ error: "Hostname and endpoint required" }), { status: 400 });
+            }
+
+            const registryData = await env.CONFIG_KV.get('registry');
+            const registry = registryData ? JSON.parse(registryData) : {};
+            const host = registry[hostname];
+
+            if (!host) {
+                return new Response(JSON.stringify({ error: "Node not found in registry" }), { status: 404 });
+            }
+
+            try {
+                const nodeUrl = `https://${host}/api/${endpoint}`;
+                const nodeResponse = await fetch(nodeUrl, {
+                    headers: { "X-API-Key": "diamon" }
+                });
+                const data = await nodeResponse.text();
+                return new Response(data, {
+                    status: nodeResponse.status,
+                    headers: { "Content-Type": "application/json" }
+                });
+            } catch (error: any) {
+                return new Response(JSON.stringify({ error: `Failed to connect to node: ${error.message}` }), { status: 500 });
+            }
+        }
+
         return new Response("VPS Metadata Server - Dashboard Ready.", { status: 200 });
     },
 };
