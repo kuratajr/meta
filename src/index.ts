@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 export interface Env {
     GITHUB_OWNER: string;
     GITHUB_REPO: string;
@@ -302,9 +303,15 @@ export default {
             }
 
             try {
-                const nodeUrl = `https://${host}/api/${endpoint}`;
+                // Remove protocol if present in host
+                let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+                const nodeUrl = `https://${sanitizedHost}/api/${endpoint}`;
+
+                console.log(`[Proxy] Routing to: ${nodeUrl}`);
+
                 const nodeResponse = await fetch(nodeUrl, {
-                    headers: { "X-API-Key": "diamon" }
+                    headers: { "X-API-Key": "diamon" },
+                    signal: AbortSignal.timeout(10000) // 10s timeout
                 });
                 const data = await nodeResponse.text();
                 return new Response(data, {
@@ -312,6 +319,7 @@ export default {
                     headers: { "Content-Type": "application/json" }
                 });
             } catch (error: any) {
+                console.error(`[Proxy] Error: ${error.message}`);
                 return new Response(JSON.stringify({ error: `Failed to connect to node: ${error.message}` }), { status: 500 });
             }
         }

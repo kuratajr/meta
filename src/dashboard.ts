@@ -189,6 +189,16 @@ export const DASHBOARD_HTML = `
             font-size: 0.85rem;
             border: 1px solid var(--glass-border);
         }
+
+        .auth-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            margin-bottom: 2rem;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -205,15 +215,19 @@ export const DASHBOARD_HTML = `
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
             <div style="font-size: 0.8rem; opacity: 0.6;">System Status</div>
-            <div style="color: var(--success); font-weight: 600;">● Online</div>
+            <div id="connection-status" style="color: var(--success); font-weight: 600;">● Online</div>
         </div>
     </aside>
 
     <main>
+        <div class="auth-error" id="auth-warning">
+            <strong>Authentication Error:</strong> Invalid or missing token. Please access via <code>?token=YOUR_TOKEN</code>.
+        </div>
+
         <div class="header">
             <h1 id="section-title">Inventory & Registry</h1>
             <div style="display: flex; gap: 1rem;">
-                <button class="btn btn-s" onclick="refreshData()">Sync Sync</button>
+                <button class="btn btn-s" onclick="refreshData()">Sync Data</button>
                 <button class="btn btn-p" id="btn-create" style="display: none;" onclick="openCreateModal()">+ Create New</button>
             </div>
         </div>
@@ -293,7 +307,7 @@ export const DASHBOARD_HTML = `
                 <textarea id="editor"></textarea>
             </div>
             <div id="info-container" style="display: none;">
-                <pre id="info-content"></pre>
+                <pre id="info-content" style="max-height: 500px; overflow: auto;"></pre>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
                 <button class="btn btn-s" onclick="closeModal()">Close</button>
@@ -306,39 +320,50 @@ export const DASHBOARD_HTML = `
         const TOKEN = new URLSearchParams(window.location.search).get('token');
         let currentKey = '';
         let isNew = false;
-        let groupsData = []; // Store central group mapping
+        let groupsData = []; 
 
         function showSection(id) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('section-' + id).classList.add('active');
-            event.currentTarget.classList.add('active');
-            document.getElementById('section-title').innerText = event.currentTarget.innerText;
+            const target = document.getElementById('section-' + id);
+            if (target) target.classList.add('active');
             
-            // Show create button for certain sections
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+                document.getElementById('section-title').innerText = event.currentTarget.innerText;
+            }
+            
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'system') ? 'block' : 'none';
         }
 
         async function refreshData() {
+            if (!TOKEN) {
+                document.getElementById('auth-warning').style.display = 'block';
+                return;
+            }
             document.getElementById('loader').style.display = 'block';
+            document.getElementById('connection-status').innerText = '● Syncing...';
+            document.getElementById('connection-status').style.color = 'var(--accent)';
+
             try {
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
+                if (res.status === 401) {
+                    document.getElementById('auth-warning').style.display = 'block';
+                    throw new Error('Unauthorized');
+                }
                 const data = await res.json();
                 groupsData = data.groups || [];
                 
-                // Stats
                 document.getElementById('stat-nodes').innerText = Object.keys(data.registry).length;
                 document.getElementById('stat-groups').innerText = groupsData.length;
                 document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length + data.certConfigs.length + (data.hasGlobal ? 1 : 0));
 
-                // Helper to find group of a node
                 const getGroupOf = (node) => {
                     const g = groupsData.find(g => (g.listnode || "").split(',').map(s=>s.trim()).includes(node));
                     return g ? g.config : "None";
                 };
 
-                // Nodes Registry
                 const nBody = document.querySelector('#table-nodes tbody');
                 nBody.innerHTML = '';
                 for (const h in data.registry) {
@@ -350,7 +375,7 @@ export const DASHBOARD_HTML = `
 
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
-                        <td><span class="tag">\${data.registry[h]}</span></td>
+                        <td style="font-size: 0.8rem; opacity: 0.7; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">\${data.registry[h]}</td>
                         <td>
                             <select onchange="updateNodeGroup('\${h}', this.value)">
                                 \${groupOptions}
@@ -359,24 +384,22 @@ export const DASHBOARD_HTML = `
                         <td>
                             <div style="display:flex; gap: 0.5rem;">
                                 <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
-                                <button class="btn btn-s" onclick="editKV('node:\${h}')">Override</button>
+                                <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                             </div>
                         </td>
                     </tr>\`;
                 }
 
-                // Group Mapping
                 const mBody = document.querySelector('#table-mapping tbody');
                 mBody.innerHTML = '';
                 groupsData.forEach(g => {
                     mBody.innerHTML += \`<tr>
                         <td style="color:var(--accent);">\${g.config}</td>
                         <td style="font-size:0.85rem; opacity:0.8;">\${g.listnode}</td>
-                        <td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Config</button></td>
+                        <td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit Config</button></td>
                     </tr>\`;
                 });
 
-                // Templates
                 const tGrid = document.getElementById('grid-templates');
                 tGrid.innerHTML = '';
                 data.templates.forEach(t => {
@@ -386,7 +409,6 @@ export const DASHBOARD_HTML = `
                     </div>\`;
                 });
 
-                // JSON Config Lists
                 const gList = document.getElementById('list-group-configs');
                 gList.innerHTML = '';
                 data.groupConfigs.forEach(c => {
@@ -403,7 +425,6 @@ export const DASHBOARD_HTML = `
                     </div>\`;
                 });
 
-                // System Section
                 const gArea = document.getElementById('global-config-area');
                 gArea.innerHTML = data.hasGlobal ? \`
                     <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
@@ -420,7 +441,13 @@ export const DASHBOARD_HTML = `
                     </div>\`;
                 });
 
-            } catch (e) { alert('Unauthorized or Network Error'); }
+                document.getElementById('connection-status').innerText = '● Online';
+                document.getElementById('connection-status').style.color = 'var(--success)';
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('connection-status').innerText = '● Disconnected';
+                document.getElementById('connection-status').style.color = 'var(--danger)';
+            }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -438,44 +465,33 @@ export const DASHBOARD_HTML = `
                 
                 let output = data;
                 try {
-                    // Try to format if it's JSON
                     output = JSON.stringify(JSON.parse(data), null, 2);
                 } catch(e) {}
                 
-                document.getElementById('info-content').innerText = output;
+                document.getElementById('info-content').innerText = output || 'No data returned from node.';
                 document.getElementById('modal').style.display = 'flex';
             } catch (e) {
-                alert('Error fetching node info');
+                alert('Connection to node failed. Check if node is online and registry host is correct.');
             }
             document.getElementById('loader').style.display = 'none';
         }
 
         async function updateNodeGroup(hostname, newGroupName) {
             document.getElementById('loader').style.display = 'block';
-            
-            // 1. Clone groupsData to modify
             const updatedGroups = groupsData.map(g => {
-                // Remove hostname from current lists
                 let nodes = (g.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== hostname);
-                
-                // Add to new group if matched
-                if (g.config === newGroupName) {
-                    nodes.push(hostname);
-                }
-                
+                if (g.config === newGroupName) nodes.push(hostname);
                 return { ...g, listnode: nodes.join(',') };
             });
 
-            // 2. Save to KV
             try {
                 const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'groups', value: JSON.stringify(updatedGroups, null, 2) })
                 });
-                if (res.ok) {
-                    refreshData();
-                } else alert('Failed to assign group');
+                if (res.ok) refreshData();
+                else alert('Failed to assign group');
             } catch (e) { alert('Error saving group mapping'); }
             document.getElementById('loader').style.display = 'none';
         }
@@ -514,7 +530,6 @@ export const DASHBOARD_HTML = `
             const key = isNew ? document.getElementById('new-key-name').value : currentKey;
             const value = document.getElementById('editor').value;
             if (!key) return alert('Key name is required');
-
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
@@ -522,10 +537,8 @@ export const DASHBOARD_HTML = `
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key, value })
                 });
-                if (res.ok) {
-                    closeModal();
-                    refreshData();
-                } else alert('Save failed');
+                if (res.ok) { closeModal(); refreshData(); }
+                else alert('Save failed');
             } catch (e) { alert('Error saving KV'); }
             document.getElementById('loader').style.display = 'none';
         }
@@ -533,7 +546,7 @@ export const DASHBOARD_HTML = `
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
         if (!TOKEN) {
-            document.body.innerHTML = '<div style="margin:auto; text-align:center;"><h1>401 UNAUTHORIZED</h1><p>Vui lòng đăng nhập bằng Token qua URL.</p></div>';
+            document.getElementById('auth-warning').style.display = 'block';
         } else {
             refreshData();
         }
