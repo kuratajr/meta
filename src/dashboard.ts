@@ -110,12 +110,26 @@ export const DASHBOARD_HTML = `
             max-height: calc(100vh - 400px);
             overflow-y: auto;
             position: relative;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
+        }
+        .table-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
 
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
         thead { position: sticky; top: 0; z-index: 10; background: #111827; }
         th { text-align: left; padding: 1.2rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
         td { padding: 1.2rem; border-bottom: 1px solid var(--glass-border); }
+
+        .copyable {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .copyable:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
 
         /* Controls */
         .btn {
@@ -143,6 +157,45 @@ export const DASHBOARD_HTML = `
         .btn-start:hover { filter: brightness(1.1); }
         .btn-destroy { background: var(--danger); color: white; }
         .btn-destroy:hover { filter: brightness(1.1); }
+
+        /* Actions Dropdown */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #1e293b;
+            min-width: 120px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 100;
+            border-radius: 0.8rem;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .dropdown:hover .dropdown-content { display: block; }
+
+        .dropdown-item {
+            color: var(--text);
+            padding: 0.8rem 1rem;
+            text-decoration: none;
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent);
+        }
 
         /* Action Flex Row */
         .action-flex {
@@ -194,6 +247,23 @@ export const DASHBOARD_HTML = `
             padding: 1rem; border-radius: 0.8rem; margin-top: 0.5rem;
         }
 
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 9999;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
         .loader {
             position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--primary);
             box-shadow: 0 0 10px var(--primary); z-index: 2000; display: none;
@@ -225,6 +295,7 @@ export const DASHBOARD_HTML = `
 </head>
 <body>
     <div class="loader" id="loader"></div>
+    <div id="toast">Copied!</div>
     
     <aside>
         <div class="logo">VPS METALink</div>
@@ -397,7 +468,9 @@ export const DASHBOARD_HTML = `
 
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
-                        <td style="font-size: 0.8rem; opacity: 0.6; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</td>
+                        <td class="copyable" title="Click to copy host" onclick="copyToClipboard('\${data.registry[h]}')">
+                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
+                        </td>
                         <td>
                             <select onchange="updateNodeGroup('\${h}', this.value)">
                                 \${groupOptions}
@@ -405,10 +478,18 @@ export const DASHBOARD_HTML = `
                         </td>
                         <td>
                             <div class="action-flex">
-                                <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
+                                <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
-                                <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
+                                
+                                <div class="dropdown">
+                                    <button class="btn btn-s" style="min-width: 40px;">More</button>
+                                    <div class="dropdown-content">
+                                        <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')">Info</div>
+                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')">Stop</div>
+                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')">Reboot</div>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>\`;
@@ -473,6 +554,22 @@ export const DASHBOARD_HTML = `
                 document.getElementById('connection-status').style.color = 'var(--danger)';
             }
             document.getElementById('loader').style.display = 'none';
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast("Host copied to clipboard!");
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
         }
 
         async function fetchNodeInfo(hostname) {
