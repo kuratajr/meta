@@ -4,7 +4,10 @@ export interface Env {
     GITHUB_BRANCH: string;
     GITHUB_TOKEN: string;
     CONFIG_KV: KVNamespace; // Binding for Cloudflare KV
+    ADMIN_TOKEN?: string;   // Optional admin token for dashboard
 }
+
+import { DASHBOARD_HTML } from './dashboard';
 
 async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
     const url = `https://raw.githubusercontent.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/${env.GITHUB_BRANCH}/${path}`;
@@ -226,6 +229,48 @@ export default {
             }
         }
 
-        return new Response("VPS Metadata Server - Hybrid Mode Ready.", { status: 200 });
+        if (url.pathname === '/' && request.method === 'GET') {
+            return new Response(DASHBOARD_HTML, {
+                headers: { "Content-Type": "text/html" }
+            });
+        }
+
+        // --- DASHBOARD API ---
+        const authHeader = request.headers.get('Authorization');
+        const queryToken = url.searchParams.get('token');
+        const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
+
+        if (url.pathname.startsWith('/api/') && !isAuthorized) {
+            return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+        }
+
+        if (url.pathname === '/api/data' && request.method === 'GET') {
+            const [registryData, groupsMappingData] = await Promise.all([
+                env.CONFIG_KV.get('registry'),
+                env.CONFIG_KV.get('groups')
+            ]);
+            return new Response(JSON.stringify({
+                registry: registryData ? JSON.parse(registryData) : {},
+                groups: groupsMappingData ? JSON.parse(groupsMappingData) : []
+            }), { headers: { "Content-Type": "application/json" } });
+        }
+
+        if (url.pathname === '/api/get-kv' && request.method === 'GET') {
+            const key = url.searchParams.get('key');
+            if (!key) return new Response("Key required", { status: 400 });
+            const val = await env.CONFIG_KV.get(key);
+            return new Response(val || "");
+        }
+
+        if (url.pathname === '/api/save' && request.method === 'POST') {
+            const { key, value } = await request.json() as any;
+            if (!key) return new Response("Key required", { status: 400 });
+            await env.CONFIG_KV.put(key, value);
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
+        return new Response("VPS Metadata Server - Dashboard Ready.", { status: 200 });
     },
 };
