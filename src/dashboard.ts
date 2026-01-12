@@ -131,6 +131,10 @@ export const DASHBOARD_HTML = `
         .btn-s:hover { background: rgba(255,255,255,0.2); }
         .btn-info { background: #3b82f6; color: white; }
         .btn-info:hover { filter: brightness(1.1); }
+        .btn-start { background: var(--success); color: white; }
+        .btn-start:hover { filter: brightness(1.1); }
+        .btn-destroy { background: var(--danger); color: white; }
+        .btn-destroy:hover { filter: brightness(1.1); }
 
         .tag {
             background: rgba(99, 102, 241, 0.2);
@@ -382,8 +386,10 @@ export const DASHBOARD_HTML = `
                             </select>
                         </td>
                         <td>
-                            <div style="display:flex; gap: 0.5rem;">
+                            <div style="display:flex; gap: 0.5rem; flex-wrap: wrap;">
                                 <button class="btn btn-info" onclick="fetchNodeInfo('\${h}')">Info</button>
+                                <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
+                                <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
                                 <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                             </div>
                         </td>
@@ -471,7 +477,23 @@ export const DASHBOARD_HTML = `
                 document.getElementById('info-content').innerText = output || 'No data returned from node.';
                 document.getElementById('modal').style.display = 'flex';
             } catch (e) {
-                alert('Connection to node failed. Check if node is online and registry host is correct.');
+                alert('Connection to node failed. Check if node is online.');
+            }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function runNodeAction(hostname, action) {
+            if (action === 'destroy') {
+                if (!confirm(\`Are you sure you want to DESTROY node \${hostname}? This action cannot be undone.\`)) return;
+            }
+
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=\${action}\`);
+                const data = await res.text();
+                alert(\`Action \${action} sent to \${hostname}. Response: \` + data);
+            } catch (e) {
+                alert(\`Failed to execute \${action} on \${hostname}\`);
             }
             document.getElementById('loader').style.display = 'none';
         }
