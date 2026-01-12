@@ -1,4 +1,4 @@
-export const DASHBOARD_HTML = `
+export const DASHBOARD_HTML = \`
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -138,6 +138,16 @@ export const DASHBOARD_HTML = `
             color: #a5b4fc;
         }
 
+        select {
+            background: #0f172a;
+            color: #818cf8;
+            border: 1px solid var(--glass-border);
+            padding: 0.4rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
         /* Modal */
         .modal {
             position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
@@ -205,7 +215,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th>Hostname</th><th>Host Link</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Hostname</th><th>Host Link</th><th>Group Assignment</th><th>Action</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -278,6 +288,7 @@ export const DASHBOARD_HTML = `
         const TOKEN = new URLSearchParams(window.location.search).get('token');
         let currentKey = '';
         let isNew = false;
+        let groupsData = []; // Store central group mapping
 
         function showSection(id) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -296,19 +307,37 @@ export const DASHBOARD_HTML = `
             try {
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
                 const data = await res.json();
+                groupsData = data.groups || [];
                 
                 // Stats
                 document.getElementById('stat-nodes').innerText = Object.keys(data.registry).length;
-                document.getElementById('stat-groups').innerText = data.groups.length;
+                document.getElementById('stat-groups').innerText = groupsData.length;
                 document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length + data.certConfigs.length + (data.hasGlobal ? 1 : 0));
+
+                // Helper to find group of a node
+                const getGroupOf = (node) => {
+                    const g = groupsData.find(g => (g.listnode || "").split(',').map(s=>s.trim()).includes(node));
+                    return g ? g.config : "None";
+                };
 
                 // Nodes Registry
                 const nBody = document.querySelector('#table-nodes tbody');
                 nBody.innerHTML = '';
                 for (const h in data.registry) {
+                    const currentGroup = getGroupOf(h);
+                    let groupOptions = '<option value="">(No Group)</option>';
+                    groupsData.forEach(g => {
+                        groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`;
+                    });
+
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
                         <td><span class="tag">\${data.registry[h]}</span></td>
+                        <td>
+                            <select onchange="updateNodeGroup('\${h}', this.value)">
+                                \${groupOptions}
+                            </select>
+                        </td>
                         <td><button class="btn btn-s" onclick="editKV('node:\${h}')">Override</button></td>
                     </tr>\`;
                 }
@@ -316,7 +345,7 @@ export const DASHBOARD_HTML = `
                 // Group Mapping
                 const mBody = document.querySelector('#table-mapping tbody');
                 mBody.innerHTML = '';
-                data.groups.forEach(g => {
+                groupsData.forEach(g => {
                     mBody.innerHTML += \`<tr>
                         <td style="color:var(--accent);">\${g.config}</td>
                         <td style="font-size:0.85rem; opacity:0.8;">\${g.listnode}</td>
@@ -369,6 +398,36 @@ export const DASHBOARD_HTML = `
                 });
 
             } catch (e) { alert('Unauthorized or Network Error'); }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function updateNodeGroup(hostname, newGroupName) {
+            document.getElementById('loader').style.display = 'block';
+            
+            // 1. Clone groupsData to modify
+            const updatedGroups = groupsData.map(g => {
+                // Remove hostname from current lists
+                let nodes = (g.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== hostname);
+                
+                // Add to new group if matched
+                if (g.config === newGroupName) {
+                    nodes.push(hostname);
+                }
+                
+                return { ...g, listnode: nodes.join(',') };
+            });
+
+            // 2. Save to KV
+            try {
+                const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'groups', value: JSON.stringify(updatedGroups, null, 2) })
+                });
+                if (res.ok) {
+                    refreshData();
+                } else alert('Failed to assign group');
+            } catch (e) { alert('Error saving group mapping'); }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -426,4 +485,4 @@ export const DASHBOARD_HTML = `
     </script>
 </body>
 </html>
-`;
+\`;
