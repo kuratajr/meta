@@ -260,11 +260,23 @@ export const DASHBOARD_HTML = `
                 transform: translateX(0);
             }
             .mobile-toggle { display: block; }
-            main { margin-left: 0; padding: 5rem 1.5rem 2rem 1.5rem; }
-            .header h1 { font-size: 1.5rem; }
-            .stats-grid { grid-template-columns: 1fr; }
+            main { margin-left: 0; padding: 4.5rem 1rem 2rem 1rem; }
+            .header { margin-bottom: 1.5rem; gap: 0.5rem; }
+            .header h1 { font-size: 1.25rem; }
+            .stats-grid { grid-template-columns: 1fr; gap: 1rem; margin-bottom: 2rem; }
+            .card { padding: 1rem; border-radius: 1rem; }
+            .stat-val { font-size: 1.6rem; margin-top: 0.2rem; }
+            
+            .table-container { 
+                max-height: calc(100vh - 450px); 
+                padding-bottom: 150px; 
+            }
+            th, td { padding: 1rem 0.8rem; font-size: 0.85rem; }
+            
             .modal-content { padding: 1.5rem; border-radius: 1.5rem; }
             textarea { height: 300px; padding: 1rem; font-size: 0.8rem; }
+            
+            .btn { min-width: 60px; padding: 0.4rem 0.6rem; }
         }
 
         .overlay {
