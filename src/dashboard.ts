@@ -200,6 +200,8 @@ export const DASHBOARD_HTML = `
         .btn-s:hover { background: rgba(255,255,255,0.2); }
         .btn-start { background: var(--success); color: white; }
         .btn-destroy { background: var(--danger); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { filter: brightness(1.1); transform: scale(1.02); }
 
         /* Actions Dropdown */
         .dropdown { position: relative; display: inline-block; }
@@ -522,7 +524,12 @@ export const DASHBOARD_HTML = `
                     mBody.innerHTML = (data.groups || []).map(g => \`<tr>
                         <td style="font-weight:600;">\${g.config}</td>
                         <td style="opacity:0.8; font-size:0.85rem;">\${g.listnode || 'None'}</td>
-                        <td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit Config</button></td>
+                        <td>
+                            <div class="action-flex">
+                                <button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')">Delete</button>
+                            </div>
+                        </td>
                     </tr>\`).join('');
                 }
 
@@ -530,15 +537,18 @@ export const DASHBOARD_HTML = `
                 if (tGrid) {
                     tGrid.innerHTML = data.templates.map(t => \`<div class="card">
                         <div style="font-weight:600; margin-bottom:0.5rem;">\${t.replace('template:', '')}</div>
-                        <button class="btn btn-s" onclick="editKV('\${t}')">Edit Template</button>
+                        <div class="action-flex">
+                            <button class="btn btn-s" onclick="editKV('\${t}')">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteKV('\${t}')">Delete</button>
+                        </div>
                     </div>\`).join('');
                 }
 
                 refreshStatusDots();
 
-                document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
-                document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
-                document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
+                document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')">Delete</button></div></div>\`).join('');
+                document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')">Delete</button></div></div>\`).join('');
+                document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')">Delete</button></div></div>\`).join('');
                 document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')">Configure</button></div>\` : 'None.';
 
 document.getElementById('connection-status').innerText = '● Online';
@@ -667,6 +677,24 @@ async function refreshStatusDots() {
                     body: JSON.stringify({ key, value: val })
                 });
                 closeModal(); refreshData();
+            } catch (e) {}
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function deleteKV(key) {
+            if (!confirm(\`Delete key "\${key}"?\`)) return;
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(\`/api/delete?token=\${TOKEN}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Deleted!");
+                    refreshData();
+                }
             } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }
