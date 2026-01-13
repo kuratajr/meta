@@ -112,6 +112,7 @@ export const DASHBOARD_HTML = `
             position: relative;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none;  /* IE and Edge */
+            padding-bottom: 120px; /* Space for dropdown boxes */
         }
         .table-container::-webkit-scrollbar {
             display: none; /* Chrome, Safari, Opera */
@@ -169,16 +170,16 @@ export const DASHBOARD_HTML = `
             position: absolute;
             right: 0;
             background-color: #1e293b;
-            min-width: 120px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
-            z-index: 100;
+            min-width: 140px;
+            box-shadow: 0px 8px 16px 16px rgba(0,0,0,0.4);
+            z-index: 1000;
             border-radius: 0.8rem;
             border: 1px solid var(--glass-border);
             overflow: hidden;
             margin-top: 5px;
         }
 
-        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown-content.show { display: block; }
 
         .dropdown-item {
             color: var(--text);
@@ -228,7 +229,7 @@ export const DASHBOARD_HTML = `
         /* Modal */
         .modal {
             position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
-            display: none; align-items: center; justify-content: center; z-index: 1000;
+            display: none; align-items: center; justify-content: center; z-index: 10000;
         }
 
         .modal-content {
@@ -258,7 +259,7 @@ export const DASHBOARD_HTML = `
             border-radius: 1rem;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             display: none;
-            z-index: 9999;
+            z-index: 20000;
             font-weight: 600;
             animation: slideIn 0.3s ease-out;
         }
@@ -266,7 +267,7 @@ export const DASHBOARD_HTML = `
 
         .loader {
             position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--primary);
-            box-shadow: 0 0 10px var(--primary); z-index: 2000; display: none;
+            box-shadow: 0 0 10px var(--primary); z-index: 20000; display: none;
             animation: pulse 2s infinite;
         }
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
@@ -335,7 +336,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th style="width: 20%;">Hostname (Node)</th><th style="width: 35%;">Cloud Host</th><th style="width: 15%;">Group</th><th>Control Center</th></tr></thead>
+                    <thead><tr><th style="width: 18%;">Hostname (Node)</th><th style="width: 40%;">Cloud Host</th><th style="width: 12%;">Group</th><th>Control Center</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -469,7 +470,7 @@ export const DASHBOARD_HTML = `
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
                         <td class="copyable" title="Click to copy host" onclick="copyToClipboard('\${data.registry[h]}')">
-                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
                         </td>
                         <td>
                             <select onchange="updateNodeGroup('\${h}', this.value)">
@@ -483,7 +484,7 @@ export const DASHBOARD_HTML = `
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
                                 
                                 <div class="dropdown">
-                                    <button class="btn btn-s" style="min-width: 40px;">More</button>
+                                    <button class="btn btn-s dropdown-trigger" style="min-width: 40px;" onclick="toggleDropdown(event)">More</button>
                                     <div class="dropdown-content">
                                         <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')">Info</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')">Stop</div>
@@ -554,6 +555,20 @@ export const DASHBOARD_HTML = `
                 document.getElementById('connection-status').style.color = 'var(--danger)';
             }
             document.getElementById('loader').style.display = 'none';
+        }
+
+        function toggleDropdown(event) {
+            event.stopPropagation();
+            const content = event.currentTarget.nextElementSibling;
+            const isShow = content.classList.contains('show');
+            document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+            if (!isShow) content.classList.add('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown-trigger') && !event.target.matches('.dropdown-item')) {
+                document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+            }
         }
 
         async function copyToClipboard(text) {
