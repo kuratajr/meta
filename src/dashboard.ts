@@ -549,7 +549,7 @@ document.getElementById('loader').style.display = 'none';
 
 async function refreshStatusDots() {
     try {
-        const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}\`);
+        const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}&_=\${Date.now()}\`);
                 const statuses = await res.json();
                 document.querySelectorAll('.status-dot').forEach(dot => {
                     const node = dot.getAttribute('data-node');

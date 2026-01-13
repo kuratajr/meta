@@ -342,8 +342,10 @@ export default {
                 try {
                     const res = await fetch(checkUrl, {
                         method: 'HEAD',
-                        signal: AbortSignal.timeout(5000)
-                    });
+                        signal: AbortSignal.timeout(5000),
+                        // Force Cloudflare to bypass cache for this internal check
+                        cf: { cacheTtl: 0, cacheKey: `${checkUrl}-${Date.now()}` }
+                    } as any);
                     return { hostname: h, active: res.status !== 404 };
                 } catch (e) {
                     return { hostname: h, active: false };
@@ -357,7 +359,12 @@ export default {
             }, {});
 
             return new Response(JSON.stringify(statusMap), {
-                headers: { "Content-Type": "application/json" }
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
             });
         }
 
