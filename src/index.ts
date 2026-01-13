@@ -286,6 +286,15 @@ export default {
             });
         }
 
+        if (url.pathname === '/api/delete' && request.method === 'POST') {
+            const { key } = await request.json() as any;
+            if (!key) return new Response("Key required", { status: 400 });
+            await env.CONFIG_KV.delete(key);
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         if (url.pathname === '/api/node-proxy' && request.method === 'GET') {
             const hostname = url.searchParams.get('hostname');
             const endpoint = url.searchParams.get('endpoint'); // e.g., 'nodeinfo', 'start', 'stop'
