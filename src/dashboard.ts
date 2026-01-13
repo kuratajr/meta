@@ -27,12 +27,13 @@ export const DASHBOARD_HTML = `
             color: var(--text);
             min-height: 100vh;
             display: flex;
+            overflow-x: hidden;
         }
 
         /* Sidebar */
         aside {
             width: 280px;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.95);
             border-right: 1px solid var(--glass-border);
             padding: 2rem;
             display: flex;
@@ -40,6 +41,8 @@ export const DASHBOARD_HTML = `
             gap: 2rem;
             position: fixed;
             height: 100vh;
+            z-index: 10000;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .logo {
@@ -64,12 +67,27 @@ export const DASHBOARD_HTML = `
         .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
         .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px var(--primary-glow); }
 
+        /* Mobile Hamburger */
+        .mobile-toggle {
+            display: none;
+            cursor: pointer;
+            z-index: 10001;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+        }
+
         /* Main Content */
         main {
             margin-left: 280px;
             flex: 1;
             padding: 3rem;
             max-width: 1400px;
+            transition: margin-left 0.3s ease;
         }
 
         .header {
@@ -77,6 +95,8 @@ export const DASHBOARD_HTML = `
             justify-content: space-between;
             align-items: center;
             margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         /* Grid & Cards */
@@ -110,27 +130,19 @@ export const DASHBOARD_HTML = `
             max-height: calc(100vh - 400px);
             overflow-y: auto;
             position: relative;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
             padding-bottom: 120px;
         }
-        .table-container::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
-        }
+        .table-container::-webkit-scrollbar { display: none; }
 
-        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 800px; }
         thead { position: sticky; top: 0; z-index: 10; background: #111827; }
         th { text-align: center; padding: 1.2rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
         td { padding: 1.2rem; border-bottom: 1px solid var(--glass-border); }
 
-        .copyable {
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .copyable:hover {
-            color: var(--accent);
-            text-decoration: underline;
-        }
+        .copyable { cursor: pointer; transition: color 0.2s; }
+        .copyable:hover { color: var(--accent); text-decoration: underline; }
 
         /* Controls */
         .btn {
@@ -160,11 +172,7 @@ export const DASHBOARD_HTML = `
         .btn-destroy:hover { filter: brightness(1.1); }
 
         /* Actions Dropdown */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
+        .dropdown { position: relative; display: inline-block; }
         .dropdown-content {
             display: none;
             position: absolute;
@@ -178,71 +186,36 @@ export const DASHBOARD_HTML = `
             overflow: hidden;
             margin-top: 5px;
         }
-
         .dropdown-content.show { display: block; }
-
         .dropdown-item {
-            color: var(--text);
-            padding: 0.8rem 1rem;
-            text-decoration: none;
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            transition: background 0.2s;
-            cursor: pointer;
-            text-align: left;
+            color: var(--text); padding: 0.8rem 1rem; text-decoration: none;
+            display: block; font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
+            cursor: pointer; text-align: left;
         }
+        .dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
 
-        .dropdown-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--accent);
-        }
-
-        /* Action Flex Row */
-        .action-flex {
-            display: flex;
-            gap: 0.4rem;
-            align-items: center;
-            flex-wrap: nowrap;
-        }
-
-        .tag {
-            background: rgba(99, 102, 241, 0.2);
-            padding: 0.3rem 0.7rem;
-            border-radius: 0.5rem;
-            font-size: 0.8rem;
-            color: #a5b4fc;
-        }
+        .action-flex { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
 
         select {
-            background: #0f172a;
-            color: #818cf8;
-            border: 1px solid var(--glass-border);
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            font-size: 0.85rem;
-            outline: none;
-            cursor: pointer;
-            width: 100%;
+            background: #0f172a; color: #818cf8; border: 1px solid var(--glass-border);
+            padding: 0.5rem; border-radius: 0.5rem; font-size: 0.85rem; outline: none;
+            cursor: pointer; width: 100%;
         }
 
         /* Modal */
         .modal {
             position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
-            display: none; align-items: center; justify-content: center; z-index: 10000;
+            display: none; align-items: center; justify-content: center; z-index: 20000;
         }
-
         .modal-content {
-            background: #1e293b; width: 90%; max-width: 800px; padding: 2.5rem; border-radius: 2rem;
-            border: 1px solid var(--glass-border);
+            background: #1e293b; width: 95%; max-width: 800px; padding: 2.5rem; border-radius: 2rem;
+            border: 1px solid var(--glass-border); max-height: 90vh; overflow-y: auto;
         }
-
         textarea {
             width: 100%; height: 400px; background: #0f172a; color: #10b981; border: 1px solid var(--glass-border);
             border-radius: 1rem; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.9rem;
             margin: 1.5rem 0; resize: none;
         }
-
         input {
             width: 100%; background: #0f172a; border: 1px solid var(--glass-border); color: white;
             padding: 1rem; border-radius: 0.8rem; margin-top: 0.5rem;
@@ -250,55 +223,71 @@ export const DASHBOARD_HTML = `
 
         /* Toast */
         #toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: var(--primary);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: none;
-            z-index: 20000;
-            font-weight: 600;
-            animation: slideIn 0.3s ease-out;
+            position: fixed; bottom: 2rem; right: 2rem; background: var(--primary); color: white;
+            padding: 1rem 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: none; z-index: 30000; font-weight: 600; animation: slideIn 0.3s ease-out;
         }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
         .loader {
             position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--primary);
-            box-shadow: 0 0 10px var(--primary); z-index: 20000; display: none;
+            box-shadow: 0 0 10px var(--primary); z-index: 40000; display: none;
             animation: pulse 2s infinite;
         }
-        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
         pre {
-            background: #0f172a;
-            color: #10b981;
-            padding: 1.5rem;
-            border-radius: 1rem;
-            overflow-x: auto;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.85rem;
+            background: #0f172a; color: #10b981; padding: 1.5rem; border-radius: 1rem;
+            overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem;
             border: 1px solid var(--glass-border);
         }
 
         .auth-error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            padding: 1rem;
-            border-radius: 1rem;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            margin-bottom: 2rem;
-            display: none;
+            background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 1rem;
+            border-radius: 1rem; border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 2rem; display: none;
         }
+
+        /* RESPONSIVE QUERIES */
+        @media (max-width: 1024px) {
+            aside { width: 240px; padding: 1.5rem; }
+            main { margin-left: 240px; padding: 2rem; }
+        }
+
+        @media (max-width: 768px) {
+            aside {
+                transform: translateX(-100%);
+                width: 280px;
+            }
+            aside.open {
+                transform: translateX(0);
+            }
+            .mobile-toggle { display: block; }
+            main { margin-left: 0; padding: 5rem 1.5rem 2rem 1.5rem; }
+            .header h1 { font-size: 1.5rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .modal-content { padding: 1.5rem; border-radius: 1.5rem; }
+            textarea { height: 300px; padding: 1rem; font-size: 0.8rem; }
+        }
+
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
+            display: none; backdrop-filter: blur(2px);
+        }
+        .overlay.show { display: block; }
     </style>
 </head>
 <body>
     <div class="loader" id="loader"></div>
     <div id="toast">Copied!</div>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     
-    <aside>
+    <div class="mobile-toggle" onclick="toggleSidebar()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </div>
+
+    <aside id="sidebar">
         <div class="logo">VPS METALink</div>
         <nav>
             <div class="nav-item active" onclick="showSection('nodes')">Inventory & Registry</div>
@@ -320,7 +309,7 @@ export const DASHBOARD_HTML = `
 
         <div class="header">
             <h1 id="section-title">Inventory & Registry</h1>
-            <div style="display: flex; gap: 1rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <button class="btn btn-s" style="width: auto; padding: 0.6rem 1.2rem;" onclick="refreshData()">Sync Data</button>
                 <button class="btn btn-p" id="btn-create" style="display: none; width: auto; padding: 0.6rem 1.2rem;" onclick="openCreateModal()">+ Create New</button>
             </div>
@@ -332,17 +321,16 @@ export const DASHBOARD_HTML = `
             <div class="card"><div>KV Entries</div><div class="stat-val" id="stat-kv">0</div></div>
         </div>
 
-        <!-- Section: Nodes -->
+        <!-- Sections -->
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th style="width: 20%;">Hostname (Node)</th><th style="width: 45%;">Cloud Host</th><th style="width: 15%;">Group</th><th style="width: 20%; text-align: center;">Control Center</th></tr></thead>
+                    <thead><tr><th style="width: 20%;">Hostname</th><th style="width: 45%;">Cloud Host</th><th style="width: 15%;">Group</th><th style="width: 20%; text-align: center;">Actions</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Section: Group Mapping -->
         <div id="section-groups" class="section">
              <div class="table-container">
                 <table id="table-mapping">
@@ -355,14 +343,12 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
-        <!-- Section: Templates -->
         <div id="section-templates" class="section">
             <div class="stats-grid" id="grid-templates"></div>
         </div>
 
-        <!-- Section: Configs -->
         <div id="section-configs" class="section">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                 <div>
                     <h3 style="margin-bottom:1rem; opacity:0.7;">Groups configs</h3>
                     <div id="list-group-configs" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
@@ -374,9 +360,8 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
-        <!-- Section: System -->
         <div id="section-system" class="section">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                 <div>
                     <h3 style="margin-bottom:1rem; opacity:0.7;">Global Configuration</h3>
                     <div id="global-config-area"></div>
@@ -389,23 +374,18 @@ export const DASHBOARD_HTML = `
         </div>
     </main>
 
-    <!-- Generic Modal -->
     <div class="modal" id="modal">
         <div class="modal-content">
             <h2 id="modal-title">Edit Configuration</h2>
             <div id="modal-key-input" style="display: none;">
-                <label>Key Name (e.g. template:new-vps or cert:domain.com)</label>
-                <input type="text" id="new-key-name" placeholder="Enter full key name...">
+                <label>Key Name</label>
+                <input type="text" id="new-key-name">
             </div>
-            <div id="editor-container">
-                <textarea id="editor"></textarea>
-            </div>
-            <div id="info-container" style="display: none;">
-                <pre id="info-content" style="max-height: 500px; overflow: auto;"></pre>
-            </div>
+            <div id="editor-container"><textarea id="editor"></textarea></div>
+            <div id="info-container" style="display: none;"><pre id="info-content" style="max-height: 500px; overflow: auto;"></pre></div>
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
-                <button class="btn btn-s" style="width: auto; padding: 0.6rem 1.5rem;" onclick="closeModal()">Close</button>
-                <button class="btn btn-p" id="modal-save-btn" style="width: auto; padding: 0.6rem 1.5rem;" onclick="saveData()">Update KV</button>
+                <button class="btn btn-s" onclick="closeModal()">Close</button>
+                <button class="btn btn-p" id="modal-save-btn" onclick="saveData()">Update</button>
             </div>
         </div>
     </div>
@@ -416,37 +396,41 @@ export const DASHBOARD_HTML = `
         let isNew = false;
         let groupsData = []; 
 
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('overlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('show');
+        }
+
         function showSection(id) {
+            if (window.innerWidth <= 768) toggleSidebar();
             document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             const target = document.getElementById('section-' + id);
             if (target) target.classList.add('active');
             
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-                document.getElementById('section-title').innerText = event.currentTarget.innerText;
-            }
+            const items = document.querySelectorAll('.nav-item');
+            items.forEach(item => {
+                if (item.getAttribute('onclick').includes("'"+id+"'")) item.classList.add('active');
+            });
+
+            document.getElementById('section-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
             
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'system') ? 'block' : 'none';
         }
 
         async function refreshData() {
-            if (!TOKEN) {
-                document.getElementById('auth-warning').style.display = 'block';
-                return;
-            }
+            if (!TOKEN) { document.getElementById('auth-warning').style.display = 'block'; return; }
             document.getElementById('loader').style.display = 'block';
             document.getElementById('connection-status').innerText = '● Syncing...';
             document.getElementById('connection-status').style.color = 'var(--accent)';
 
             try {
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
-                if (res.status === 401) {
-                    document.getElementById('auth-warning').style.display = 'block';
-                    throw new Error('Unauthorized');
-                }
+                if (res.status === 401) { document.getElementById('auth-warning').style.display = 'block'; throw new Error('Unauthorized'); }
                 const data = await res.json();
                 groupsData = data.groups || [];
                 
@@ -463,29 +447,26 @@ export const DASHBOARD_HTML = `
                 nBody.innerHTML = '';
                 for (const h in data.registry) {
                     const currentGroup = getGroupOf(h);
-                    let groupOptions = '<option value="">(No Group)</option>';
+                    let groupOptions = '<option value="">None</option>';
                     groupsData.forEach(g => {
                         groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`;
                     });
 
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
-                        <td class="copyable" title="Click to copy host" onclick="copyToClipboard('\${data.registry[h]}')">
+                        <td class="copyable" onclick="copyToClipboard('\${data.registry[h]}')">
                             <div style="font-size: 0.8rem; opacity: 0.6; max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
                         </td>
                         <td style="text-align: center;">
-                            <select onchange="updateNodeGroup('\${h}', this.value)">
-                                \${groupOptions}
-                            </select>
+                            <select onchange="updateNodeGroup('\${h}', this.value)">\${groupOptions}</select>
                         </td>
                         <td style="text-align: center;">
                             <div class="action-flex" style="justify-content: center;">
                                 <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
-                                
                                 <div class="dropdown">
-                                    <button class="btn btn-s dropdown-trigger" style="min-width: 40px;" onclick="toggleDropdown(event)">More</button>
+                                    <button class="btn btn-s dropdown-trigger" onclick="toggleDropdown(event)">More</button>
                                     <div class="dropdown-content">
                                         <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')">Info</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')">Stop</div>
@@ -497,62 +478,28 @@ export const DASHBOARD_HTML = `
                     </tr>\`;
                 }
 
+                // ... other rendering logic remains similar ...
                 const mBody = document.querySelector('#table-mapping tbody');
                 mBody.innerHTML = '';
                 groupsData.forEach(g => {
-                    mBody.innerHTML += \`<tr>
-                        <td style="color:var(--accent); font-weight:600;">\${g.config}</td>
-                        <td style="font-size:0.85rem; opacity:0.8;">\${g.listnode}</td>
-                        <td style="width: 100px;"><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Config</button></td>
-                    </tr>\`;
+                    mBody.innerHTML += \`<tr><td style="color:var(--accent); font-weight:600;">\${g.config}</td><td style="font-size:0.85rem; opacity:0.8;">\${g.listnode}</td><td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit</button></td></tr>\`;
                 });
 
                 const tGrid = document.getElementById('grid-templates');
                 tGrid.innerHTML = '';
                 data.templates.forEach(t => {
-                    tGrid.innerHTML += \`<div class="card">
-                        <div style="font-weight:600;">\${t.split(':')[1]}</div>
-                        <div style="margin-top:1rem;"><button class="btn btn-s" onclick="editKV('\${t}')">Edit Script</button></div>
-                    </div>\`;
+                    tGrid.innerHTML += \`<div class="card"><div style="font-weight:600;">\${t.split(':')[1]}</div><div style="margin-top:1rem;"><button class="btn btn-s" onclick="editKV('\${t}')">Edit Script</button></div></div>\`;
                 });
 
-                const gList = document.getElementById('list-group-configs');
-                gList.innerHTML = '';
-                data.groupConfigs.forEach(c => {
-                    gList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;">
-                        <span>\${c}</span><button class="btn btn-s" style="width: 80px;" onclick="editKV('\${c}')">Edit</button>
-                    </div>\`;
-                });
-
-                const nodeC = document.getElementById('list-node-configs');
-                nodeC.innerHTML = '';
-                data.nodeConfigs.forEach(c => {
-                    nodeC.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;">
-                        <span>\${c}</span><button class="btn btn-s" style="width: 80px;" onclick="editKV('\${c}')">Edit</button>
-                    </div>\`;
-                });
-
-                const gArea = document.getElementById('global-config-area');
-                gArea.innerHTML = data.hasGlobal ? \`
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>global.json</span>
-                        <button class="btn btn-p" style="width: 120px;" onclick="editKV('global')">Configure</button>
-                    </div>
-                \` : '<p style="opacity:0.5;">No global configuration found.</p>';
-
-                const cList = document.getElementById('list-cert-configs');
-                cList.innerHTML = '';
-                data.certConfigs.forEach(c => {
-                    cList.innerHTML += \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;">
-                        <span>\${c}</span><button class="btn btn-s" style="width: 80px;" onclick="editKV('\${c}')">Edit</button>
-                    </div>\`;
-                });
+                document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
+                document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
+                document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
+                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')">Configure</button></div>\` : '<p style="opacity:0.5;">None.</p>';
 
                 document.getElementById('connection-status').innerText = '● Online';
                 document.getElementById('connection-status').style.color = 'var(--success)';
-            } catch (e) { 
-                console.error(e);
-                document.getElementById('connection-status').innerText = '● Disconnected';
+            } catch (e) {
+                document.getElementById('connection-status').innerText = '● Error';
                 document.getElementById('connection-status').style.color = 'var(--danger)';
             }
             document.getElementById('loader').style.display = 'none';
@@ -572,30 +519,21 @@ export const DASHBOARD_HTML = `
             }
         }
 
-        // Auto-close dropdowns on scroll to prevent overlapping with sticky header
         document.addEventListener('DOMContentLoaded', () => {
             const containers = document.querySelectorAll('.table-container');
-            containers.forEach(container => {
-                container.addEventListener('scroll', () => {
-                    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-                });
-            });
+            containers.forEach(c => c.addEventListener('scroll', () => {
+                document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+            }));
         });
 
         async function copyToClipboard(text) {
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast("Host copied to clipboard!");
-            } catch (err) {
-                console.error('Failed to copy: ', err);
-            }
+            try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) {}
         }
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+            toast.innerText = msg; toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
         }
 
         async function fetchNodeInfo(hostname) {
@@ -603,39 +541,26 @@ export const DASHBOARD_HTML = `
             try {
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=nodeinfo\`);
                 const data = await res.text();
-                
                 document.getElementById('modal-title').innerText = \`Node Info: \${hostname}\`;
                 document.getElementById('modal-key-input').style.display = 'none';
                 document.getElementById('editor-container').style.display = 'none';
                 document.getElementById('info-container').style.display = 'block';
                 document.getElementById('modal-save-btn').style.display = 'none';
-                
                 let output = data;
-                try {
-                    output = JSON.stringify(JSON.parse(data), null, 2);
-                } catch(e) {}
-                
-                document.getElementById('info-content').innerText = output || 'No data returned from node.';
+                try { output = JSON.stringify(JSON.parse(data), null, 2); } catch(e) {}
+                document.getElementById('info-content').innerText = output || 'No data.';
                 document.getElementById('modal').style.display = 'flex';
-            } catch (e) {
-                alert('Connection to node failed.');
-            }
+            } catch (e) { alert('Failed.'); }
             document.getElementById('loader').style.display = 'none';
         }
 
         async function runNodeAction(hostname, action) {
-            if (action === 'destroy') {
-                if (!confirm(\`Are you sure you want to DESTROY node [\${hostname}]?\\nThis cannot be undone.\`)) return;
-            }
-
+            if (action === 'destroy' && !confirm(\`Destroy node \${hostname}?\`)) return;
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=\${action}\`);
-                const data = await res.text();
-                alert(\`Action [\${action}] requested for [\${hostname}].\\n\\nResponse: \` + data);
-            } catch (e) {
-                alert(\`Failed to execute \${action} on \${hostname}\`);
-            }
+                alert(\`Action requested for \${hostname}.\`);
+            } catch (e) { alert(\`Error.\`); }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -646,7 +571,6 @@ export const DASHBOARD_HTML = `
                 if (g.config === newGroupName) nodes.push(hostname);
                 return { ...g, listnode: nodes.join(',') };
             });
-
             try {
                 const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
                     method: 'POST',
@@ -654,14 +578,12 @@ export const DASHBOARD_HTML = `
                     body: JSON.stringify({ key: 'groups', value: JSON.stringify(updatedGroups, null, 2) })
                 });
                 if (res.ok) refreshData();
-                else alert('Failed to assign group');
-            } catch (e) { alert('Error saving group mapping'); }
+            } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }
 
         async function editKV(key) {
-            currentKey = key;
-            isNew = false;
+            currentKey = key; isNew = false;
             document.getElementById('modal-title').innerText = 'Editing ' + key;
             document.getElementById('modal-key-input').style.display = 'none';
             document.getElementById('editor-container').style.display = 'block';
@@ -672,14 +594,13 @@ export const DASHBOARD_HTML = `
                 const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${key}\`);
                 document.getElementById('editor').value = await res.text();
                 document.getElementById('modal').style.display = 'flex';
-            } catch (e) { alert('Error fetching KV'); }
+            } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }
 
         function openCreateModal() {
-            currentKey = '';
-            isNew = true;
-            document.getElementById('modal-title').innerText = 'Create New Configuration';
+            currentKey = ''; isNew = true;
+            document.getElementById('modal-title').innerText = 'New Configuration';
             document.getElementById('modal-key-input').style.display = 'block';
             document.getElementById('editor-container').style.display = 'block';
             document.getElementById('info-container').style.display = 'none';
@@ -692,7 +613,7 @@ export const DASHBOARD_HTML = `
         async function saveData() {
             const key = isNew ? document.getElementById('new-key-name').value : currentKey;
             const value = document.getElementById('editor').value;
-            if (!key) return alert('Key name is required');
+            if (!key) return alert('Key required.');
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
@@ -701,18 +622,14 @@ export const DASHBOARD_HTML = `
                     body: JSON.stringify({ key, value })
                 });
                 if (res.ok) { closeModal(); refreshData(); }
-                else alert('Save failed');
-            } catch (e) { alert('Error saving KV'); }
+            } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        if (!TOKEN) {
-            document.getElementById('auth-warning').style.display = 'block';
-        } else {
-            refreshData();
-        }
+        if (TOKEN) refreshData();
+        else document.getElementById('auth-warning').style.display = 'block';
     </script>
 </body>
 </html>
