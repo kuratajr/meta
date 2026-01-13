@@ -120,7 +120,7 @@ export const DASHBOARD_HTML = `
 
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
         thead { position: sticky; top: 0; z-index: 10; background: #111827; }
-        th { text-align: left; padding: 1.2rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
+        th { text-align: center; padding: 1.2rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
         td { padding: 1.2rem; border-bottom: 1px solid var(--glass-border); }
 
         .copyable {
@@ -336,7 +336,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th style="width: 15%;">Hostname (Node)</th><th style="width: 50%;">Cloud Host</th><th style="width: 10%;">Group</th><th style="text-align: right;">Control Center</th></tr></thead>
+                    <thead><tr><th style="width: 22%;">Hostname (Node)</th><th style="width: 48%;">Cloud Host</th><th style="width: 10%;">Group</th><th style="width: 20%; text-align: right;">Control Center</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -470,9 +470,9 @@ export const DASHBOARD_HTML = `
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
                         <td class="copyable" title="Click to copy host" onclick="copyToClipboard('\${data.registry[h]}')">
-                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 550px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
                         </td>
-                        <td>
+                        <td style="text-align: center;">
                             <select onchange="updateNodeGroup('\${h}', this.value)">
                                 \${groupOptions}
                             </select>
