@@ -511,6 +511,8 @@ export const DASHBOARD_HTML = `
                                         <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')">Info</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')">Stop</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')">Reboot</div>
+                                        <div class="dropdown-divider"></div>
+                                        <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')">Delete from Registry</div>
                                     </div>
                                 </div>
                             </div>
@@ -637,6 +639,42 @@ async function refreshStatusDots() {
                 });
                 refreshData();
             } catch (e) {}
+        }
+
+        async function deleteFromRegistry(h) {
+            if (!confirm(\`Delete \${h} from Registry?\`)) return;
+            document.getElementById('loader').style.display = 'block';
+            try {
+                // 1. Get current registry
+                const res = await fetch(\`/api/data?token=\${TOKEN}\`);
+                const data = await res.json();
+                const registry = data.registry;
+                
+                // 2. Remove node
+                delete registry[h];
+                
+                // 3. Save registry
+                await fetch(\`/api/save?token=\${TOKEN}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'registry', value: JSON.stringify(registry, null, 4) })
+                });
+
+                // 4. Remove from groups
+                const updatedGroups = (data.groups || []).map(item => {
+                    let nodes = (item.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== h);
+                    return { ...item, listnode: nodes.join(',') };
+                });
+                await fetch(\`/api/save?token=\${TOKEN}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'groups', value: JSON.stringify(updatedGroups, null, 4) })
+                });
+
+                showToast("Node removed!");
+                refreshData();
+            } catch (e) {}
+            document.getElementById('loader').style.display = 'none';
         }
 
         async function editKV(k) {
