@@ -57,7 +57,7 @@ export const DASHBOARD_HTML = `
         }
 
         .nav-item {
-            padding: 1rem;
+            padding: 0.8rem 1rem;
             border-radius: 1rem;
             cursor: pointer;
             transition: all 0.2s;
@@ -65,11 +65,11 @@ export const DASHBOARD_HTML = `
             font-weight: 400;
             display: flex;
             align-items: center;
-            gap: 0.8rem;
+            gap: 0.7rem;
         }
         .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
         .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px var(--primary-glow); }
-        .nav-item i { width: 1.2rem; height: 1.2rem; }
+        .nav-item i { width: 1rem; height: 1rem; }
 
         /* Mobile Hamburger */
         .mobile-toggle {
@@ -184,7 +184,7 @@ export const DASHBOARD_HTML = `
 
         /* Controls */
         .btn {
-            padding: 0.5rem 0.8rem;
+            padding: 0.4rem 0.7rem;
             border-radius: 0.8rem;
             border: none;
             cursor: pointer;
@@ -194,11 +194,11 @@ export const DASHBOARD_HTML = `
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
             min-width: 65px;
             white-space: nowrap;
         }
-        .btn i { width: 1rem; height: 1rem; }
+        .btn i { width: 0.85rem; height: 0.85rem; }
 
         .btn-p { background: var(--primary); color: white; }
         .btn-p:hover { filter: brightness(1.1); transform: scale(1.02); }
@@ -231,12 +231,12 @@ export const DASHBOARD_HTML = `
         .dropdown-content::-webkit-scrollbar { display: none; } /* Chrome/Safari */
         .dropdown-content.show { display: block; }
         .dropdown-item {
-            color: var(--text); padding: 0.8rem 1rem; text-decoration: none;
-            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            color: var(--text); padding: 0.7rem 1rem; text-decoration: none;
+            display: flex; align-items: center; justify-content: center; gap: 0.4rem;
             font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
             cursor: pointer; text-align: center;
         }
-        .dropdown-item i { width: 1rem; height: 1rem; }
+        .dropdown-item i { width: 0.85rem; height: 0.85rem; }
         .dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
 
         .action-flex { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
@@ -568,7 +568,7 @@ export const DASHBOARD_HTML = `
                 const tGrid = document.getElementById('grid-templates');
                 if (tGrid) {
                     tGrid.innerHTML = data.templates.map(t => \`<div class="card">
-                        <div style="font-weight:600; margin-bottom:0.8rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="file-text" style="color: var(--accent); width: 1.1rem; height: 1.1rem;"></i>\${t.replace('template:', '')}</div>
+                        <div style="font-weight:600; margin-bottom:0.8rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="file-text" style="color: var(--accent); width: 0.95rem; height: 0.95rem;"></i>\${t.replace('template:', '')}</div>
                         <div class="action-flex">
                             <button class="btn btn-s" onclick="editKV('\${t}')"><i data-lucide="edit-3"></i>Edit</button>
                             <button class="btn btn-danger" onclick="deleteKV('\${t}')"><i data-lucide="trash"></i>Delete</button>
