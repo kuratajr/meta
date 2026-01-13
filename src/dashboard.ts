@@ -238,6 +238,13 @@ export const DASHBOARD_HTML = `
             border-radius: 1rem; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.9rem;
             margin: 1.5rem 0; resize: none;
         }
+        #info-content {
+            background: #0f172a; color: #10b981; padding: 1.5rem; border-radius: 1rem;
+            font-family: 'Fira Code', monospace; font-size: 0.95rem; line-height: 1.6;
+            white-space: pre-wrap; word-break: break-all; overflow-y: auto;
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        #info-content::-webkit-scrollbar { display: none; }
         input {
             width: 100%; background: #0f172a; border: 1px solid var(--glass-border); color: white;
             padding: 1rem; border-radius: 0.8rem; margin-top: 0.5rem;
@@ -408,7 +415,7 @@ export const DASHBOARD_HTML = `
             <h2 id="modal-title">Edit Configuration</h2>
             <div id="modal-key-input" style="display: none;"><label>Key Name</label><input type="text" id="new-key-name"></div>
             <div id="editor-container"><textarea id="editor"></textarea></div>
-            <div id="info-container" style="display: none;"><pre id="info-content" style="max-height: 500px; overflow: auto;"></pre></div>
+            <div id="info-container" style="display: none;"><pre id="info-content" style="max-height: 60vh;"></pre></div>
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
                 <button class="btn btn-s" onclick="closeModal()">Close</button>
                 <button class="btn btn-p" id="modal-save-btn" onclick="saveData()">Update</button>
@@ -568,12 +575,18 @@ async function refreshStatusDots() {
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=nodeinfo\`);
-                const data = await res.text();
+                const raw = await res.text();
+                let display = raw;
+                try {
+                    const parsed = JSON.parse(raw);
+                    display = JSON.stringify(parsed, null, 4);
+                } catch(e) {}
+                
                 document.getElementById('modal-title').innerText = \`Node Info: \${h}\`;
                 document.getElementById('editor-container').style.display = 'none';
                 document.getElementById('info-container').style.display = 'block';
                 document.getElementById('modal-save-btn').style.display = 'none';
-                document.getElementById('info-content').innerText = data;
+                document.getElementById('info-content').innerText = display;
                 document.getElementById('modal').style.display = 'flex';
             } catch (e) {}
             document.getElementById('loader').style.display = 'none';
