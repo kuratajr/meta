@@ -337,7 +337,12 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th style="width: 20%;">Hostname</th><th style="width: 45%;">Cloud Host</th><th style="width: 15%;">Group</th><th style="width: 20%; text-align: center;">Actions</th></tr></thead>
+                    <thead><tr>
+                        <th style="width: 20%; min-width: 150px;">Hostname</th>
+                        <th style="width: 40%; min-width: 200px;">Cloud Host</th>
+                        <th style="width: 15%; min-width: 100px;">Group</th>
+                        <th style="width: 25%; min-width: 220px; text-align: center;">Actions</th>
+                    </tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -465,14 +470,14 @@ export const DASHBOARD_HTML = `
                     });
 
                     nBody.innerHTML += \`<tr>
-                        <td style="font-weight:600;">\${h}</td>
-                        <td class="copyable" onclick="copyToClipboard('\${data.registry[h]}')">
-                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
+                        <td style="font-weight:600; min-width: 150px;">\${h}</td>
+                        <td class="copyable" style="min-width: 200px;" onclick="copyToClipboard('\${data.registry[h]}')">
+                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
                         </td>
-                        <td style="text-align: center;">
+                        <td style="text-align: center; min-width: 100px;">
                             <select onchange="updateNodeGroup('\${h}', this.value)">\${groupOptions}</select>
                         </td>
-                        <td style="text-align: center;">
+                        <td style="text-align: center; min-width: 220px;">
                             <div class="action-flex" style="justify-content: center;">
                                 <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
