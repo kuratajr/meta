@@ -6,6 +6,7 @@ export const DASHBOARD_HTML = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -62,10 +63,13 @@ export const DASHBOARD_HTML = `
             transition: all 0.2s;
             color: var(--text-dim);
             font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
         }
-
         .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
         .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 15px var(--primary-glow); }
+        .nav-item i { width: 1.2rem; height: 1.2rem; }
 
         /* Mobile Hamburger */
         .mobile-toggle {
@@ -190,9 +194,11 @@ export const DASHBOARD_HTML = `
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 0.5rem;
             min-width: 65px;
             white-space: nowrap;
         }
+        .btn i { width: 1rem; height: 1rem; }
 
         .btn-p { background: var(--primary); color: white; }
         .btn-p:hover { filter: brightness(1.1); transform: scale(1.02); }
@@ -226,9 +232,11 @@ export const DASHBOARD_HTML = `
         .dropdown-content.show { display: block; }
         .dropdown-item {
             color: var(--text); padding: 0.8rem 1rem; text-decoration: none;
-            display: block; font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
             cursor: pointer; text-align: center;
         }
+        .dropdown-item i { width: 1rem; height: 1rem; }
         .dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
 
         .action-flex { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
@@ -337,11 +345,11 @@ export const DASHBOARD_HTML = `
     <aside id="sidebar">
         <div class="logo">VPS METALink</div>
         <nav>
-            <div class="nav-item active" onclick="showSection('nodes')">Inventory & Registry</div>
-            <div class="nav-item" onclick="showSection('groups')">Group Mappings</div>
-            <div class="nav-item" onclick="showSection('templates')">Shell Templates</div>
-            <div class="nav-item" onclick="showSection('configs')">KV Configs (JSON)</div>
-            <div class="nav-item" onclick="showSection('system')">Global & Security</div>
+            <div class="nav-item active" onclick="showSection('nodes')"><i data-lucide="server"></i>Inventory & Registry</div>
+            <div class="nav-item" onclick="showSection('groups')"><i data-lucide="layers"></i>Group Mappings</div>
+            <div class="nav-item" onclick="showSection('templates')"><i data-lucide="file-code"></i>Shell Templates</div>
+            <div class="nav-item" onclick="showSection('configs')"><i data-lucide="database"></i>KV Configs (JSON)</div>
+            <div class="nav-item" onclick="showSection('system')"><i data-lucide="shield"></i>Global & Security</div>
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
             <div style="font-size: 0.8rem; opacity: 0.6;">System Status</div>
@@ -368,9 +376,27 @@ export const DASHBOARD_HTML = `
         </div>
 
         <div class="stats-grid">
-            <div class="card"><div>Total Nodes</div><div class="stat-val" id="stat-nodes">0</div></div>
-            <div class="card"><div>Active Groups</div><div class="stat-val" id="stat-groups">0</div></div>
-            <div class="card"><div>KV Entries</div><div class="stat-val" id="stat-kv">0</div></div>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>Total Nodes</div>
+                    <i data-lucide="cpu" style="color: var(--accent); opacity: 0.6;"></i>
+                </div>
+                <div class="stat-val" id="stat-nodes">0</div>
+            </div>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>Active Groups</div>
+                    <i data-lucide="layers" style="color: var(--accent); opacity: 0.6;"></i>
+                </div>
+                <div class="stat-val" id="stat-groups">0</div>
+            </div>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>KV Entries</div>
+                    <i data-lucide="database" style="color: var(--accent); opacity: 0.6;"></i>
+                </div>
+                <div class="stat-val" id="stat-kv">0</div>
+            </div>
         </div>
 
         <div id="section-nodes" class="section active">
@@ -507,17 +533,17 @@ export const DASHBOARD_HTML = `
                         <td style="text-align: center; min-width:100px;"><select onchange="updateNodeGroup('\${h}', this.value)">\${groupOptions}</select></td>
                         <td style="text-align: center; min-width:220px;">
                             <div class="action-flex" style="justify-content: center;">
-                                <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
-                                <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
-                                <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
+                                <button class="btn btn-s" onclick="editKV('node:\${h}')"><i data-lucide="settings"></i>Config</button>
+                                <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')"><i data-lucide="play"></i>Start</button>
+                                <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')"><i data-lucide="trash-2"></i>Destroy</button>
                                 <div class="dropdown">
                                     <button class="btn btn-s dropdown-trigger" onclick="toggleDropdown(event)">More</button>
                                     <div class="dropdown-content">
-                                        <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')">Info</div>
-                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')">Stop</div>
-                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')">Reboot</div>
+                                        <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')"><i data-lucide="info"></i>Info</div>
+                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
+                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
                                         <div class="dropdown-divider"></div>
-                                        <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')">Delete from Registry</div>
+                                        <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')"><i data-lucide="trash"></i>Delete from Registry</div>
                                     </div>
                                 </div>
                             </div>
@@ -525,7 +551,6 @@ export const DASHBOARD_HTML = `
                     </tr>\`;
                 }
 
-                // Render Other sections
                 const mBody = document.querySelector('#table-mapping tbody');
                 if (mBody) {
                     mBody.innerHTML = (data.groups || []).map(g => \`<tr>
@@ -533,8 +558,8 @@ export const DASHBOARD_HTML = `
                         <td style="opacity:0.8; font-size:0.85rem;">\${g.listnode || 'None'}</td>
                         <td>
                             <div class="action-flex">
-                                <button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit</button>
-                                <button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')">Delete</button>
+                                <button class="btn btn-s" onclick="editKV('group:\${g.config}')"><i data-lucide="edit-3"></i>Edit</button>
+                                <button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')"><i data-lucide="trash"></i>Delete</button>
                             </div>
                         </td>
                     </tr>\`).join('');
@@ -543,25 +568,26 @@ export const DASHBOARD_HTML = `
                 const tGrid = document.getElementById('grid-templates');
                 if (tGrid) {
                     tGrid.innerHTML = data.templates.map(t => \`<div class="card">
-                        <div style="font-weight:600; margin-bottom:0.5rem;">\${t.replace('template:', '')}</div>
+                        <div style="font-weight:600; margin-bottom:0.8rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="file-text" style="color: var(--accent); width: 1.1rem; height: 1.1rem;"></i>\${t.replace('template:', '')}</div>
                         <div class="action-flex">
-                            <button class="btn btn-s" onclick="editKV('\${t}')">Edit</button>
-                            <button class="btn btn-danger" onclick="deleteKV('\${t}')">Delete</button>
+                            <button class="btn btn-s" onclick="editKV('\${t}')"><i data-lucide="edit-3"></i>Edit</button>
+                            <button class="btn btn-danger" onclick="deleteKV('\${t}')"><i data-lucide="trash"></i>Delete</button>
                         </div>
                     </div>\`).join('');
                 }
 
                 refreshStatusDots();
 
-                document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')">Delete</button></div></div>\`).join('');
-                document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')">Delete</button></div></div>\`).join('');
-                document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')">Delete</button></div></div>\`).join('');
-                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')">Configure</button></div>\` : 'None.';
+                document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+                document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+                document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')"><i data-lucide="settings"></i>Configure</button></div>\` : 'None.';
 
-document.getElementById('connection-status').innerText = '● Online';
-document.getElementById('connection-status').style.color = 'var(--success)';
+                if (window.lucide) lucide.createIcons();
+                document.getElementById('connection-status').innerText = '● Online';
+                document.getElementById('connection-status').style.color = 'var(--success)';
             } catch (e) { document.getElementById('connection-status').innerText = '● Error'; }
-document.getElementById('loader').style.display = 'none';
+            document.getElementById('loader').style.display = 'none';
         }
 
 async function refreshStatusDots() {
