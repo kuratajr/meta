@@ -211,18 +211,23 @@ export const DASHBOARD_HTML = `
             right: 0;
             background-color: #1e293b;
             min-width: 140px;
-            box-shadow: 0px 8px 16px 16px rgba(0,0,0,0.4);
+            box-shadow: 0px 8px 32px rgba(0,0,0,0.5);
             z-index: 1000;
             border-radius: 0.8rem;
             border: 1px solid var(--glass-border);
-            overflow: hidden;
             margin-top: 5px;
+            /* Limit to ~3 items, hide scrollbar */
+            max-height: 140px;
+            overflow-y: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
         }
+        .dropdown-content::-webkit-scrollbar { display: none; } /* Chrome/Safari */
         .dropdown-content.show { display: block; }
         .dropdown-item {
             color: var(--text); padding: 0.8rem 1rem; text-decoration: none;
             display: block; font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
-            cursor: pointer; text-align: left;
+            cursor: pointer; text-align: center;
         }
         .dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
 
