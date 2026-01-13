@@ -417,6 +417,7 @@ export const DASHBOARD_HTML = `
         let groupsData = []; 
 
         function showSection(id) {
+            document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             const target = document.getElementById('section-' + id);
@@ -570,6 +571,16 @@ export const DASHBOARD_HTML = `
                 document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
             }
         }
+
+        // Auto-close dropdowns on scroll to prevent overlapping with sticky header
+        document.addEventListener('DOMContentLoaded', () => {
+            const containers = document.querySelectorAll('.table-container');
+            containers.forEach(container => {
+                container.addEventListener('scroll', () => {
+                    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+                });
+            });
+        });
 
         async function copyToClipboard(text) {
             try {
