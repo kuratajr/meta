@@ -496,7 +496,24 @@ export const DASHBOARD_HTML = `
                     </tr>\`;
                 }
 
-                // Render other sections...
+                // Render Other sections
+                const mBody = document.querySelector('#table-mapping tbody');
+                if (mBody) {
+                    mBody.innerHTML = (data.groups || []).map(g => \`<tr>
+                        <td style="font-weight:600;">\${g.config}</td>
+                        <td style="opacity:0.8; font-size:0.85rem;">\${g.listnode || 'None'}</td>
+                        <td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit Config</button></td>
+                    </tr>\`).join('');
+                }
+
+                const tGrid = document.getElementById('grid-templates');
+                if (tGrid) {
+                    tGrid.innerHTML = data.templates.map(t => \`<div class="card">
+                        <div style="font-weight:600; margin-bottom:0.5rem;">\${t.replace('template:', '')}</div>
+                        <button class="btn btn-s" onclick="editKV('\${t}')">Edit Template</button>
+                    </div>\`).join('');
+                }
+
                 refreshStatusDots();
 
                 document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
@@ -504,15 +521,15 @@ export const DASHBOARD_HTML = `
                 document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
                 document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')">Configure</button></div>\` : 'None.';
 
-                document.getElementById('connection-status').innerText = '● Online';
-                document.getElementById('connection-status').style.color = 'var(--success)';
+document.getElementById('connection-status').innerText = '● Online';
+document.getElementById('connection-status').style.color = 'var(--success)';
             } catch (e) { document.getElementById('connection-status').innerText = '● Error'; }
-            document.getElementById('loader').style.display = 'none';
+document.getElementById('loader').style.display = 'none';
         }
 
-        async function refreshStatusDots() {
-            try {
-                const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}\`);
+async function refreshStatusDots() {
+    try {
+        const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}\`);
                 const statuses = await res.json();
                 document.querySelectorAll('.status-dot').forEach(dot => {
                     const node = dot.getAttribute('data-node');
