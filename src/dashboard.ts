@@ -170,6 +170,14 @@ export const DASHBOARD_HTML = `
             100% { transform: scale(1); opacity: 0.8; }
         }
 
+        .live-indicator {
+            display: flex; align-items: center; gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05); padding: 0.4rem 0.8rem;
+            border-radius: 2rem; font-size: 0.75rem; border: 1px solid var(--glass-border);
+        }
+        .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; }
+        .live-dot.active { background: var(--success); box-shadow: 0 0 5px var(--success); }
+
         /* Controls */
         .btn {
             padding: 0.5rem 0.8rem;
@@ -341,7 +349,12 @@ export const DASHBOARD_HTML = `
 
         <div class="header">
             <h1 id="section-title">Inventory & Registry</h1>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center;">
+                <div class="live-indicator" id="live-indicator">
+                    <div class="live-dot" id="live-dot"></div>
+                    <span id="live-text">Live: Off</span>
+                </div>
+                <button class="btn btn-s" onclick="toggleAutoRefresh()" id="btn-live">Enable Auto-Live</button>
                 <button class="btn btn-s" onclick="refreshData()">Sync Data</button>
                 <button class="btn btn-p" id="btn-create" style="display: none;" onclick="openCreateModal()">+ Create New</button>
             </div>
@@ -659,6 +672,60 @@ async function refreshStatusDots() {
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        let autoRefreshInterval = null;
+        let countdown = 30;
+        let isLive = false;
+
+        function toggleAutoRefresh() {
+            isLive = !isLive;
+            const btn = document.getElementById('btn-live');
+            const dot = document.getElementById('live-dot');
+            const txt = document.getElementById('live-text');
+            
+            if (isLive) {
+                btn.innerText = "Disable Auto-Live";
+                dot.classList.add('active');
+                startAutoRefresh();
+            } else {
+                btn.innerText = "Enable Auto-Live";
+                dot.classList.remove('active');
+                stopAutoRefresh();
+                txt.innerText = "Live: Off";
+            }
+        }
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            countdown = 30;
+            updateLiveText();
+            autoRefreshInterval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    countdown--;
+                    if (countdown <= 0) {
+                        refreshStatusDots();
+                        countdown = 30;
+                    }
+                    updateLiveText();
+                }
+            }, 1000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+
+        function updateLiveText() {
+            document.getElementById('live-text').innerText = \`Live in \${countdown}s\`;
+        }
+
+        // Reset timer on manual sync
+        const originalRefreshData = refreshData;
+        refreshData = async () => {
+            await originalRefreshData();
+            if (isLive) countdown = 30;
+        };
+
         if (TOKEN) refreshData();
         else document.getElementById('auth-warning').style.display = 'block';
     </script>
