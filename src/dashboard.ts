@@ -236,7 +236,7 @@ export const DASHBOARD_HTML = `
             font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
             cursor: pointer; text-align: center;
         }
-        .dropdown-item i { width: 0.85rem; height: 0.85rem; }
+        .dropdown-item i { width: 0.8rem; height: 0.8rem; }
         .dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
 
         .action-flex { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
@@ -543,7 +543,7 @@ export const DASHBOARD_HTML = `
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
                                         <div class="dropdown-divider"></div>
-                                        <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')"><i data-lucide="trash"></i>Delete from Registry</div>
+                                        <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')"><i data-lucide="trash"></i>Delete</div>
                                     </div>
                                 </div>
                             </div>
