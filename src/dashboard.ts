@@ -112,7 +112,7 @@ export const DASHBOARD_HTML = `
             position: relative;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none;  /* IE and Edge */
-            padding-bottom: 120px; /* Space for dropdown boxes */
+            padding-bottom: 120px;
         }
         .table-container::-webkit-scrollbar {
             display: none; /* Chrome, Safari, Opera */
@@ -336,7 +336,7 @@ export const DASHBOARD_HTML = `
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
-                    <thead><tr><th style="width: 18%;">Hostname (Node)</th><th style="width: 40%;">Cloud Host</th><th style="width: 12%;">Group</th><th>Control Center</th></tr></thead>
+                    <thead><tr><th style="width: 15%;">Hostname (Node)</th><th style="width: 50%;">Cloud Host</th><th style="width: 10%;">Group</th><th style="text-align: right;">Control Center</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -470,15 +470,15 @@ export const DASHBOARD_HTML = `
                     nBody.innerHTML += \`<tr>
                         <td style="font-weight:600;">\${h}</td>
                         <td class="copyable" title="Click to copy host" onclick="copyToClipboard('\${data.registry[h]}')">
-                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
                         </td>
                         <td>
                             <select onchange="updateNodeGroup('\${h}', this.value)">
                                 \${groupOptions}
                             </select>
                         </td>
-                        <td>
-                            <div class="action-flex">
+                        <td style="text-align: right;">
+                            <div class="action-flex" style="justify-content: flex-end;">
                                 <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
                                 <button class="btn btn-destroy" onclick="runNodeAction('\${h}', 'destroy')">Destroy</button>
