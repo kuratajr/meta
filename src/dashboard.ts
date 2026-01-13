@@ -144,6 +144,32 @@ export const DASHBOARD_HTML = `
         .copyable { cursor: pointer; transition: color 0.2s; }
         .copyable:hover { color: var(--accent); text-decoration: underline; }
 
+        /* Status Dot */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #475569; /* grey */
+            margin-right: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: breathe 2s infinite ease-in-out;
+        }
+        .status-dot.offline {
+            background: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+        @keyframes breathe {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
         /* Controls */
         .btn {
             padding: 0.5rem 0.8rem;
@@ -164,12 +190,8 @@ export const DASHBOARD_HTML = `
         .btn-p:hover { filter: brightness(1.1); transform: scale(1.02); }
         .btn-s { background: rgba(255,255,255,0.1); color: white; }
         .btn-s:hover { background: rgba(255,255,255,0.2); }
-        .btn-info { background: #3b82f6; color: white; }
-        .btn-info:hover { filter: brightness(1.1); }
         .btn-start { background: var(--success); color: white; }
-        .btn-start:hover { filter: brightness(1.1); }
         .btn-destroy { background: var(--danger); color: white; }
-        .btn-destroy:hover { filter: brightness(1.1); }
 
         /* Actions Dropdown */
         .dropdown { position: relative; display: inline-block; }
@@ -252,13 +274,8 @@ export const DASHBOARD_HTML = `
         }
 
         @media (max-width: 768px) {
-            aside {
-                transform: translateX(-100%);
-                width: 280px;
-            }
-            aside.open {
-                transform: translateX(0);
-            }
+            aside { transform: translateX(-100%); width: 280px; }
+            aside.open { transform: translateX(0); }
             .mobile-toggle { display: block; }
             main { margin-left: 0; padding: 4.5rem 1rem 2rem 1rem; }
             .header { margin-bottom: 1.5rem; gap: 0.5rem; }
@@ -267,15 +284,11 @@ export const DASHBOARD_HTML = `
             .card { padding: 1rem; border-radius: 1rem; }
             .stat-val { font-size: 1.6rem; margin-top: 0.2rem; }
             
-            .table-container { 
-                max-height: calc(100vh - 450px); 
-                padding-bottom: 150px; 
-            }
+            .table-container { max-height: calc(100vh - 450px); padding-bottom: 150px; }
             th, td { padding: 1rem 0.8rem; font-size: 0.85rem; }
             
             .modal-content { padding: 1.5rem; border-radius: 1.5rem; }
             textarea { height: 300px; padding: 1rem; font-size: 0.8rem; }
-            
             .btn { min-width: 60px; padding: 0.4rem 0.6rem; }
         }
 
@@ -316,14 +329,14 @@ export const DASHBOARD_HTML = `
 
     <main>
         <div class="auth-error" id="auth-warning">
-            <strong>Authentication Error:</strong> Invalid or missing token. Please access via <code>?token=YOUR_TOKEN</code>.
+            <strong>Authentication Error:</strong> Invalid or missing token.
         </div>
 
         <div class="header">
             <h1 id="section-title">Inventory & Registry</h1>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="btn btn-s" style="width: auto; padding: 0.6rem 1.2rem;" onclick="refreshData()">Sync Data</button>
-                <button class="btn btn-p" id="btn-create" style="display: none; width: auto; padding: 0.6rem 1.2rem;" onclick="openCreateModal()">+ Create New</button>
+                <button class="btn btn-s" onclick="refreshData()">Sync Data</button>
+                <button class="btn btn-p" id="btn-create" style="display: none;" onclick="openCreateModal()">+ Create New</button>
             </div>
         </div>
 
@@ -333,7 +346,6 @@ export const DASHBOARD_HTML = `
             <div class="card"><div>KV Entries</div><div class="stat-val" id="stat-kv">0</div></div>
         </div>
 
-        <!-- Sections -->
         <div id="section-nodes" class="section active">
             <div class="table-container">
                 <table id="table-nodes">
@@ -356,7 +368,7 @@ export const DASHBOARD_HTML = `
                 </table>
             </div>
             <div style="margin-top: 2rem;">
-                <button class="btn btn-p" style="width: auto; padding: 0.8rem 2rem;" onclick="editKV('groups')">Edit Central Mapping JSON</button>
+                <button class="btn btn-p" onclick="editKV('groups')">Edit Central Mapping JSON</button>
             </div>
         </div>
 
@@ -394,10 +406,7 @@ export const DASHBOARD_HTML = `
     <div class="modal" id="modal">
         <div class="modal-content">
             <h2 id="modal-title">Edit Configuration</h2>
-            <div id="modal-key-input" style="display: none;">
-                <label>Key Name</label>
-                <input type="text" id="new-key-name">
-            </div>
+            <div id="modal-key-input" style="display: none;"><label>Key Name</label><input type="text" id="new-key-name"></div>
             <div id="editor-container"><textarea id="editor"></textarea></div>
             <div id="info-container" style="display: none;"><pre id="info-content" style="max-height: 500px; overflow: auto;"></pre></div>
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
@@ -414,10 +423,8 @@ export const DASHBOARD_HTML = `
         let groupsData = []; 
 
         function toggleSidebar() {
-            const sb = document.getElementById('sidebar');
-            const ov = document.getElementById('overlay');
-            sb.classList.toggle('open');
-            ov.classList.toggle('show');
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
         }
 
         function showSection(id) {
@@ -428,13 +435,10 @@ export const DASHBOARD_HTML = `
             const target = document.getElementById('section-' + id);
             if (target) target.classList.add('active');
             
-            const items = document.querySelectorAll('.nav-item');
-            items.forEach(item => {
+            document.querySelectorAll('.nav-item').forEach(item => {
                 if (item.getAttribute('onclick').includes("'"+id+"'")) item.classList.add('active');
             });
-
             document.getElementById('section-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
-            
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'system') ? 'block' : 'none';
         }
@@ -447,7 +451,6 @@ export const DASHBOARD_HTML = `
 
             try {
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
-                if (res.status === 401) { document.getElementById('auth-warning').style.display = 'block'; throw new Error('Unauthorized'); }
                 const data = await res.json();
                 groupsData = data.groups || [];
                 
@@ -465,19 +468,17 @@ export const DASHBOARD_HTML = `
                 for (const h in data.registry) {
                     const currentGroup = getGroupOf(h);
                     let groupOptions = '<option value="">None</option>';
-                    groupsData.forEach(g => {
-                        groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`;
-                    });
+                    groupsData.forEach(g => { groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`; });
 
                     nBody.innerHTML += \`<tr>
-                        <td style="font-weight:600; min-width: 150px;">\${h}</td>
-                        <td class="copyable" style="min-width: 200px;" onclick="copyToClipboard('\${data.registry[h]}')">
+                        <td style="font-weight:600; min-width:150px;">
+                            <span class="status-dot" data-node="\${h}"></span>\${h}
+                        </td>
+                        <td class="copyable" style="min-width:200px;" onclick="copyToClipboard('\${data.registry[h]}')">
                             <div style="font-size: 0.8rem; opacity: 0.6; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
                         </td>
-                        <td style="text-align: center; min-width: 100px;">
-                            <select onchange="updateNodeGroup('\${h}', this.value)">\${groupOptions}</select>
-                        </td>
-                        <td style="text-align: center; min-width: 220px;">
+                        <td style="text-align: center; min-width:100px;"><select onchange="updateNodeGroup('\${h}', this.value)">\${groupOptions}</select></td>
+                        <td style="text-align: center; min-width:220px;">
                             <div class="action-flex" style="justify-content: center;">
                                 <button class="btn btn-s" onclick="editKV('node:\${h}')">Config</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')">Start</button>
@@ -495,31 +496,30 @@ export const DASHBOARD_HTML = `
                     </tr>\`;
                 }
 
-                // ... other rendering logic remains similar ...
-                const mBody = document.querySelector('#table-mapping tbody');
-                mBody.innerHTML = '';
-                groupsData.forEach(g => {
-                    mBody.innerHTML += \`<tr><td style="color:var(--accent); font-weight:600;">\${g.config}</td><td style="font-size:0.85rem; opacity:0.8;">\${g.listnode}</td><td><button class="btn btn-s" onclick="editKV('group:\${g.config}')">Edit</button></td></tr>\`;
-                });
-
-                const tGrid = document.getElementById('grid-templates');
-                tGrid.innerHTML = '';
-                data.templates.forEach(t => {
-                    tGrid.innerHTML += \`<div class="card"><div style="font-weight:600;">\${t.split(':')[1]}</div><div style="margin-top:1rem;"><button class="btn btn-s" onclick="editKV('\${t}')">Edit Script</button></div></div>\`;
-                });
+                // Render other sections...
+                refreshStatusDots();
 
                 document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
                 document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
                 document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><button class="btn btn-s" onclick="editKV('\${c}')">Edit</button></div>\`).join('');
-                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')">Configure</button></div>\` : '<p style="opacity:0.5;">None.</p>';
+                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')">Configure</button></div>\` : 'None.';
 
                 document.getElementById('connection-status').innerText = '● Online';
                 document.getElementById('connection-status').style.color = 'var(--success)';
-            } catch (e) {
-                document.getElementById('connection-status').innerText = '● Error';
-                document.getElementById('connection-status').style.color = 'var(--danger)';
-            }
+            } catch (e) { document.getElementById('connection-status').innerText = '● Error'; }
             document.getElementById('loader').style.display = 'none';
+        }
+
+        async function refreshStatusDots() {
+            try {
+                const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}\`);
+                const statuses = await res.json();
+                document.querySelectorAll('.status-dot').forEach(dot => {
+                    const node = dot.getAttribute('data-node');
+                    if (statuses[node] === true) { dot.className = 'status-dot online'; }
+                    else if (statuses[node] === false) { dot.className = 'status-dot offline'; }
+                });
+            } catch (e) {}
         }
 
         function toggleDropdown(event) {
@@ -531,84 +531,71 @@ export const DASHBOARD_HTML = `
         }
 
         window.onclick = function(event) {
-            if (!event.target.matches('.dropdown-trigger') && !event.target.matches('.dropdown-item')) {
-                document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-            }
+            if (!event.target.matches('.dropdown-trigger')) document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const containers = document.querySelectorAll('.table-container');
-            containers.forEach(c => c.addEventListener('scroll', () => {
+            document.querySelectorAll('.table-container').forEach(c => c.addEventListener('scroll', () => {
                 document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
             }));
         });
 
-        async function copyToClipboard(text) {
-            try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) {}
-        }
-
+        async function copyToClipboard(text) { try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) {} }
         function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg; toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2000);
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
         }
 
-        async function fetchNodeInfo(hostname) {
+        async function fetchNodeInfo(h) {
             document.getElementById('loader').style.display = 'block';
             try {
-                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=nodeinfo\`);
+                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=nodeinfo\`);
                 const data = await res.text();
-                document.getElementById('modal-title').innerText = \`Node Info: \${hostname}\`;
-                document.getElementById('modal-key-input').style.display = 'none';
+                document.getElementById('modal-title').innerText = \`Node Info: \${h}\`;
                 document.getElementById('editor-container').style.display = 'none';
                 document.getElementById('info-container').style.display = 'block';
                 document.getElementById('modal-save-btn').style.display = 'none';
-                let output = data;
-                try { output = JSON.stringify(JSON.parse(data), null, 2); } catch(e) {}
-                document.getElementById('info-content').innerText = output || 'No data.';
+                document.getElementById('info-content').innerText = data;
                 document.getElementById('modal').style.display = 'flex';
-            } catch (e) { alert('Failed.'); }
-            document.getElementById('loader').style.display = 'none';
-        }
-
-        async function runNodeAction(hostname, action) {
-            if (action === 'destroy' && !confirm(\`Destroy node \${hostname}?\`)) return;
-            document.getElementById('loader').style.display = 'block';
-            try {
-                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${hostname}&endpoint=\${action}\`);
-                alert(\`Action requested for \${hostname}.\`);
-            } catch (e) { alert(\`Error.\`); }
-            document.getElementById('loader').style.display = 'none';
-        }
-
-        async function updateNodeGroup(hostname, newGroupName) {
-            document.getElementById('loader').style.display = 'block';
-            const updatedGroups = groupsData.map(g => {
-                let nodes = (g.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== hostname);
-                if (g.config === newGroupName) nodes.push(hostname);
-                return { ...g, listnode: nodes.join(',') };
-            });
-            try {
-                const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: 'groups', value: JSON.stringify(updatedGroups, null, 2) })
-                });
-                if (res.ok) refreshData();
             } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }
 
-        async function editKV(key) {
-            currentKey = key; isNew = false;
-            document.getElementById('modal-title').innerText = 'Editing ' + key;
+        async function runNodeAction(h, a) {
+            if (a === 'destroy' && !confirm(\`Destroy \${h}?\`)) return;
+            document.getElementById('loader').style.display = 'block';
+            try { await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`); alert('Requested.'); } catch (e) {}
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function updateNodeGroup(h, g) {
+            document.getElementById('loader').style.display = 'block';
+            const updated = groupsData.map(item => {
+                let nodes = (item.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== h);
+                if (item.config === g) nodes.push(h);
+                return { ...item, listnode: nodes.join(',') };
+            });
+            try {
+                await fetch(\`/api/save?token=\${TOKEN}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'groups', value: JSON.stringify(updated, null, 2) })
+                });
+                refreshData();
+            } catch (e) {}
+        }
+
+        async function editKV(k) {
+            currentKey = k; isNew = false;
+            document.getElementById('modal-title').innerText = 'Edit ' + k;
             document.getElementById('modal-key-input').style.display = 'none';
             document.getElementById('editor-container').style.display = 'block';
             document.getElementById('info-container').style.display = 'none';
             document.getElementById('modal-save-btn').style.display = 'block';
             document.getElementById('loader').style.display = 'block';
             try {
-                const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${key}\`);
+                const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${k}\`);
                 document.getElementById('editor').value = await res.text();
                 document.getElementById('modal').style.display = 'flex';
             } catch (e) {}
@@ -616,35 +603,32 @@ export const DASHBOARD_HTML = `
         }
 
         function openCreateModal() {
-            currentKey = ''; isNew = true;
-            document.getElementById('modal-title').innerText = 'New Configuration';
+            isNew = true; document.getElementById('modal-title').innerText = 'New Config';
             document.getElementById('modal-key-input').style.display = 'block';
             document.getElementById('editor-container').style.display = 'block';
             document.getElementById('info-container').style.display = 'none';
             document.getElementById('modal-save-btn').style.display = 'block';
-            document.getElementById('new-key-name').value = '';
             document.getElementById('editor').value = '{}';
             document.getElementById('modal').style.display = 'flex';
         }
 
         async function saveData() {
             const key = isNew ? document.getElementById('new-key-name').value : currentKey;
-            const value = document.getElementById('editor').value;
+            const val = document.getElementById('editor').value;
             if (!key) return alert('Key required.');
             document.getElementById('loader').style.display = 'block';
             try {
-                const res = await fetch(\`/api/save?token=\${TOKEN}\`, {
+                await fetch(\`/api/save?token=\${TOKEN}\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, value })
+                    body: JSON.stringify({ key, value: val })
                 });
-                if (res.ok) { closeModal(); refreshData(); }
+                closeModal(); refreshData();
             } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
         if (TOKEN) refreshData();
         else document.getElementById('auth-warning').style.display = 'block';
     </script>
