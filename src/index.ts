@@ -329,6 +329,41 @@ export default {
             }
         }
 
+        if (url.pathname === '/api/batch-check-nodes' && request.method === 'GET') {
+            const registryData = await env.CONFIG_KV.get('registry');
+            const registry = registryData ? JSON.parse(registryData) : {};
+            const hostnames = Object.keys(registry);
+
+            const checks = hostnames.map(async (h) => {
+                const host = registry[h];
+                let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+                if (!sanitizedHost.startsWith('31465-')) {
+                    sanitizedHost = '31465-' + sanitizedHost;
+                }
+                const checkUrl = `https://${sanitizedHost}/`;
+
+                try {
+                    const res = await fetch(checkUrl, {
+                        method: 'HEAD',
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    return { hostname: h, active: res.status !== 404 };
+                } catch (e) {
+                    return { hostname: h, active: false };
+                }
+            });
+
+            const results = await Promise.all(checks);
+            const statusMap = results.reduce((acc: any, r) => {
+                acc[r.hostname] = r.active;
+                return acc;
+            }, {});
+
+            return new Response(JSON.stringify(statusMap), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         return new Response("VPS Metadata Server - Dashboard Ready.", { status: 200 });
     },
 };
