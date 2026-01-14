@@ -586,7 +586,7 @@ export const DASHBOARD_HTML = `
                 document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
-                document.getElementById('list-ip-configs').innerHTML = (data.ipConfigs || []).map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+                document.getElementById('list-ip-configs').innerHTML = Object.keys(data.ips || {}).map(node => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;"><span>ip:\${node}</span><div class="action-flex"><button class="btn btn-s" onclick="editIP('\${node}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteIP('\${node}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')"><i data-lucide="settings"></i>Configure</button></div>\` : 'None.';
 
                 if (window.lucide) lucide.createIcons();
@@ -742,18 +742,71 @@ async function refreshStatusDots() {
             document.getElementById('modal').style.display = 'flex';
         }
 
+        async function editIP(node) {
+            currentKey = 'ip:' + node; isNew = false;
+            document.getElementById('modal-title').innerText = 'Edit IP: ' + node;
+            document.getElementById('modal-key-input').style.display = 'none';
+            document.getElementById('editor-container').style.display = 'block';
+            document.getElementById('info-container').style.display = 'none';
+            document.getElementById('modal-save-btn').style.display = 'block';
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(\`/api/data?token=\${TOKEN}\`);
+                const data = await res.json();
+                document.getElementById('editor').value = data.ips[node] || "";
+                document.getElementById('modal').style.display = 'flex';
+            } catch (e) {}
+            document.getElementById('loader').style.display = 'none';
+        }
+
         async function saveData() {
+            const currentSection = document.querySelector('.section.active').id;
             const key = isNew ? document.getElementById('new-key-name').value : currentKey;
             const val = document.getElementById('editor').value;
             if (!key) return alert('Key required.');
             document.getElementById('loader').style.display = 'block';
             try {
+                if (currentSection === 'section-ip' || (key.startsWith('ip:') && !isNew)) {
+                    const node = key.startsWith('ip:') ? key.replace('ip:', '') : key;
+                    // 1. Get current IPs
+                    const res = await fetch(\`/api/data?token=\${TOKEN}\`);
+                    const data = await res.json();
+                    const ips = data.ips || {};
+                    // 2. Update
+                    ips[node] = val;
+                    // 3. Save key "ips"
+                    await fetch(\`/api/save?token=\${TOKEN}\`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: 'ips', value: JSON.stringify(ips, null, 2) })
+                    });
+                } else {
+                    await fetch(\`/api/save?token=\${TOKEN}\`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key, value: val })
+                    });
+                }
+                closeModal(); refreshData();
+            } catch (e) {}
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function deleteIP(node) {
+            if (!confirm(\`Delete ip:\${node}?\`)) return;
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(\`/api/data?token=\${TOKEN}\`);
+                const data = await res.json();
+                const ips = data.ips || {};
+                delete ips[node];
                 await fetch(\`/api/save?token=\${TOKEN}\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key, value: val })
+                    body: JSON.stringify({ key: 'ips', value: JSON.stringify(ips, null, 2) })
                 });
-                closeModal(); refreshData();
+                showToast("Deleted!");
+                refreshData();
             } catch (e) {}
             document.getElementById('loader').style.display = 'none';
         }

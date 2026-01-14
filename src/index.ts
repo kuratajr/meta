@@ -80,6 +80,17 @@ export default {
                     registryConfig[`host:${key}`] = value;
                 }
 
+                // 1.3 Fetch IPs for placeholders
+                const ipsData = await env.CONFIG_KV.get('ips');
+                const ipsJson: Record<string, string> = ipsData ? JSON.parse(ipsData) : {};
+                const ipConfig: Record<string, string> = {};
+                if (ipsJson[hostname]) {
+                    ipConfig['IP'] = ipsJson[hostname];
+                }
+                for (const [key, value] of Object.entries(ipsJson)) {
+                    ipConfig[`ip:${key}`] = value;
+                }
+
                 // 1.5 Fetch Central Group Mappings
                 const groupsMappingData = await env.CONFIG_KV.get('groups');
                 let centralGroupName: string | null = null;
@@ -133,6 +144,7 @@ export default {
                     ...(kvGroupJson || {}),
                     ...nodePart,
                     ...registryConfig,
+                    ...ipConfig,
                     hostname
                 };
 
@@ -257,8 +269,10 @@ export default {
             const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
             const nodeConfigs = keys.filter((k: string) => k.startsWith('node:'));
             const certConfigs = keys.filter((k: string) => k.startsWith('cert:'));
-            const ipConfigs = keys.filter((k: string) => k.startsWith('ip:'));
-            const hasGlobal = keys.includes('global');
+            const [ipsData, hasGlobal] = await Promise.all([
+                env.CONFIG_KV.get('ips'),
+                Promise.resolve(keys.includes('global'))
+            ]);
 
             return new Response(JSON.stringify({
                 registry: registryData ? JSON.parse(registryData) : {},
@@ -267,7 +281,7 @@ export default {
                 groupConfigs,
                 nodeConfigs,
                 certConfigs,
-                ipConfigs,
+                ips: ipsData ? JSON.parse(ipsData) : {},
                 hasGlobal
             }), { headers: { "Content-Type": "application/json" } });
         }
