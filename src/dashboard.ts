@@ -431,7 +431,16 @@ export const DASHBOARD_HTML = `
         </div>
 
         <div id="section-ip" class="section">
-            <div id="list-ip-configs" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;"></div>
+            <div class="table-container">
+                <table id="table-ips">
+                    <thead><tr>
+                        <th style="width: 30%; min-width: 150px;">Hostname</th>
+                        <th style="width: 45%; min-width: 200px;">IP Address</th>
+                        <th style="width: 25%; min-width: 150px; text-align: center;">Actions</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="section-configs" class="section">
@@ -586,8 +595,22 @@ export const DASHBOARD_HTML = `
                 document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
-                document.getElementById('list-ip-configs').innerHTML = Object.keys(data.ips || {}).map(node => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;"><span>ip:\${node}</span><div class="action-flex"><button class="btn btn-s" onclick="editIP('\${node}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteIP('\${node}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
-                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')"><i data-lucide="settings"></i>Configure</button></div>\` : 'None.';
+                const ipBody = document.querySelector('#table-ips tbody');
+                if (ipBody) {
+                    ipBody.innerHTML = Object.keys(data.ips || {}).map(node => \`<tr>
+                        <td style="font-weight:600;">ip:\${node}</td>
+                        <td class="copyable" onclick="copyToClipboard('\${data.ips[node]}')">
+                            <div style="opacity: 0.8; font-size: 0.85rem;">\${data.ips[node]}</div>
+                        </td>
+                        <td style="text-align: center;">
+                            <div class="action-flex" style="justify-content: center;">
+                                <button class="btn btn-s" onclick="editIP('\${node}')"><i data-lucide="edit-3"></i>Edit</button>
+                                <button class="btn btn-danger" onclick="deleteIP('\${node}')"><i data-lucide="trash"></i>Delete</button>
+                            </div>
+                        </td>
+                    </tr>\`).join('');
+                }
+document.getElementById('global-config-area').innerHTML = data.hasGlobal ?\`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')"><i data-lucide="settings"></i>Configure</button></div>\` : 'None.';
 
                 if (window.lucide) lucide.createIcons();
                 document.getElementById('connection-status').innerText = '● Online';
