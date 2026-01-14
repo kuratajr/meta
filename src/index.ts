@@ -257,6 +257,7 @@ export default {
             const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
             const nodeConfigs = keys.filter((k: string) => k.startsWith('node:'));
             const certConfigs = keys.filter((k: string) => k.startsWith('cert:'));
+            const ipConfigs = keys.filter((k: string) => k.startsWith('ip:'));
             const hasGlobal = keys.includes('global');
 
             return new Response(JSON.stringify({
@@ -266,6 +267,7 @@ export default {
                 groupConfigs,
                 nodeConfigs,
                 certConfigs,
+                ipConfigs,
                 hasGlobal
             }), { headers: { "Content-Type": "application/json" } });
         }

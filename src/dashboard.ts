@@ -349,6 +349,7 @@ export const DASHBOARD_HTML = `
             <div class="nav-item" onclick="showSection('groups')"><i data-lucide="layers"></i>Group Mappings</div>
             <div class="nav-item" onclick="showSection('templates')"><i data-lucide="file-code"></i>Shell Templates</div>
             <div class="nav-item" onclick="showSection('configs')"><i data-lucide="database"></i>KV Configs (JSON)</div>
+            <div class="nav-item" onclick="showSection('ip')"><i data-lucide="globe"></i>IP Management</div>
             <div class="nav-item" onclick="showSection('system')"><i data-lucide="shield"></i>Global & Security</div>
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
@@ -429,6 +430,10 @@ export const DASHBOARD_HTML = `
             <div class="stats-grid" id="grid-templates"></div>
         </div>
 
+        <div id="section-ip" class="section">
+            <div id="list-ip-configs" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;"></div>
+        </div>
+
         <div id="section-configs" class="section">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                 <div>
@@ -493,7 +498,7 @@ export const DASHBOARD_HTML = `
             });
             document.getElementById('section-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
             const btn = document.getElementById('btn-create');
-            btn.style.display = (id === 'templates' || id === 'configs' || id === 'system') ? 'block' : 'none';
+            btn.style.display = (id === 'templates' || id === 'configs' || id === 'system' || id === 'ip') ? 'block' : 'none';
         }
 
         async function refreshData() {
@@ -581,6 +586,7 @@ export const DASHBOARD_HTML = `
                 document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+                document.getElementById('list-ip-configs').innerHTML = (data.ipConfigs || []).map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')"><i data-lucide="settings"></i>Configure</button></div>\` : 'None.';
 
                 if (window.lucide) lucide.createIcons();
@@ -730,6 +736,8 @@ async function refreshStatusDots() {
             document.getElementById('editor-container').style.display = 'block';
             document.getElementById('info-container').style.display = 'none';
             document.getElementById('modal-save-btn').style.display = 'block';
+            const currentSection = document.querySelector('.section.active').id;
+            document.getElementById('new-key-name').value = (currentSection === 'section-ip') ? 'ip:' : '';
             document.getElementById('editor').value = '{}';
             document.getElementById('modal').style.display = 'flex';
         }
