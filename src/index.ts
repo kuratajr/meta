@@ -378,9 +378,16 @@ export default {
                 try {
                     const res = await fetch(checkUrl, {
                         method: 'HEAD',
-                        signal: AbortSignal.timeout(5000),
+                        redirect: 'follow', // Reach the final destination if redirected
+                        signal: AbortSignal.timeout(8000), // Slightly longer timeout for redirects
+                        headers: {
+                            'User-Agent': 'Cloudflare-Worker-Status-Checker'
+                        },
                         // Force Cloudflare to bypass cache for this internal check
-                        cf: { cacheTtl: 0, cacheKey: `${checkUrl}-${Date.now()}` }
+                        cf: {
+                            cacheTtl: 0,
+                            cacheKey: `${checkUrl}-status-check-${Date.now()}`
+                        }
                     } as any);
                     return { hostname: h, active: res.status !== 404 };
                 } catch (e) {
