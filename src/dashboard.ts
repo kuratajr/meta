@@ -133,6 +133,7 @@ export const DASHBOARD_HTML = `
             border-radius: 1.5rem;
             max-height: calc(100vh - 400px);
             overflow-y: auto;
+            overflow-x: hidden; /* Prevent horizontal scroll */
             position: relative;
             scrollbar-width: none;
             -ms-overflow-style: none;

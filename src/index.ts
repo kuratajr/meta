@@ -379,16 +379,19 @@ export default {
                     const res = await fetch(checkUrl, {
                         method: 'GET',
                         redirect: 'follow', // Reach the final destination if redirected
-                        signal: AbortSignal.timeout(8000), // Slightly longer timeout for redirects
+                        signal: AbortSignal.timeout(15000), // Wait up to 15s for sleeping workstations
                         headers: {
-                            'User-Agent': 'Cloudflare-Worker-Status-Checker'
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                         },
                         // Force Cloudflare to bypass cache for this internal check
                         cf: {
                             cacheTtl: 0,
-                            cacheKey: `${checkUrl}-status-check-${Date.now()}`
+                            cacheKey: `${checkUrl}-final-status-${Date.now()}`
                         }
                     } as any);
+
+                    // In many cases, any response (even 401, 403, 302 to login) means the workstation host is "Up".
+                    // We only mark as Offline if it's 404 exactly or connection error.
                     return { hostname: h, active: res.status !== 404 };
                 } catch (e) {
                     return { hostname: h, active: false };
