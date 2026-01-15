@@ -140,10 +140,10 @@ export const DASHBOARD_HTML = `
         }
         .table-container::-webkit-scrollbar { display: none; }
 
-        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 800px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         thead { position: sticky; top: 0; z-index: 10; background: #111827; }
-        th { text-align: center; padding: 1.2rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.9rem; }
-        td { padding: 1.2rem; border-bottom: 1px solid var(--glass-border); }
+        th { text-align: center; padding: 1rem 0.5rem; border-bottom: 2px solid var(--glass-border); color: var(--text-dim); font-weight: 400; font-size: 0.85rem; }
+        td { padding: 1rem 0.5rem; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
 
         .copyable { cursor: pointer; transition: color 0.2s; }
         .copyable:hover { color: var(--accent); text-decoration: underline; }
@@ -410,10 +410,10 @@ export const DASHBOARD_HTML = `
             <div class="table-container">
                 <table id="table-nodes">
                     <thead><tr>
-                        <th style="width: 20%; min-width: 150px;">Hostname</th>
-                        <th style="width: 40%; min-width: 200px;">Cloud Host</th>
-                        <th style="width: 15%; min-width: 100px;">Group</th>
-                        <th style="width: 25%; min-width: 220px; text-align: center;">Actions</th>
+                        <th style="width: 15%;">Hostname</th>
+                        <th style="width: 50%;">Cloud Host</th>
+                        <th style="width: 10%;">Group</th>
+                        <th style="width: 25%; text-align: center;">Actions</th>
                     </tr></thead>
                     <tbody></tbody>
                 </table>
@@ -561,14 +561,14 @@ export const DASHBOARD_HTML = `
                     groupsData.forEach(g => { groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`; });
 
                     nBody.innerHTML += \`<tr>
-                        <td style="font-weight:600; min-width:150px;">
+                        <td style="font-weight:600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                             <span class="status-dot" data-node="\${h}"></span>\${h}
                         </td>
-                        <td class="copyable" style="min-width:200px;" onclick="copyToClipboard('\${data.registry[h]}')">
-                            <div style="font-size: 0.8rem; opacity: 0.6; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${data.registry[h]}</div>
+                        <td class="copyable" onclick="copyToClipboard('\${data.registry[h]}')">
+                            <div style="font-size: 0.75rem; opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="\${data.registry[h]}">\${data.registry[h]}</div>
                         </td>
-                        <td style="text-align: center; min-width:100px;"><select onchange="updateNodeGroup('\${h}', this.value)">\${groupOptions}</select></td>
-                        <td style="text-align: center; min-width:220px;">
+                        <td style="text-align: center;"><select onchange="updateNodeGroup('\${h}', this.value)" style="padding: 0.3rem; font-size: 0.75rem;">\${groupOptions}</select></td>
+                        <td style="text-align: center;">
                             <div class="action-flex" style="justify-content: center;">
                                 <button class="btn btn-s" onclick="editKV('node:\${h}')"><i data-lucide="settings"></i>Config</button>
                                 <button class="btn btn-start" onclick="runNodeAction('\${h}', 'start')"><i data-lucide="play"></i>Start</button>

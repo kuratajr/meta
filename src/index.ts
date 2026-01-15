@@ -373,11 +373,14 @@ export default {
             const checks = hostnames.map(async (h) => {
                 const host = registry[h];
                 let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+                if (!sanitizedHost.startsWith('31465-')) {
+                    sanitizedHost = '31465-' + sanitizedHost;
+                }
                 const checkUrl = `https://${sanitizedHost}/`;
 
                 try {
                     const res = await fetch(checkUrl, {
-                        method: 'HEAD',
+                        method: 'GET',
                         redirect: 'follow', // Reach the final destination if redirected
                         signal: AbortSignal.timeout(8000), // Slightly longer timeout for redirects
                         headers: {
