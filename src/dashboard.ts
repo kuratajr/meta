@@ -327,6 +327,11 @@ export const DASHBOARD_HTML = `
             display: none; backdrop-filter: blur(2px);
         }
         .overlay.show { display: block; }
+
+        .badge {
+            padding: 0.25rem 0.5rem; border-radius: 0.5rem; font-size: 0.7rem; font-weight: 600;
+        }
+        .badge-accent { background: rgba(192, 132, 252, 0.1); color: var(--accent); border: 1px solid rgba(192, 132, 252, 0.2); }
     </style>
 </head>
 <body>
@@ -350,7 +355,8 @@ export const DASHBOARD_HTML = `
             <div class="nav-item" onclick="showSection('templates')"><i data-lucide="file-code"></i>Shell Templates</div>
             <div class="nav-item" onclick="showSection('configs')"><i data-lucide="database"></i>KV Configs (JSON)</div>
             <div class="nav-item" onclick="showSection('ip')"><i data-lucide="globe"></i>IP Management</div>
-            <div class="nav-item" onclick="showSection('system')"><i data-lucide="shield"></i>Global & Security</div>
+            <div class="nav-item" onclick="showSection('cloud')"><i data-lucide="cloud"></i>Cloud-init Meta</div>
+            <div class="nav-item" onclick="showSection('global')"><i data-lucide="shield"></i>Global & Security</div>
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
             <div style="font-size: 0.8rem; opacity: 0.6;">System Status</div>
@@ -443,6 +449,19 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
+        <div id="section-cloud" class="section">
+            <div class="table-container">
+                <table id="table-cloud">
+                    <thead><tr>
+                        <th style="width: 40%; text-align: left; padding-left: 1.5rem;">Config Name</th>
+                        <th style="width: 35%; text-align: left;">Type</th>
+                        <th style="width: 25%; text-align: right; padding-right: 1.5rem;">Actions</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <div id="section-configs" class="section">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                 <div>
@@ -456,7 +475,7 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
-        <div id="section-system" class="section">
+        <div id="section-global" class="section">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                 <div>
                     <h3 style="margin-bottom:1rem; opacity:0.7;">Global Configuration</h3>
@@ -505,9 +524,13 @@ export const DASHBOARD_HTML = `
             document.querySelectorAll('.nav-item').forEach(item => {
                 if (item.getAttribute('onclick').includes("'"+id+"'")) item.classList.add('active');
             });
-            document.getElementById('section-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
+            let sectionTitle = id.charAt(0).toUpperCase() + id.slice(1);
+            if (id === 'ip') sectionTitle = 'IP Management';
+            else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
+            else if (id === 'global') sectionTitle = 'Global & Security';
+            document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
-            btn.style.display = (id === 'templates' || id === 'configs' || id === 'system' || id === 'ip') ? 'block' : 'none';
+            btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
         }
 
         async function refreshData() {
@@ -523,7 +546,7 @@ export const DASHBOARD_HTML = `
                 
                 document.getElementById('stat-nodes').innerText = Object.keys(data.registry).length;
                 document.getElementById('stat-groups').innerText = groupsData.length;
-                document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length + data.certConfigs.length + (data.hasGlobal ? 1 : 0));
+                document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length + data.certConfigs.length + (data.hasGlobal ? 1 : 0) + (data.cloudConfigs ? data.cloudConfigs.length : 0));
 
                 const getGroupOf = (node) => {
                     const g = groupsData.find(g => (g.listnode || "").split(',').map(s=>s.trim()).includes(node));
@@ -591,10 +614,10 @@ export const DASHBOARD_HTML = `
                 }
 
                 refreshStatusDots();
-
                 document.getElementById('list-group-configs').innerHTML = data.groupConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
                 document.getElementById('list-cert-configs').innerHTML = data.certConfigs.map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+                
                 const ipBody = document.querySelector('#table-ips tbody');
                 if (ipBody) {
                     ipBody.innerHTML = Object.keys(data.ips || {}).map(node => \`<tr>
@@ -610,25 +633,44 @@ export const DASHBOARD_HTML = `
                         </td>
                     </tr>\`).join('');
                 }
-document.getElementById('global-config-area').innerHTML = data.hasGlobal ?\`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><button class="btn btn-p" onclick="editKV('global')"><i data-lucide="settings"></i>Configure</button></div>\` : 'None.';
+
+                const cloudBody = document.querySelector('#table-cloud tbody');
+                if (cloudBody) {
+                    cloudBody.innerHTML = (data.cloudConfigs || []).map(c => \`<tr>
+                        <td style="font-weight:600; padding-left: 1.5rem;">\${c}</td>
+                        <td><span class="badge badge-accent">KV Storage</span></td>
+                        <td style="text-align: right; padding-right: 1.5rem;">
+                            <div class="action-flex" style="justify-content: flex-end;">
+                                <button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button>
+                                <button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button>
+                            </div>
+                        </td>
+                    </tr>\`).join('');
+                }
+
+                document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>\` : 'None.';
 
                 if (window.lucide) lucide.createIcons();
                 document.getElementById('connection-status').innerText = '● Online';
                 document.getElementById('connection-status').style.color = 'var(--success)';
-            } catch (e) { document.getElementById('connection-status').innerText = '● Error'; }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('connection-status').innerText = '● Offline';
+                document.getElementById('connection-status').style.color = 'var(--danger)';
+            }
             document.getElementById('loader').style.display = 'none';
         }
 
-async function refreshStatusDots() {
-    try {
-        const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}&_=\${Date.now()}\`);
+        async function refreshStatusDots() {
+            try {
+                const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}&_=\${Date.now()}\`);
                 const statuses = await res.json();
                 document.querySelectorAll('.status-dot').forEach(dot => {
                     const node = dot.getAttribute('data-node');
                     if (statuses[node] === true) { dot.className = 'status-dot online'; }
                     else if (statuses[node] === false) { dot.className = 'status-dot offline'; }
                 });
-            } catch (e) {}
+            } catch (e) { }
         }
 
         function toggleDropdown(event) {
@@ -639,7 +681,7 @@ async function refreshStatusDots() {
             if (!isShow) content.classList.add('show');
         }
 
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             if (!event.target.matches('.dropdown-trigger')) document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
         }
 
@@ -649,7 +691,7 @@ async function refreshStatusDots() {
             }));
         });
 
-        async function copyToClipboard(text) { try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) {} }
+        async function copyToClipboard(text) { try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) { } }
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.innerText = msg; t.style.display = 'block';
@@ -665,29 +707,29 @@ async function refreshStatusDots() {
                 try {
                     const parsed = JSON.parse(raw);
                     display = JSON.stringify(parsed, null, 4);
-                } catch(e) {}
-                
+                } catch (e) { }
+
                 document.getElementById('modal-title').innerText = \`Node Info: \${h}\`;
                 document.getElementById('editor-container').style.display = 'none';
                 document.getElementById('info-container').style.display = 'block';
                 document.getElementById('modal-save-btn').style.display = 'none';
                 document.getElementById('info-content').innerText = display;
                 document.getElementById('modal').style.display = 'flex';
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
         async function runNodeAction(h, a) {
             if (a === 'destroy' && !confirm(\`Destroy \${h}?\`)) return;
             document.getElementById('loader').style.display = 'block';
-            try { await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`); alert('Requested.'); } catch (e) {}
+            try { await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`); alert('Requested.'); } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
         async function updateNodeGroup(h, g) {
             document.getElementById('loader').style.display = 'block';
             const updated = groupsData.map(item => {
-                let nodes = (item.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== h);
+                let nodes = (item.listnode || "").split(',').map(s => s.trim()).filter(s => s && s !== h);
                 if (item.config === g) nodes.push(h);
                 return { ...item, listnode: nodes.join(',') };
             });
@@ -698,31 +740,24 @@ async function refreshStatusDots() {
                     body: JSON.stringify({ key: 'groups', value: JSON.stringify(updated, null, 2) })
                 });
                 refreshData();
-            } catch (e) {}
+            } catch (e) { }
         }
 
         async function deleteFromRegistry(h) {
             if (!confirm(\`Delete \${h} from Registry?\`)) return;
             document.getElementById('loader').style.display = 'block';
             try {
-                // 1. Get current registry
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
                 const data = await res.json();
                 const registry = data.registry;
-                
-                // 2. Remove node
                 delete registry[h];
-                
-                // 3. Save registry
                 await fetch(\`/api/save?token=\${TOKEN}\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'registry', value: JSON.stringify(registry, null, 4) })
                 });
-
-                // 4. Remove from groups
                 const updatedGroups = (data.groups || []).map(item => {
-                    let nodes = (item.listnode || "").split(',').map(s=>s.trim()).filter(s => s && s !== h);
+                    let nodes = (item.listnode || "").split(',').map(s => s.trim()).filter(s => s && s !== h);
                     return { ...item, listnode: nodes.join(',') };
                 });
                 await fetch(\`/api/save?token=\${TOKEN}\`, {
@@ -730,10 +765,9 @@ async function refreshStatusDots() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'groups', value: JSON.stringify(updatedGroups, null, 4) })
                 });
-
                 showToast("Node removed!");
                 refreshData();
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -749,18 +783,22 @@ async function refreshStatusDots() {
                 const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${k}\`);
                 document.getElementById('editor').value = await res.text();
                 document.getElementById('modal').style.display = 'flex';
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
         function openCreateModal() {
-            isNew = true; document.getElementById('modal-title').innerText = 'New Config';
+            isNew = true;
+            const currentSection = document.querySelector('.section.active').id;
+            document.getElementById('modal-title').innerText = 'Create New Configuration';
             document.getElementById('modal-key-input').style.display = 'block';
             document.getElementById('editor-container').style.display = 'block';
             document.getElementById('info-container').style.display = 'none';
             document.getElementById('modal-save-btn').style.display = 'block';
-            const currentSection = document.querySelector('.section.active').id;
-            document.getElementById('new-key-name').value = (currentSection === 'section-ip') ? 'ip:' : '';
+            let defaultKey = '';
+            if (currentSection === 'section-ip') defaultKey = 'ip:';
+            else if (currentSection === 'section-cloud') defaultKey = 'cloud:';
+            document.getElementById('new-key-name').value = defaultKey;
             document.getElementById('editor').value = '{}';
             document.getElementById('modal').style.display = 'flex';
         }
@@ -778,7 +816,7 @@ async function refreshStatusDots() {
                 const data = await res.json();
                 document.getElementById('editor').value = data.ips[node] || "";
                 document.getElementById('modal').style.display = 'flex';
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -791,13 +829,10 @@ async function refreshStatusDots() {
             try {
                 if (currentSection === 'section-ip' || (key.startsWith('ip:') && !isNew)) {
                     const node = key.startsWith('ip:') ? key.replace('ip:', '') : key;
-                    // 1. Get current IPs
                     const res = await fetch(\`/api/data?token=\${TOKEN}\`);
                     const data = await res.json();
                     const ips = data.ips || {};
-                    // 2. Update
                     ips[node] = val;
-                    // 3. Save key "ips"
                     await fetch(\`/api/save?token=\${TOKEN}\`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -811,7 +846,7 @@ async function refreshStatusDots() {
                     });
                 }
                 closeModal(); refreshData();
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -830,7 +865,7 @@ async function refreshStatusDots() {
                 });
                 showToast("Deleted!");
                 refreshData();
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -848,7 +883,7 @@ async function refreshStatusDots() {
                     showToast("Deleted!");
                     refreshData();
                 }
-            } catch (e) {}
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -862,7 +897,6 @@ async function refreshStatusDots() {
             const btn = document.getElementById('btn-live');
             const dot = document.getElementById('live-dot');
             const txt = document.getElementById('live-text');
-            
             if (isLive) {
                 btn.innerText = "Disable Auto-Live";
                 dot.classList.add('active');
@@ -912,4 +946,4 @@ async function refreshStatusDots() {
     </script>
 </body>
 </html>
-`;
+\`;

@@ -91,6 +91,14 @@ export default {
                     ipConfig[`ip:${key}`] = value;
                 }
 
+                // 1.4 Fetch Cloud-init Meta
+                const cloudConfig: Record<string, string> = {};
+                const kvKeys = await env.CONFIG_KV.list();
+                for (const k of kvKeys.keys.filter((key: { name: string }) => key.name.startsWith('cloud:'))) {
+                    const val = await env.CONFIG_KV.get(k.name);
+                    if (val) cloudConfig[k.name] = val;
+                }
+
                 // 1.5 Fetch Central Group Mappings
                 const groupsMappingData = await env.CONFIG_KV.get('groups');
                 let centralGroupName: string | null = null;
@@ -145,6 +153,7 @@ export default {
                     ...nodePart,
                     ...registryConfig,
                     ...ipConfig,
+                    ...cloudConfig,
                     hostname
                 };
 
@@ -269,6 +278,7 @@ export default {
             const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
             const nodeConfigs = keys.filter((k: string) => k.startsWith('node:'));
             const certConfigs = keys.filter((k: string) => k.startsWith('cert:'));
+            const cloudConfigs = keys.filter((k: string) => k.startsWith('cloud:'));
             const [ipsData, hasGlobal] = await Promise.all([
                 env.CONFIG_KV.get('ips'),
                 Promise.resolve(keys.includes('global'))
@@ -281,6 +291,7 @@ export default {
                 groupConfigs,
                 nodeConfigs,
                 certConfigs,
+                cloudConfigs,
                 ips: ipsData ? JSON.parse(ipsData) : {},
                 hasGlobal
             }), { headers: { "Content-Type": "application/json" } });
