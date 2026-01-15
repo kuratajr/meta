@@ -154,7 +154,9 @@ export default {
                     ...registryConfig,
                     ...ipConfig,
                     ...cloudConfig,
-                    hostname
+                    hostname,
+                    WORKER_URL: new URL(request.url).origin,
+                    ADMIN_TOKEN: (env as any).ADMIN_TOKEN || "" // Fallback if not in env
                 };
 
                 // 2.3 Fetch stand-alone KV keys (for placeholders not in JSON config)
@@ -322,6 +324,22 @@ export default {
             });
         }
 
+        if (url.pathname === '/api/heartbeat' && request.method === 'GET') {
+            const hbHostname = url.searchParams.get('hostname');
+            if (!hbHostname) return new Response("Hostname required", { status: 400 });
+
+            // Atomic update for consolidated heartbeats object
+            const hbData = await env.CONFIG_KV.get('heartbeats');
+            const heartbeats = hbData ? JSON.parse(hbData) : {};
+            heartbeats[hbHostname] = Date.now();
+
+            await env.CONFIG_KV.put('heartbeats', JSON.stringify(heartbeats));
+
+            return new Response(JSON.stringify({ success: true, timestamp: heartbeats[hbHostname] }), {
+                headers: { "Content-Type": "application/json" }
+            });
+        }
+
         if (url.pathname === '/api/node-proxy' && request.method === 'GET') {
             const hostname = url.searchParams.get('hostname');
             const endpoint = url.searchParams.get('endpoint'); // e.g., 'nodeinfo', 'start', 'stop'
@@ -366,43 +384,31 @@ export default {
         }
 
         if (url.pathname === '/api/batch-check-nodes' && request.method === 'GET') {
-            const registryData = await env.CONFIG_KV.get('registry');
+            const [registryData, hbData, timeoutData] = await Promise.all([
+                env.CONFIG_KV.get('registry'),
+                env.CONFIG_KV.get('heartbeats'),
+                env.CONFIG_KV.get('heartbeat_timeout')
+            ]);
+
             const registry = registryData ? JSON.parse(registryData) : {};
+            const heartbeats = hbData ? JSON.parse(hbData) : {};
             const hostnames = Object.keys(registry);
 
-            const checks = hostnames.map(async (h) => {
-                const host = registry[h];
-                let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-                const checkUrl = `https://${sanitizedHost}/`;
+            // Get heartbeat timeout from dedicated KV key or default to 180s
+            const heartbeatTimeoutSec = timeoutData ? parseInt(timeoutData) : 180;
 
-                try {
-                    const res = await fetch(checkUrl, {
-                        method: 'GET',
-                        redirect: 'follow', // Reach the final destination if redirected
-                        signal: AbortSignal.timeout(15000), // Wait up to 15s for sleeping workstations
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                        },
-                        // Force Cloudflare to bypass cache for this internal check
-                        cf: {
-                            cacheTtl: 0,
-                            cacheKey: `${checkUrl}-final-status-${Date.now()}`
-                        }
-                    } as any);
+            const now = Date.now();
+            const statusMap: Record<string, boolean> = {};
 
-                    // In many cases, any response (even 401, 403, 302 to login) means the workstation host is "Up".
-                    // We only mark as Offline if it's 404 exactly or connection error.
-                    return { hostname: h, active: res.status !== 404 };
-                } catch (e) {
-                    return { hostname: h, active: false };
+            for (const h of hostnames) {
+                const lastSeen = heartbeats[h];
+                if (lastSeen) {
+                    const diffSec = (now - lastSeen) / 1000;
+                    statusMap[h] = diffSec < heartbeatTimeoutSec;
+                } else {
+                    statusMap[h] = false;
                 }
-            });
-
-            const results = await Promise.all(checks);
-            const statusMap = results.reduce((acc: any, r) => {
-                acc[r.hostname] = r.active;
-                return acc;
-            }, {});
+            }
 
             return new Response(JSON.stringify(statusMap), {
                 headers: {
