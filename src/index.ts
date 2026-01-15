@@ -373,9 +373,6 @@ export default {
             const checks = hostnames.map(async (h) => {
                 const host = registry[h];
                 let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-                if (!sanitizedHost.startsWith('31465-')) {
-                    sanitizedHost = '31465-' + sanitizedHost;
-                }
                 const checkUrl = `https://${sanitizedHost}/`;
 
                 try {
