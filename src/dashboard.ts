@@ -136,7 +136,7 @@ export const DASHBOARD_HTML = `
             position: relative;
             scrollbar-width: none;
             -ms-overflow-style: none;
-            padding-bottom: 120px;
+            padding-bottom: 2rem;
         }
         .table-container::-webkit-scrollbar { display: none; }
 
