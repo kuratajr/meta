@@ -434,9 +434,9 @@ export const DASHBOARD_HTML = `
             <div class="table-container">
                 <table id="table-ips">
                     <thead><tr>
-                        <th style="width: 30%; min-width: 150px;">Hostname</th>
-                        <th style="width: 45%; min-width: 200px;">IP Address</th>
-                        <th style="width: 25%; min-width: 150px; text-align: center;">Actions</th>
+                        <th style="width: 35%; text-align: left; padding-left: 1.5rem;">Hostname</th>
+                        <th style="width: 40%; text-align: left;">IP Address</th>
+                        <th style="width: 25%; text-align: right; padding-right: 1.5rem;">Actions</th>
                     </tr></thead>
                     <tbody></tbody>
                 </table>
@@ -598,12 +598,12 @@ export const DASHBOARD_HTML = `
                 const ipBody = document.querySelector('#table-ips tbody');
                 if (ipBody) {
                     ipBody.innerHTML = Object.keys(data.ips || {}).map(node => \`<tr>
-                        <td style="font-weight:600;">ip:\${node}</td>
+                        <td style="font-weight:600; padding-left: 1.5rem;">ip:\${node}</td>
                         <td class="copyable" onclick="copyToClipboard('\${data.ips[node]}')">
                             <div style="opacity: 0.8; font-size: 0.85rem;">\${data.ips[node]}</div>
                         </td>
-                        <td style="text-align: center;">
-                            <div class="action-flex" style="justify-content: center;">
+                        <td style="text-align: right; padding-right: 1.5rem;">
+                            <div class="action-flex" style="justify-content: flex-end;">
                                 <button class="btn btn-s" onclick="editIP('\${node}')"><i data-lucide="edit-3"></i>Edit</button>
                                 <button class="btn btn-danger" onclick="deleteIP('\${node}')"><i data-lucide="trash"></i>Delete</button>
                             </div>
