@@ -150,22 +150,20 @@ export const DASHBOARD_HTML = `
         .copyable:hover { color: var(--accent); text-decoration: underline; }
 
         /* Search Filter */
+        /* Search Filter */
         .search-container {
             position: relative;
-            flex: 1;
-            min-width: 200px;
-            max-width: 400px;
-            margin: 0 1.5rem;
             display: none; /* Hidden by default */
+            width: 280px;
         }
         .search-container input {
             width: 100%;
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid var(--glass-border);
             border-radius: 1rem;
-            padding: 0.75rem 1rem 0.75rem 2.8rem;
+            padding: 0.6rem 1rem 0.6rem 2.8rem;
             color: white;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             outline: none;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -174,16 +172,17 @@ export const DASHBOARD_HTML = `
             background: rgba(0, 0, 0, 0.3);
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
         }
-        .search-container i {
+        .search-container i, .search-container svg {
             position: absolute;
             left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 1.2rem;
-            height: 1.2rem;
-            opacity: 0.5;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 1rem;
+            height: 1rem;
+            opacity: 0.6;
             pointer-events: none;
             color: var(--accent);
+            margin: 0 !important;
         }
 
         /* Status Dot */
@@ -409,13 +408,12 @@ export const DASHBOARD_HTML = `
 
         <div class="header" style="align-items: center;">
             <h1 id="section-title" style="margin-bottom: 0;">Inventory & Registry</h1>
-            
-            <div class="search-container" id="search-wrapper">
-                <i data-lucide="search"></i>
-                <input type="text" id="table-search" placeholder="Search entries..." oninput="handleSearch(this.value)">
-            </div>
 
             <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; margin-left: auto;">
+                <div class="search-container" id="search-wrapper">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="table-search" placeholder="Search entries..." oninput="handleSearch(this.value)">
+                </div>
                 <div class="live-indicator" id="live-indicator">
                     <div class="live-dot" id="live-dot"></div>
                     <span id="live-text">Live: Off</span>
