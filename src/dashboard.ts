@@ -470,7 +470,11 @@ export const DASHBOARD_HTML = `
         <div id="section-groups" class="section">
              <div class="table-container">
                 <table id="table-mapping">
-                    <thead><tr><th>Config ID</th><th>Node List</th><th>Action</th></tr></thead>
+                    <thead><tr>
+                        <th style="width: 25%; text-align: left; padding-left: 1.5rem;">Group Name</th>
+                        <th style="width: 55%; text-align: left;">Node List</th>
+                        <th style="width: 20%; text-align: right; padding-right: 1.5rem;">Actions</th>
+                    </tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -695,9 +699,9 @@ export const DASHBOARD_HTML = `
             const mBody = document.querySelector('#table-mapping tbody');
             if (!mBody) return;
             mBody.innerHTML = (data.groups || []).filter(g => !currentSearch || g.config.toLowerCase().includes(currentSearch) || (g.listnode || '').toLowerCase().includes(currentSearch)).map(g => \`<tr>
-                <td style="font-weight:600;">\${g.config}</td>
-                <td style="opacity:0.8; font-size:0.85rem;">\${g.listnode || 'None'}</td>
-                <td><div class="action-flex"><button class="btn btn-s" onclick="editKV('group:\${g.config}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')"><i data-lucide="trash"></i>Delete</button></div></td>
+                <td style="font-weight:600; padding-left: 1.5rem;">\${g.config}</td>
+                <td style="opacity:0.8; font-size:0.85rem; line-height: 1.4; word-break: break-all; padding-right: 1rem;">\${(g.listnode || 'None').split(',').join(', ')}</td>
+                <td style="text-align: right; padding-right: 1.5rem;"><div class="action-flex" style="justify-content: flex-end;"><button class="btn btn-s" onclick="editKV('group:\${g.config}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')"><i data-lucide="trash"></i>Delete</button></div></td>
             </tr>\`).join('');
             if (window.lucide) lucide.createIcons();
         }
