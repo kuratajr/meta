@@ -150,7 +150,6 @@ export const DASHBOARD_HTML = `
         .copyable:hover { color: var(--accent); text-decoration: underline; }
 
         /* Search Filter */
-        /* Search Filter */
         .search-container {
             position: relative;
             display: none; /* Hidden by default */
@@ -259,13 +258,18 @@ export const DASHBOARD_HTML = `
             border-radius: 0.8rem;
             border: 1px solid var(--glass-border);
             margin-top: 5px;
-            /* Limit to ~3 items, hide scrollbar */
-            max-height: 140px;
+            max-height: 250px;
             overflow-y: auto;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none; /* IE/Edge */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
-        .dropdown-content::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        .dropdown-content.drop-up {
+            bottom: 100%;
+            top: auto;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+        .dropdown-content::-webkit-scrollbar { display: none; }
         .dropdown-content.show { display: block; }
         .dropdown-item {
             color: var(--text); padding: 0.7rem 1rem; text-decoration: none;
@@ -751,10 +755,27 @@ export const DASHBOARD_HTML = `
 
         function toggleDropdown(event) {
             event.stopPropagation();
-            const content = event.currentTarget.nextElementSibling;
+            const btn = event.currentTarget;
+            const content = btn.nextElementSibling;
             const isShow = content.classList.contains('show');
+            
             document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-            if (!isShow) content.classList.add('show');
+            
+            if (!isShow) {
+                // Smart positioning: check if there's space below
+                const rect = btn.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                const spaceBelow = windowHeight - rect.bottom;
+                const dropdownHeight = 200; // estimated
+
+                if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+                    content.classList.add('drop-up');
+                } else {
+                    content.classList.remove('drop-up');
+                }
+                
+                content.classList.add('show');
+            }
         }
 
         window.onclick = function (event) {
