@@ -747,13 +747,28 @@ export const DASHBOARD_HTML = `
         }
 
         async function refreshStatusDots() {
+            if (!lastData || !lastData.registry) return;
+            const hostnames = Object.keys(lastData.registry);
+            const batchSize = 40;
+            const total = hostnames.length;
+            
+            const promises = [];
+            for (let i = 0; i < total; i += batchSize) {
+                promises.push(
+                    fetch(\`/api/batch-check-nodes?token=\${TOKEN}&offset=\${i}&limit=\${batchSize}&_=\${Date.now()}\`)
+                    .then(r => r.json())
+                    .catch(() => ({}))
+                );
+            }
+
             try {
-                const res = await fetch(\`/api/batch-check-nodes?token=\${TOKEN}&_=\${Date.now()}\`);
-                const statuses = await res.json();
+                const results = await Promise.all(promises);
+                const allStatuses = Object.assign({}, ...results);
+                
                 document.querySelectorAll('.status-dot').forEach(dot => {
                     const node = dot.getAttribute('data-node');
-                    if (statuses[node] === true) { dot.className = 'status-dot online'; }
-                    else if (statuses[node] === false) { dot.className = 'status-dot offline'; }
+                    if (allStatuses[node] === true) { dot.className = 'status-dot online'; }
+                    else if (allStatuses[node] === false) { dot.className = 'status-dot offline'; }
                 });
             } catch (e) { }
         }

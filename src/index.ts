@@ -324,21 +324,6 @@ export default {
             });
         }
 
-        if (url.pathname === '/api/heartbeat' && request.method === 'GET') {
-            const hbHostname = url.searchParams.get('hostname');
-            if (!hbHostname) return new Response("Hostname required", { status: 400 });
-
-            // Atomic update for consolidated heartbeats object
-            const hbData = await env.CONFIG_KV.get('heartbeats');
-            const heartbeats = hbData ? JSON.parse(hbData) : {};
-            heartbeats[hbHostname] = Date.now();
-
-            await env.CONFIG_KV.put('heartbeats', JSON.stringify(heartbeats));
-
-            return new Response(JSON.stringify({ success: true, timestamp: heartbeats[hbHostname] }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
 
         if (url.pathname === '/api/node-proxy' && request.method === 'GET') {
             const hostname = url.searchParams.get('hostname');
@@ -384,31 +369,30 @@ export default {
         }
 
         if (url.pathname === '/api/batch-check-nodes' && request.method === 'GET') {
-            const [registryData, hbData, timeoutData] = await Promise.all([
-                env.CONFIG_KV.get('registry'),
-                env.CONFIG_KV.get('heartbeats'),
-                env.CONFIG_KV.get('heartbeat_timeout')
-            ]);
+            const offset = parseInt(url.searchParams.get('offset') || '0');
+            const limit = parseInt(url.searchParams.get('limit') || '50');
 
+            const registryData = await env.CONFIG_KV.get('registry');
             const registry = registryData ? JSON.parse(registryData) : {};
-            const heartbeats = hbData ? JSON.parse(hbData) : {};
-            const hostnames = Object.keys(registry);
+            const allHostnames = Object.keys(registry);
+            const hostnames = allHostnames.slice(offset, offset + limit);
 
-            // Get heartbeat timeout from dedicated KV key or default to 180s
-            const heartbeatTimeoutSec = timeoutData ? parseInt(timeoutData) : 180;
-
-            const now = Date.now();
             const statusMap: Record<string, boolean> = {};
-
-            for (const h of hostnames) {
-                const lastSeen = heartbeats[h];
-                if (lastSeen) {
-                    const diffSec = (now - lastSeen) / 1000;
-                    statusMap[h] = diffSec < heartbeatTimeoutSec;
-                } else {
+            await Promise.all(hostnames.map(async (h) => {
+                const nodeUrl = registry[h];
+                if (!nodeUrl) { statusMap[h] = false; return; }
+                try {
+                    // Use a HEAD request with a short timeout to check if node is responsive
+                    const resp = await fetch(nodeUrl, {
+                        method: 'HEAD',
+                        headers: { "X-API-Key": "diamon" },
+                        signal: AbortSignal.timeout(3000)
+                    });
+                    statusMap[h] = resp.ok;
+                } catch (e) {
                     statusMap[h] = false;
                 }
-            }
+            }));
 
             return new Response(JSON.stringify(statusMap), {
                 headers: {

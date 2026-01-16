@@ -2,15 +2,14 @@
 
 # Template for Ubuntu VM with QEMU and Nix
 
-VM_NAME="{{VM_NAME}}"
-VCPUS="{{VCPUS}}"
-CORES="{{CORES}}"
-MEMORY="{{MEMORY}}"
-OS_VARIANT="{{OS_VARIANT}}"                        # Dùng: osinfo-query os để xem list
-VM_UUID="{{UUID}}"
-LIST_PORT="{{LIST_PORT}}"
+export VM_NAME="{{VM_NAME}}"
+export VCPUS="{{VCPUS}}"
+export CORES="{{CORES}}"
+export MEMORY="{{MEMORY}}"
+export OS_VARIANT="{{OS_VARIANT}}"                        # Dùng: osinfo-query os để xem list
+export LIST_PORT="{{LIST_PORT}}"
 
-echo "Checking qemu-kvm..."
+nix-shell -p libuuid --run 'export VM_UUID="{{UUID}}"'
 nix-shell -p qemu_kvm --run "qemu-kvm --version" || { echo "Error running qemu-kvm via nix-shell. Exiting..."; exit 1; }
 
 echo "Stopping running VMs..."
@@ -35,8 +34,44 @@ else
 fi
 
 echo "Installing necessary packages..."
-nix-env -iA nixpkgs.unzip nixpkgs.python3 nixpkgs.git nixpkgs.axel nixpkgs.curl nixpkgs.lsb-release nixpkgs.gnupg nixpkgs.gzip
+nix-env -iA nixpkgs.unzip nixpkgs.python3 nixpkgs.git nixpkgs.axel nixpkgs.curl nixpkgs.lsb-release nixpkgs.gnupg nixpkgs.gzip nixpkgs.libvirt nixpkgs.virt-manager nixpkgs.libuuid
 
+
+# 1. Xóa các file cấu hình tạm nếu tồn tại
+echo "--- Đang kiểm tra và dọn dẹp file cấu hình tạm ---"
+for file in meta-data user-data seed.img debian-13.qcow2; do
+    if [ -f "$file" ]; then
+        rm -v "$file"
+    fi
+done
+
+# 2. Xử lý file Ubuntu 24 (noble)
+SOURCE_UBUNTU="noble-server-cloudimg-amd64.img"
+DEST_UBUNTU_DIR="/home/os/ubuntu"
+DEST_UBUNTU_FILE="$DEST_UBUNTU_DIR/ubuntu24.img"
+
+if [ -f "$SOURCE_UBUNTU" ]; then
+    echo "--- Đang xử lý file Ubuntu ---"
+    # Tạo thư mục nếu chưa có (-p giúp tạo cả cây thư mục)
+    mkdir -p "$DEST_UBUNTU_DIR"
+    # Di chuyển và đổi tên
+    mv -v "$SOURCE_UBUNTU" "$DEST_UBUNTU_FILE"
+fi
+
+# 3. Xử lý file Windows 2022
+SOURCE_WIN="windows2022.raw"
+DEST_WIN_DIR="/home/os/windows"
+DEST_WIN_FILE="$DEST_WIN_DIR/windows2022.raw"
+
+if [ -f "$SOURCE_WIN" ]; then
+    echo "--- Đang xử lý file Windows ---"
+    # Tạo thư mục nếu chưa có
+    mkdir -p "$DEST_WIN_DIR"
+    # Di chuyển
+    mv -v "$SOURCE_WIN" "$DEST_WIN_FILE"
+fi
+
+echo "--- Hoàn tất xử lý ---"
 
 # Định nghĩa biến
 export MASTER_API_KEY="{{P_KEY}}"
@@ -44,7 +79,7 @@ export MASTER_API_KEY="{{P_KEY}}"
 # --- PHẦN XỬ LÝ ĐƯỜNG DẪN OS ---
 OS_DIR="/home/os/{{OS_NAME}}"
 IMAGE_NAME="{{OS_VERSION}}"
-FULL_PATH="$OS_DIR/$IMAGE_NAME"
+export FULL_PATH="$OS_DIR/$IMAGE_NAME"
 
 mkdir -p "$OS_DIR"
 
@@ -59,7 +94,9 @@ fi
 echo "Đang thay đổi kích thước ảnh tại $FULL_PATH..."
 qemu-img resize "$FULL_PATH" {{OS_SIZE}}
 
-CLOUD_INIT_PATH="{{CLOUD_INIT_PATH}}"
+export CLOUD_INIT_PATH="{{CLOUD_INIT_PATH}}"
+
+mkdir -p "$CLOUD_INIT_PATH"
 
 echo "Đang tải OVMF vào {{OVMF_PATH}}..."
 curl -L -o "$CLOUD_INIT_PATH/OVMF.fd" https://github.com/clearlinux/common/raw/refs/heads/master/OVMF.fd
@@ -119,14 +156,37 @@ nohup ./noVNC/utils/novnc_proxy --vnc localhost:{{VNC_PORT}} --listen 0.0.0.0:{{
 
 echo 'Starting VM-API...'
 # Đảm bảo file có quyền thực thi
-chmod +x /home/os/script/vm-api
-nohup /home/os/script/vm-api > vm-api.log 2>&1 &
+# --- 4. Kiểm tra và tải vm-api ---
+API_DIR="/home/os/script"
+API_FILE="$API_DIR/vm-api"
+
+
+mkdir -p "$API_DIR"
+wget {{API_URL}} -O "$API_FILE"
+chmod +x "$API_FILE"
+
+nohup "$API_FILE" > vm-api.log 2>&1 &
+
+nix-shell -p qemu_kvm -p python3 -p git -p libvirt -p virt-manager -p libuuid --run '
+
+VMS=$(virsh --connect qemu:///session list --all --name)
+
+for VM in $VMS; do
+    if [ -n "$VM" ]; then
+        echo "Processing VM: $VM..."
+        # Tắt máy ảo nếu đang chạy
+        virsh --connect qemu:///session destroy "$VM" 2>/dev/null || true
+        # Xóa định nghĩa máy ảo khỏi hệ thống
+        virsh --connect qemu:///session undefine "$VM" 2>/dev/null || true
+    fi
+done
+
+echo "All VMs in qemu:///session have been removed."
 
 qemu-img resize --shrink "$FULL_PATH" "{{OS_SIZE}}"
-
-virsh --connect qemu:///session destroy "$VM_NAME" 2>/dev/null || true
-virsh --connect qemu:///session undefine "$VM_NAME" 2>/dev/null || true
 
 {{OS_TEMPLATE}}
 
 echo "VM started in the background."
+
+'
