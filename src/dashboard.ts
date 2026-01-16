@@ -1017,7 +1017,10 @@ export const DASHBOARD_HTML = `
             if (isLive) countdown = 30;
         };
 
-        if (TOKEN) refreshData();
+        if (TOKEN) {
+            showSection('nodes');
+            refreshData();
+        }
         else document.getElementById('auth-warning').style.display = 'block';
     </script>
 </body>
