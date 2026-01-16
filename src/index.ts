@@ -10,6 +10,16 @@ export interface Env {
 
 import { DASHBOARD_HTML } from './dashboard';
 
+async function recordLog(env: Env, msg: string) {
+    try {
+        const logsStr = await env.CONFIG_KV.get('system_logs');
+        let logs = logsStr ? JSON.parse(logsStr) : [];
+        logs.unshift({ time: Date.now(), msg });
+        if (logs.length > 50) logs = logs.slice(0, 50);
+        await env.CONFIG_KV.put('system_logs', JSON.stringify(logs));
+    } catch (e) { }
+}
+
 async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
     const url = `https://raw.githubusercontent.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/${env.GITHUB_BRANCH}/${path}`;
 
@@ -244,6 +254,7 @@ export default {
                 registryJson[regHostname] = regHost;
 
                 await env.CONFIG_KV.put('registry', JSON.stringify(registryJson));
+                await recordLog(env, `New node registered: ${regHostname}`);
 
                 return new Response(JSON.stringify({ success: true, message: `Registered ${regHostname}` }), {
                     headers: { "Content-Type": "application/json" }
@@ -299,6 +310,17 @@ export default {
             }), { headers: { "Content-Type": "application/json" } });
         }
 
+        if (url.pathname === '/api/logs' && request.method === 'GET') {
+            const val = await env.CONFIG_KV.get('system_logs');
+            return new Response(val || "[]", { headers: { "Content-Type": "application/json" } });
+        }
+
+        if (url.pathname === '/api/record-log' && request.method === 'POST') {
+            const { msg } = await request.json() as any;
+            if (msg) await recordLog(env, msg);
+            return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+        }
+
         if (url.pathname === '/api/get-kv' && request.method === 'GET') {
             const key = url.searchParams.get('key');
             if (!key) return new Response("Key required", { status: 400 });
@@ -310,6 +332,7 @@ export default {
             const { key, value } = await request.json() as any;
             if (!key) return new Response("Key required", { status: 400 });
             await env.CONFIG_KV.put(key, value);
+            await recordLog(env, `Updated config: ${key}`);
             return new Response(JSON.stringify({ success: true }), {
                 headers: { "Content-Type": "application/json" }
             });
@@ -319,6 +342,7 @@ export default {
             const { key } = await request.json() as any;
             if (!key) return new Response("Key required", { status: 400 });
             await env.CONFIG_KV.delete(key);
+            await recordLog(env, `Deleted config: ${key}`);
             return new Response(JSON.stringify({ success: true }), {
                 headers: { "Content-Type": "application/json" }
             });
@@ -350,6 +374,10 @@ export default {
 
                 // Construct the target URL with VM parameter
                 const nodeUrl = `https://${sanitizedHost}/api/${endpoint}?vm=${hostname}`;
+
+                if (['start', 'stop', 'reboot', 'destroy'].includes(endpoint)) {
+                    await recordLog(env, `Action [${endpoint.toUpperCase()}] on node: ${hostname}`);
+                }
 
                 console.log(`[Proxy] Routing to: ${nodeUrl}`);
 

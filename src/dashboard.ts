@@ -283,6 +283,25 @@ export const DASHBOARD_HTML = `
 
         .action-flex { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
 
+        /* Logs Terminal */
+        .terminal-container {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            line-height: 1.5;
+            font-size: 0.85rem;
+        }
+        .log-entry { margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; font-family: inherit; }
+        .log-time { color: var(--accent); font-size: 0.75rem; margin-right: 0.8rem; font-family: inherit; }
+
+        .dropdown-divider { height: 1px; background: var(--glass-border); margin: 0.4rem 0; }
+
         select {
             background: #0f172a; color: #818cf8; border: 1px solid var(--glass-border);
             padding: 0.5rem; border-radius: 0.5rem; font-size: 0.85rem; outline: none;
@@ -398,6 +417,7 @@ export const DASHBOARD_HTML = `
             <div class="nav-item" onclick="showSection('configs')"><i data-lucide="database"></i>KV Configs (JSON)</div>
             <div class="nav-item" onclick="showSection('ip')"><i data-lucide="globe"></i>IP Management</div>
             <div class="nav-item" onclick="showSection('cloud')"><i data-lucide="cloud"></i>Cloud-init Meta</div>
+            <div class="nav-item" onclick="showSection('logs')"><i data-lucide="terminal"></i>Logs & Activity</div>
             <div class="nav-item" onclick="showSection('global')"><i data-lucide="shield"></i>Global & Security</div>
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
@@ -464,6 +484,23 @@ export const DASHBOARD_HTML = `
                     </tr></thead>
                     <tbody></tbody>
                 </table>
+            </div>
+        </div>
+
+        <div id="section-logs" class="section">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+                <div>
+                    <h3 style="margin-bottom:1rem; opacity:0.7;">System Activity</h3>
+                    <div id="system-logs" class="terminal-container" style="background: var(--glass); color: var(--text);">
+                        <div style="opacity: 0.5;">Loading logs...</div>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:1rem; opacity:0.7;">Live Node Logs: <span id="current-log-node" style="color:var(--accent)">None</span></h3>
+                    <div id="live-logs" class="terminal-container">
+                        <div style="opacity: 0.5;">Select a node to view live logs...</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -560,6 +597,7 @@ export const DASHBOARD_HTML = `
         let groupsData = []; 
         let lastData = null;
         let currentSearch = '';
+        let previousStatuses = {};
 
         function handleSearch(val) {
             currentSearch = val.toLowerCase();
@@ -586,6 +624,7 @@ export const DASHBOARD_HTML = `
             if (id === 'ip') sectionTitle = 'IP Management';
             else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
             else if (id === 'global') sectionTitle = 'Global & Security';
+            else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; fetchSystemLogs(); }
             document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
@@ -680,6 +719,7 @@ export const DASHBOARD_HTML = `
                                 <button class="btn btn-s dropdown-trigger" onclick="toggleDropdown(event)">More</button>
                                 <div class="dropdown-content">
                                     <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')"><i data-lucide="info"></i>Info</div>
+                                    <div class="dropdown-item" onclick="viewNodeLogs('\${h}')"><i data-lucide="terminal"></i>Logs</div>
                                     <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
                                     <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
                                     <div class="dropdown-divider"></div>
@@ -765,6 +805,22 @@ export const DASHBOARD_HTML = `
                 const results = await Promise.all(promises);
                 const allStatuses = Object.assign({}, ...results);
                 
+                for (const node of hostnames) {
+                    const newStatus = allStatuses[node];
+                    const prevStatus = previousStatuses[node];
+                    
+                    if (prevStatus !== undefined && newStatus !== prevStatus) {
+                        const msg = \`Node [\${node}] is now \${newStatus ? 'ONLINE' : 'OFFLINE'}\`;
+                        fetch(\`/api/record-log?token=\${TOKEN}\`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ msg })
+                        }).catch(() => {});
+                        if (document.getElementById('section-logs').classList.contains('active')) fetchSystemLogs();
+                    }
+                    previousStatuses[node] = newStatus;
+                }
+
                 document.querySelectorAll('.status-dot').forEach(dot => {
                     const node = dot.getAttribute('data-node');
                     if (allStatuses[node] === true) { dot.className = 'status-dot online'; }
@@ -773,52 +829,76 @@ export const DASHBOARD_HTML = `
             } catch (e) { }
         }
 
-        function toggleDropdown(event) {
-            event.stopPropagation();
-            const btn = event.currentTarget;
-            const content = btn.nextElementSibling;
-            const isShow = content.classList.contains('show');
-            
-            document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-            
-            if (!isShow) {
-                // Smart positioning: check if there's space below
-                const rect = btn.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-                const spaceBelow = windowHeight - rect.bottom;
-                const dropdownHeight = 200; // estimated
+        async function fetchSystemLogs() {
+            try {
+                const res = await fetch(\`/api/logs?token=\${TOKEN}&_=\${Date.now()}\`);
+                const logs = await res.json();
+                const container = document.getElementById('system-logs');
+                container.innerHTML = logs.map(l => \`<div class="log-entry"><span class="log-time">\${new Date(l.time).toLocaleTimeString()}</span>\${l.msg}</div>\`).join('') || '<div style="opacity:0.5">No logs yet.</div>';
+            } catch(e) {}
+        }
 
-                if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
-                    content.classList.add('drop-up');
-                } else {
-                    content.classList.remove('drop-up');
-                }
-                
-                content.classList.add('show');
+        async function viewNodeLogs(h) {
+            showSection('logs');
+            const liveContainer = document.getElementById('live-logs');
+            document.getElementById('current-log-node').innerText = h;
+            liveContainer.innerHTML = '<div style="opacity:0.5">Fetching logs from ' + h + '...</div>';
+            
+            try {
+                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=logs\`);
+                const data = await res.text();
+                liveContainer.innerHTML = \`<pre style="white-space: pre-wrap; font-family: inherit;">\${data}</pre>\`;
+            } catch (e) {
+                liveContainer.innerHTML = '<div style="color:var(--danger)">Failed to fetch logs from node.</div>';
             }
         }
 
-        window.onclick = function (event) {
-            if (!event.target.matches('.dropdown-trigger')) document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+function toggleDropdown(event) {
+    event.stopPropagation();
+    const btn = event.currentTarget;
+    const content = btn.nextElementSibling;
+    const isShow = content.classList.contains('show');
+
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+
+    if (!isShow) {
+        // Smart positioning: check if there's space below
+        const rect = btn.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const spaceBelow = windowHeight - rect.bottom;
+        const dropdownHeight = 200; // estimated
+
+        if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+            content.classList.add('drop-up');
+        } else {
+            content.classList.remove('drop-up');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.table-container').forEach(c => c.addEventListener('scroll', () => {
-                document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-            }));
-        });
+        content.classList.add('show');
+    }
+}
 
-        async function copyToClipboard(text) { try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) { } }
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg; t.style.display = 'block';
-            setTimeout(() => t.style.display = 'none', 2000);
-        }
+window.onclick = function (event) {
+    if (!event.target.matches('.dropdown-trigger')) document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+}
 
-        async function fetchNodeInfo(h) {
-            document.getElementById('loader').style.display = 'block';
-            try {
-                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=nodeinfo\`);
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.table-container').forEach(c => c.addEventListener('scroll', () => {
+        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+    }));
+});
+
+async function copyToClipboard(text) { try { await navigator.clipboard.writeText(text); showToast("Copied!"); } catch (err) { } }
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2000);
+}
+
+async function fetchNodeInfo(h) {
+    document.getElementById('loader').style.display = 'block';
+    try {
+        const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=nodeinfo\`);
                 const raw = await res.text();
                 let display = raw;
                 try {
