@@ -132,8 +132,9 @@ export const DASHBOARD_HTML = `
             border: 1px solid var(--glass-border); 
             border-radius: 1.5rem;
             max-height: calc(100vh - 400px);
+            min-height: 450px; /* Ensure space for dropdowns even with 1 row */
             overflow-y: auto;
-            overflow-x: hidden; /* Prevent horizontal scroll */
+            overflow-x: hidden;
             position: relative;
             scrollbar-width: none;
             -ms-overflow-style: none;
