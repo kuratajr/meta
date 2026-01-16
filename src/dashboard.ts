@@ -154,34 +154,36 @@ export const DASHBOARD_HTML = `
             position: relative;
             flex: 1;
             min-width: 200px;
-            max-width: 350px;
-            margin: 0 1rem;
+            max-width: 400px;
+            margin: 0 1.5rem;
+            display: none; /* Hidden by default */
         }
         .search-container input {
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.2);
             border: 1px solid var(--glass-border);
-            border-radius: 0.8rem;
-            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            border-radius: 1rem;
+            padding: 0.75rem 1rem 0.75rem 2.8rem;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             outline: none;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .search-container input:focus {
             border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
         }
         .search-container i {
             position: absolute;
-            left: 0.8rem;
+            left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            width: 1rem;
-            height: 1rem;
-            opacity: 0.4;
+            width: 1.2rem;
+            height: 1.2rem;
+            opacity: 0.5;
             pointer-events: none;
+            color: var(--accent);
         }
 
         /* Status Dot */
@@ -405,15 +407,15 @@ export const DASHBOARD_HTML = `
             <strong>Authentication Error:</strong> Invalid or missing token.
         </div>
 
-        <div class="header">
-            <h1 id="section-title">Inventory & Registry</h1>
+        <div class="header" style="align-items: center;">
+            <h1 id="section-title" style="margin-bottom: 0;">Inventory & Registry</h1>
             
             <div class="search-container" id="search-wrapper">
                 <i data-lucide="search"></i>
                 <input type="text" id="table-search" placeholder="Search entries..." oninput="handleSearch(this.value)">
             </div>
 
-            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center;">
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; margin-left: auto;">
                 <div class="live-indicator" id="live-indicator">
                     <div class="live-dot" id="live-dot"></div>
                     <span id="live-text">Live: Off</span>
@@ -580,6 +582,10 @@ export const DASHBOARD_HTML = `
             document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
+
+            // Conditional search visibility
+            const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
+            document.getElementById('search-wrapper').style.display = hasTable ? 'block' : 'none';
         }
 
         async function refreshData() {
@@ -605,31 +611,52 @@ export const DASHBOARD_HTML = `
             document.getElementById('loader').style.display = 'none';
         }
 
+        function handleSearch(val) {
+            currentSearch = val.toLowerCase();
+            if (!lastData) return;
+            const activeId = document.querySelector('.section.active').id.replace('section-', '');
+            if (activeId === 'nodes') renderNodes(lastData);
+            else if (activeId === 'groups') renderGroups(lastData);
+            else if (activeId === 'ip') renderIPs(lastData);
+            else if (activeId === 'cloud') renderCloudInit(lastData);
+            else if (activeId === 'configs') renderConfigs(lastData);
+            else if (activeId === 'templates') renderTemplates(lastData);
+        }
+
         function renderUI(data) {
             groupsData = data.groups || [];
-            
             document.getElementById('stat-nodes').innerText = Object.keys(data.registry).length;
             document.getElementById('stat-groups').innerText = groupsData.length;
             document.getElementById('stat-kv').innerText = (data.templates.length + data.groupConfigs.length + data.nodeConfigs.length + data.certConfigs.length + (data.hasGlobal ? 1 : 0) + (data.cloudConfigs ? data.cloudConfigs.length : 0));
 
-            const getGroupOf = (node) => {
-                const g = groupsData.find(g => (g.listnode || "").split(',').map(s=>s.trim()).includes(node));
-                return g ? g.config : "None";
-            };
+            renderNodes(data);
+            renderGroups(data);
+            renderTemplates(data);
+            renderConfigs(data);
+            renderIPs(data);
+            renderCloudInit(data);
+            
+            document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>\` : 'None.';
+            if (window.lucide) lucide.createIcons();
+        }
 
+        const getGroupOf = (node) => {
+            const g = groupsData.find(g => (g.listnode || "").split(',').map(s=>s.trim()).includes(node));
+            return g ? g.config : "None";
+        };
+
+        function renderNodes(data) {
             const nBody = document.querySelector('#table-nodes tbody');
-            nBody.innerHTML = '';
+            let html = '';
             for (const h in data.registry) {
                 const regVal = data.registry[h];
                 const currentGroup = getGroupOf(h);
-                
-                // Filter
                 if (currentSearch && !h.toLowerCase().includes(currentSearch) && !regVal.toLowerCase().includes(currentSearch) && !currentGroup.toLowerCase().includes(currentSearch)) continue;
 
                 let groupOptions = '<option value="">None</option>';
                 groupsData.forEach(g => { groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`; });
 
-                nBody.innerHTML += \`<tr>
+                html += \`<tr>
                     <td style="font-weight:600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                         <span class="status-dot" data-node="\${h}"></span>\${h}
                     </td>
@@ -656,68 +683,59 @@ export const DASHBOARD_HTML = `
                     </td>
                 </tr>\`;
             }
-
-            const mBody = document.querySelector('#table-mapping tbody');
-            if (mBody) {
-                mBody.innerHTML = (data.groups || []).filter(g => !currentSearch || g.config.toLowerCase().includes(currentSearch) || (g.listnode || '').toLowerCase().includes(currentSearch)).map(g => \`<tr>
-                    <td style="font-weight:600;">\${g.config}</td>
-                    <td style="opacity:0.8; font-size:0.85rem;">\${g.listnode || 'None'}</td>
-                    <td>
-                        <div class="action-flex">
-                            <button class="btn btn-s" onclick="editKV('group:\${g.config}')"><i data-lucide="edit-3"></i>Edit</button>
-                            <button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')"><i data-lucide="trash"></i>Delete</button>
-                        </div>
-                    </td>
-                </tr>\`).join('');
-            }
-
-            const tGrid = document.getElementById('grid-templates');
-            if (tGrid) {
-                tGrid.innerHTML = data.templates.filter(t => !currentSearch || t.toLowerCase().includes(currentSearch)).map(t => \`<div class="card">
-                    <div style="font-weight:600; margin-bottom:0.8rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="file-text" style="color: var(--accent); width: 0.95rem; height: 0.95rem;"></i>\${t.replace('template:', '')}</div>
-                    <div class="action-flex">
-                        <button class="btn btn-s" onclick="editKV('\${t}')"><i data-lucide="edit-3"></i>Edit</button>
-                        <button class="btn btn-danger" onclick="deleteKV('\${t}')"><i data-lucide="trash"></i>Delete</button>
-                    </div>
-                </div>\`).join('');
-            }
-
+            nBody.innerHTML = html;
             refreshStatusDots();
-            document.getElementById('list-group-configs').innerHTML = data.groupConfigs.filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
-            document.getElementById('list-node-configs').innerHTML = data.nodeConfigs.filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
-            document.getElementById('list-cert-configs').innerHTML = data.certConfigs.filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
-            
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderGroups(data) {
+            const mBody = document.querySelector('#table-mapping tbody');
+            if (!mBody) return;
+            mBody.innerHTML = (data.groups || []).filter(g => !currentSearch || g.config.toLowerCase().includes(currentSearch) || (g.listnode || '').toLowerCase().includes(currentSearch)).map(g => \`<tr>
+                <td style="font-weight:600;">\${g.config}</td>
+                <td style="opacity:0.8; font-size:0.85rem;">\${g.listnode || 'None'}</td>
+                <td><div class="action-flex"><button class="btn btn-s" onclick="editKV('group:\${g.config}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('group:\${g.config}')"><i data-lucide="trash"></i>Delete</button></div></td>
+            </tr>\`).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderTemplates(data) {
+            const tGrid = document.getElementById('grid-templates');
+            if (!tGrid) return;
+            tGrid.innerHTML = data.templates.filter(t => !currentSearch || t.toLowerCase().includes(currentSearch)).map(t => \`<div class="card">
+                <div style="font-weight:600; margin-bottom:0.8rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="file-text" style="color: var(--accent); width: 0.95rem; height: 0.95rem;"></i>\${t.replace('template:', '')}</div>
+                <div class="action-flex"><button class="btn btn-s" onclick="editKV('\${t}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${t}')"><i data-lucide="trash"></i>Delete</button></div>
+            </div>\`).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderConfigs(data) {
+            const filter = (arr) => arr.filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => \`<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>\${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></div>\`).join('');
+            document.getElementById('list-group-configs').innerHTML = filter(data.groupConfigs);
+            document.getElementById('list-node-configs').innerHTML = filter(data.nodeConfigs);
+            document.getElementById('list-cert-configs').innerHTML = filter(data.certConfigs);
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderIPs(data) {
             const ipBody = document.querySelector('#table-ips tbody');
-            if (ipBody) {
-                ipBody.innerHTML = Object.keys(data.ips || {}).filter(node => !currentSearch || node.toLowerCase().includes(currentSearch) || (data.ips[node] || '').toLowerCase().includes(currentSearch)).map(node => \`<tr>
-                    <td style="font-weight:600; padding-left: 1.5rem;">ip:\${node}</td>
-                    <td class="copyable" onclick="copyToClipboard('\${data.ips[node]}')">
-                        <div style="opacity: 0.8; font-size: 0.85rem;">\${data.ips[node]}</div>
-                    </td>
-                    <td style="text-align: right; padding-right: 1.5rem;">
-                        <div class="action-flex" style="justify-content: flex-end;">
-                            <button class="btn btn-s" onclick="editIP('\${node}')"><i data-lucide="edit-3"></i>Edit</button>
-                            <button class="btn btn-danger" onclick="deleteIP('\${node}')"><i data-lucide="trash"></i>Delete</button>
-                        </div>
-                    </td>
-                </tr>\`).join('');
-            }
+            if (!ipBody) return;
+            ipBody.innerHTML = Object.keys(data.ips || {}).filter(node => !currentSearch || node.toLowerCase().includes(currentSearch) || (data.ips[node] || '').toLowerCase().includes(currentSearch)).map(node => \`<tr>
+                <td style="font-weight:600; padding-left: 1.5rem;">ip:\${node}</td>
+                <td class="copyable" onclick="copyToClipboard('\${data.ips[node]}')"><div style="opacity: 0.8; font-size: 0.85rem;">\${data.ips[node]}</div></td>
+                <td style="text-align: right; padding-right: 1.5rem;"><div class="action-flex" style="justify-content: flex-end;"><button class="btn btn-s" onclick="editIP('\${node}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteIP('\${node}')"><i data-lucide="trash"></i>Delete</button></div></td>
+            </tr>\`).join('');
+            if (window.lucide) lucide.createIcons();
+        }
 
+        function renderCloudInit(data) {
             const cloudBody = document.querySelector('#table-cloud tbody');
-            if (cloudBody) {
-                cloudBody.innerHTML = (data.cloudConfigs || []).filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => \`<tr>
-                    <td style="font-weight:600; padding-left: 1.5rem;">\${c}</td>
-                    <td><span class="badge badge-accent">KV Storage</span></td>
-                    <td style="text-align: right; padding-right: 1.5rem;">
-                        <div class="action-flex" style="justify-content: flex-end;">
-                            <button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button>
-                            <button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button>
-                        </div>
-                    </td>
-                </tr>\`).join('');
-            }
-
-            document.getElementById('global-config-area').innerHTML = data.hasGlobal ? \`<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>\` : 'None.';
+            if (!cloudBody) return;
+            cloudBody.innerHTML = (data.cloudConfigs || []).filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => \`<tr>
+                <td style="font-weight:600; padding-left: 1.5rem;">\${c}</td>
+                <td><span class="badge badge-accent">KV Storage</span></td>
+                <td style="text-align: right; padding-right: 1.5rem;"><div class="action-flex" style="justify-content: flex-end;"><button class="btn btn-s" onclick="editKV('\${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('\${c}')"><i data-lucide="trash"></i>Delete</button></div></td>
+            </tr>\`).join('');
             if (window.lucide) lucide.createIcons();
         }
 
