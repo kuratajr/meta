@@ -5,6 +5,7 @@ export interface Env {
     GITHUB_BRANCH: string;
     GITHUB_TOKEN: string;
     CONFIG_KV: KVNamespace; // Binding for Cloudflare KV
+    DB: D1Database;          // Binding for Cloudflare D1 (SQL)
     ADMIN_TOKEN?: string;   // Optional admin token for dashboard
 }
 
@@ -12,12 +13,13 @@ import { DASHBOARD_HTML } from './dashboard';
 
 async function recordLog(env: Env, msg: string, node?: string) {
     try {
-        const logsStr = await env.CONFIG_KV.get('system_logs');
-        let logs = logsStr ? JSON.parse(logsStr) : [];
-        logs.unshift({ time: Date.now(), msg, node });
-        if (logs.length > 100) logs = logs.slice(0, 100);
-        await env.CONFIG_KV.put('system_logs', JSON.stringify(logs));
-    } catch (e) { }
+        // Migration note: We are now using D1 (SQL) instead of KV for better write scaling.
+        await env.DB.prepare('INSERT INTO logs (msg, node) VALUES (?, ?)')
+            .bind(msg, node || null)
+            .run();
+    } catch (e) {
+        console.error("Failed to record log to D1:", e);
+    }
 }
 
 async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
@@ -312,12 +314,23 @@ export default {
 
         if (url.pathname === '/api/logs' && request.method === 'GET') {
             const nodeFilter = url.searchParams.get('hostname');
-            const val = await env.CONFIG_KV.get('system_logs');
-            let logs = val ? JSON.parse(val) : [];
-            if (nodeFilter) {
-                logs = logs.filter((l: any) => l.node === nodeFilter || (l.msg && l.msg.includes(nodeFilter)));
+            try {
+                let stmt;
+                if (nodeFilter) {
+                    // Search by node tag OR message content for backward compatibility/flexibility
+                    stmt = env.DB.prepare('SELECT * FROM logs WHERE node = ? OR msg LIKE ? ORDER BY id DESC LIMIT 100')
+                        .bind(nodeFilter, `%${nodeFilter}%`);
+                } else {
+                    stmt = env.DB.prepare('SELECT * FROM logs ORDER BY id DESC LIMIT 100');
+                }
+                const { results } = await stmt.all();
+
+                // Format for frontend (ensure time is in a format JS Date can parse, though D1 usually handles this)
+                // results.time might be a string like "2026-01-17 14:00:00"
+                return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
+            } catch (e) {
+                return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
             }
-            return new Response(JSON.stringify(logs), { headers: { "Content-Type": "application/json" } });
         }
 
         if (url.pathname === '/api/record-log' && request.method === 'POST') {
