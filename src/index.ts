@@ -315,7 +315,7 @@ export default {
             const val = await env.CONFIG_KV.get('system_logs');
             let logs = val ? JSON.parse(val) : [];
             if (nodeFilter) {
-                logs = logs.filter((l: any) => l.node === nodeFilter);
+                logs = logs.filter((l: any) => l.node === nodeFilter || (l.msg && l.msg.includes(nodeFilter)));
             }
             return new Response(JSON.stringify(logs), { headers: { "Content-Type": "application/json" } });
         }

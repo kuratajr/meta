@@ -300,7 +300,10 @@ export const DASHBOARD_HTML = `
             border: 1px solid var(--glass-border);
             line-height: 1.5;
             font-size: 0.85rem;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
+        .terminal-container::-webkit-scrollbar { display: none; }
         .log-entry { margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; font-family: inherit; }
         .log-time { color: var(--accent); font-size: 0.75rem; margin-right: 0.8rem; font-family: inherit; }
 
