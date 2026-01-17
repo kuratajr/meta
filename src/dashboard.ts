@@ -258,33 +258,32 @@ export const DASHBOARD_HTML = `
             position: absolute;
             right: 0;
             background-color: #1e293b;
-            min-width: 140px;
+            min-width: 130px;
             box-shadow: 0px 8px 32px rgba(0,0,0,0.5);
             z-index: 1000;
-            border-radius: 0.8rem;
+            border-radius: 1rem;
             border: 1px solid var(--glass-border);
             margin-top: 5px;
-            max-height: 250px;
+            overflow: hidden;
+        }
+        .dropdown-content.show { display: block; }
+        .dropdown-scroll-area {
+            max-height: 126px; /* Approx 3 items */
             overflow-y: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
-        .dropdown-content.drop-up {
-            bottom: 100%;
-            top: auto;
-            margin-top: 0;
-            margin-bottom: 5px;
-        }
-        .dropdown-content::-webkit-scrollbar { display: none; }
-        .dropdown-content.show { display: block; }
+        .dropdown-scroll-area::-webkit-scrollbar { display: none; }
+
         .dropdown-item {
-            color: var(--text); padding: 0.7rem 1rem; text-decoration: none;
-            display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-            font-size: 0.8rem; font-weight: 500; transition: background 0.2s;
-            cursor: pointer; text-align: center;
+            color: var(--text); padding: 0.6rem 1rem; text-decoration: none;
+            display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem;
+            font-size: 0.75rem; font-weight: 500; transition: background 0.2s;
+            cursor: pointer;
         }
-        .dropdown-item i { width: 0.8rem; height: 0.8rem; }
+        .dropdown-item i { width: 0.75rem; height: 0.75rem; opacity: 0.7; }
         .dropdown-item:hover { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
+        .dropdown-item:hover i { opacity: 1; color: var(--accent); }
 
         .action-flex { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
 
@@ -749,12 +748,14 @@ export const DASHBOARD_HTML = `
                             <div class="dropdown">
                                 <button class="btn btn-s dropdown-trigger" onclick="toggleDropdown(event)">More</button>
                                 <div class="dropdown-content">
-                                    <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')"><i data-lucide="info"></i>Info</div>
-                                    <div class="dropdown-item" onclick="viewNodeLogs('\${h}')"><i data-lucide="terminal"></i>Logs</div>
-                                    <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
-                                    <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
+                                    <div class="dropdown-scroll-area">
+                                        <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')"><i data-lucide="info"></i>Info</div>
+                                        <div class="dropdown-item" onclick="viewNodeLogs('\${h}')"><i data-lucide="terminal"></i>Logs</div>
+                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
+                                        <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
+                                    </div>
                                     <div class="dropdown-divider"></div>
-                                    <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')"><i data-lucide="trash"></i>Delete</div>
+                                    <div class="dropdown-item" style="color:var(--danger);" onclick="deleteFromRegistry('\${h}')"><i data-lucide="trash-2"></i>Delete</div>
                                 </div>
                             </div>
                         </div>
