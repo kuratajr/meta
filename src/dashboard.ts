@@ -211,6 +211,11 @@ export const DASHBOARD_HTML = `
             100% { transform: scale(1); opacity: 0.8; }
         }
 
+        /* Status Filter Logic */
+        #table-nodes.filter-online tr[data-status="offline"] { display: none; }
+        #table-nodes.filter-offline tr[data-status="online"] { display: none; }
+        #table-nodes.filter-online thead tr, #table-nodes.filter-offline thead tr { display: table-row !important; }
+
         .live-indicator {
             display: flex; align-items: center; gap: 0.5rem;
             background: rgba(255, 255, 255, 0.05); padding: 0.4rem 0.8rem;
@@ -435,6 +440,11 @@ export const DASHBOARD_HTML = `
             <h1 id="section-title" style="margin-bottom: 0;">Inventory & Registry</h1>
 
             <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; margin-left: auto;">
+                <select class="filter-select" id="status-filter" onchange="handleStatusFilter(this.value)">
+                    <option value="all">All Status</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                </select>
                 <div class="search-container" id="search-wrapper">
                     <i data-lucide="search"></i>
                     <input type="text" id="table-search" placeholder="Search entries..." oninput="handleSearch(this.value)">
@@ -598,6 +608,15 @@ export const DASHBOARD_HTML = `
         let lastData = null;
         let currentSearch = '';
         let previousStatuses = {};
+        let currentStatusFilter = 'all';
+
+        function handleStatusFilter(val) {
+            currentStatusFilter = val;
+            const table = document.getElementById('table-nodes');
+            table.classList.remove('filter-online', 'filter-offline');
+            if (val === 'online') table.classList.add('filter-online');
+            else if (val === 'offline') table.classList.add('filter-offline');
+        }
 
         function handleSearch(val) {
             currentSearch = val.toLowerCase();
@@ -702,7 +721,7 @@ export const DASHBOARD_HTML = `
                 let groupOptions = '<option value="">None</option>';
                 groupsData.forEach(g => { groupOptions += \`<option value="\${g.config}" \${g.config === currentGroup ? 'selected' : ''}>\${g.config}</option>\`; });
 
-                html += \`<tr>
+                html += \`<tr data-status="\${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
                     <td style="font-weight:600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                         <span class="status-dot" data-node="\${h}"></span>\${h}
                     </td>
@@ -823,8 +842,15 @@ export const DASHBOARD_HTML = `
 
                 document.querySelectorAll('.status-dot').forEach(dot => {
                     const node = dot.getAttribute('data-node');
-                    if (allStatuses[node] === true) { dot.className = 'status-dot online'; }
-                    else if (allStatuses[node] === false) { dot.className = 'status-dot offline'; }
+                    const row = dot.closest('tr');
+                    if (allStatuses[node] === true) { 
+                        dot.className = 'status-dot online'; 
+                        if (row) row.setAttribute('data-status', 'online');
+                    }
+                    else if (allStatuses[node] === false) { 
+                        dot.className = 'status-dot offline'; 
+                        if (row) row.setAttribute('data-status', 'offline');
+                    }
                 });
             } catch (e) { }
         }
