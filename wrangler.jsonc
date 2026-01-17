@@ -13,6 +13,13 @@
 			"id": "6234d2c5364749409f0642565766b1e0"
 		}
 	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "vps-logs-db",
+			"database_id": "cfd10145-5edf-43dd-9311-3690569a93ac"
+		}
+	],
 	"observability": {
 		"enabled": true
 	}
