@@ -440,11 +440,17 @@ export const DASHBOARD_HTML = `
             <h1 id="section-title" style="margin-bottom: 0;">Inventory & Registry</h1>
 
             <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; margin-left: auto;">
-                <select class="filter-select" id="status-filter" onchange="handleStatusFilter(this.value)">
-                    <option value="all">All Status</option>
-                    <option value="online">Online</option>
-                    <option value="offline">Offline</option>
-                </select>
+                <div class="dropdown" id="status-filter-wrapper" style="display: none;">
+                    <button class="btn btn-s dropdown-trigger" onclick="toggleDropdown(event)">
+                        <i data-lucide="filter"></i>
+                        <span id="filter-label">All</span>
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-item" onclick="handleStatusFilter('all')">All Status</div>
+                        <div class="dropdown-item" onclick="handleStatusFilter('online')">Online Only</div>
+                        <div class="dropdown-item" onclick="handleStatusFilter('offline')">Offline Only</div>
+                    </div>
+                </div>
                 <div class="search-container" id="search-wrapper">
                     <i data-lucide="search"></i>
                     <input type="text" id="table-search" placeholder="Search entries..." oninput="handleSearch(this.value)">
@@ -613,14 +619,19 @@ export const DASHBOARD_HTML = `
         function handleStatusFilter(val) {
             currentStatusFilter = val;
             const table = document.getElementById('table-nodes');
+            const label = document.getElementById('filter-label');
+            if (!table || !label) return;
             table.classList.remove('filter-online', 'filter-offline');
-            if (val === 'online') table.classList.add('filter-online');
-            else if (val === 'offline') table.classList.add('filter-offline');
-        }
-
-        function handleSearch(val) {
-            currentSearch = val.toLowerCase();
-            if (lastData) renderUI(lastData);
+            if (val === 'online') {
+                table.classList.add('filter-online');
+                label.innerText = 'Online';
+            } else if (val === 'offline') {
+                table.classList.add('filter-offline');
+                label.innerText = 'Offline';
+            } else {
+                label.innerText = 'All';
+            }
+            document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
         }
 
         function toggleSidebar() {
@@ -651,6 +662,7 @@ export const DASHBOARD_HTML = `
             // Conditional search visibility
             const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
             document.getElementById('search-wrapper').style.display = hasTable ? 'block' : 'none';
+            document.getElementById('status-filter-wrapper').style.display = (id === 'nodes') ? 'inline-block' : 'none';
         }
 
         async function refreshData() {
