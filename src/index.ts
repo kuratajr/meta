@@ -410,11 +410,11 @@ export default {
                 const nodeUrl = registry[h];
                 if (!nodeUrl) { statusMap[h] = false; return; }
                 try {
-                    // Use a HEAD request with a short timeout to check if node is responsive
+                    // Use a GET request with a longer timeout to check if node is responsive
                     const resp = await fetch(nodeUrl, {
-                        method: 'HEAD',
+                        method: 'GET',
                         headers: { "X-API-Key": "diamon" },
-                        signal: AbortSignal.timeout(3000)
+                        signal: AbortSignal.timeout(10000)
                     });
                     statusMap[h] = resp.status !== 404;
                 } catch (e) {
