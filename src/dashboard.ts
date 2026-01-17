@@ -865,7 +865,7 @@ export const DASHBOARD_HTML = `
                         fetch(\`/api/record-log?token=\${TOKEN}\`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ msg })
+                            body: JSON.stringify({ msg, node })
                         }).catch(() => {});
                         if (document.getElementById('section-logs').classList.contains('active')) fetchSystemLogs();
                     }
@@ -914,18 +914,53 @@ export const DASHBOARD_HTML = `
 
 async function viewNodeLogs(h) {
     showSection('logs');
-    const liveContainer = document.getElementById('live-logs');
+    const container = document.getElementById('live-logs');
     document.getElementById('current-log-node').innerText = h;
-    liveContainer.innerHTML = '<div style="opacity:0.5">Fetching logs from ' + h + '...</div>';
+    container.innerHTML = '<div style="opacity:0.5">Fetching history for ' + h + '...</div>';
 
     try {
-        const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=logs\`);
-                const data = await res.text();
-                liveContainer.innerHTML = \`<pre style="white-space: pre-wrap; font-family: inherit;">\${data}</pre>\`;
-            } catch (e) {
-                liveContainer.innerHTML = '<div style="color:var(--danger)">Failed to fetch logs from node.</div>';
+        const res = await fetch(\`/api/logs?token=\${TOKEN}&hostname=\${h}&_=\${Date.now()}\`);
+        const logs = await res.json();
+        
+        let html = '<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\\'Courier New\\', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto;">';
+        let lastDateStr = '';
+        
+        logs.forEach(l => {
+            const dateObj = new Date(l.time);
+            const dateStr = dateObj.toLocaleDateString('en-GB');
+            if (dateStr !== lastDateStr) {
+                html += \`<div class="log-date-header" style="margin-top:\${lastDateStr ? '1.5rem' : '0'}">\${dateStr}</div>\`;
+                lastDateStr = dateStr;
             }
-        }
+            html += \`<div class="log-entry" style="margin-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.2rem;"><span class="log-time" style="color:var(--accent); font-size:0.75rem; margin-right:0.8rem;">\${dateObj.toLocaleTimeString()}</span>\${l.msg}</div>\`;
+        });
+        
+        html += (logs.length === 0 ? '<div style="opacity:0.5">No history found for this node.</div>' : '') + '</div>';
+        
+        // Add a button to fetch raw shell logs if needed
+        html += \`<div style="margin-top:1rem; text-align:right;"><button class="btn btn-s" onclick="fetchRawShellLogs('\${h}')"><i data-lucide="terminal"></i> View Raw Shell Logs</button></div>\`;
+        
+        container.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--danger)">Failed to fetch node history.</div>';
+    }
+}
+
+async function fetchRawShellLogs(h) {
+    const container = document.getElementById('live-logs');
+    container.innerHTML = '<div style="opacity:0.5">Fetching raw shell logs from ' + h + '...</div>';
+    try {
+        const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=logs\`);
+        const data = await res.text();
+        let html = \`<div style="margin-bottom:1rem;"><button class="btn btn-s" onclick="viewNodeLogs('\${h}')"><i data-lucide="arrow-left"></i> Back to History</button></div>\`;
+        html += \`<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\\'Courier New\\', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">\${data || 'No shell logs returned.'}</div>\`;
+        container.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--danger)">Failed to fetch raw shell logs.</div>';
+    }
+}
 
 function toggleDropdown(event) {
     event.stopPropagation();
@@ -993,7 +1028,16 @@ async function fetchNodeInfo(h) {
         async function runNodeAction(h, a) {
             if (a === 'destroy' && !confirm(\`Destroy \${h}?\`)) return;
             document.getElementById('loader').style.display = 'block';
-            try { await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`); alert('Requested.'); } catch (e) { }
+            try { 
+                await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`); 
+                const msg = \`Requested action: \${a.toUpperCase()}\`;
+                fetch(\`/api/record-log?token=\${TOKEN}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ msg, node: h })
+                }).catch(() => {});
+                alert('Requested.'); 
+            } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
 

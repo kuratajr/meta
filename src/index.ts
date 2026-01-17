@@ -10,12 +10,12 @@ export interface Env {
 
 import { DASHBOARD_HTML } from './dashboard';
 
-async function recordLog(env: Env, msg: string) {
+async function recordLog(env: Env, msg: string, node?: string) {
     try {
         const logsStr = await env.CONFIG_KV.get('system_logs');
         let logs = logsStr ? JSON.parse(logsStr) : [];
-        logs.unshift({ time: Date.now(), msg });
-        if (logs.length > 50) logs = logs.slice(0, 50);
+        logs.unshift({ time: Date.now(), msg, node });
+        if (logs.length > 100) logs = logs.slice(0, 100);
         await env.CONFIG_KV.put('system_logs', JSON.stringify(logs));
     } catch (e) { }
 }
@@ -254,7 +254,7 @@ export default {
                 registryJson[regHostname] = regHost;
 
                 await env.CONFIG_KV.put('registry', JSON.stringify(registryJson));
-                await recordLog(env, `New node registered: ${regHostname}`);
+                await recordLog(env, `New node registered: ${regHostname}`, regHostname);
 
                 return new Response(JSON.stringify({ success: true, message: `Registered ${regHostname}` }), {
                     headers: { "Content-Type": "application/json" }
@@ -311,13 +311,18 @@ export default {
         }
 
         if (url.pathname === '/api/logs' && request.method === 'GET') {
+            const nodeFilter = url.searchParams.get('hostname');
             const val = await env.CONFIG_KV.get('system_logs');
-            return new Response(val || "[]", { headers: { "Content-Type": "application/json" } });
+            let logs = val ? JSON.parse(val) : [];
+            if (nodeFilter) {
+                logs = logs.filter((l: any) => l.node === nodeFilter);
+            }
+            return new Response(JSON.stringify(logs), { headers: { "Content-Type": "application/json" } });
         }
 
         if (url.pathname === '/api/record-log' && request.method === 'POST') {
-            const { msg } = await request.json() as any;
-            if (msg) await recordLog(env, msg);
+            const { msg, node } = await request.json() as any;
+            if (msg) await recordLog(env, msg, node);
             return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
         }
 
@@ -332,7 +337,8 @@ export default {
             const { key, value } = await request.json() as any;
             if (!key) return new Response("Key required", { status: 400 });
             await env.CONFIG_KV.put(key, value);
-            await recordLog(env, `Updated config: ${key}`);
+            const nodeMatch = key.match(/^node:(.+)$/);
+            await recordLog(env, `Updated config: ${key}`, nodeMatch ? nodeMatch[1] : undefined);
             return new Response(JSON.stringify({ success: true }), {
                 headers: { "Content-Type": "application/json" }
             });
@@ -342,7 +348,8 @@ export default {
             const { key } = await request.json() as any;
             if (!key) return new Response("Key required", { status: 400 });
             await env.CONFIG_KV.delete(key);
-            await recordLog(env, `Deleted config: ${key}`);
+            const nodeMatch = key.match(/^node:(.+)$/);
+            await recordLog(env, `Deleted config: ${key}`, nodeMatch ? nodeMatch[1] : undefined);
             return new Response(JSON.stringify({ success: true }), {
                 headers: { "Content-Type": "application/json" }
             });
