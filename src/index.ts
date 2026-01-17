@@ -407,15 +407,25 @@ export default {
 
             const statusMap: Record<string, boolean> = {};
             await Promise.all(hostnames.map(async (h) => {
-                const nodeUrl = registry[h];
-                if (!nodeUrl) { statusMap[h] = false; return; }
+                const host = registry[h];
+                if (!host) { statusMap[h] = false; return; }
                 try {
-                    // Use a GET request with a longer timeout to check if node is responsive
+                    // Sanitize host to include the 31465- prefix for workstation API access
+                    let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+                    if (!sanitizedHost.startsWith('8080-')) {
+                        sanitizedHost = '8080-' + sanitizedHost;
+                    }
+
+                    // Hit the nodeinfo endpoint to verify connectivity
+                    const nodeUrl = `https://${sanitizedHost}`;
                     const resp = await fetch(nodeUrl, {
                         method: 'GET',
                         headers: { "X-API-Key": "diamon" },
-                        signal: AbortSignal.timeout(10000)
+                        signal: AbortSignal.timeout(10000),
+                        redirect: 'manual'
                     });
+
+                    // Only 404 is considered OFFLINE (node strictly deleted)
                     statusMap[h] = resp.status !== 404;
                 } catch (e) {
                     statusMap[h] = false;
