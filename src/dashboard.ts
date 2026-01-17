@@ -304,6 +304,25 @@ export const DASHBOARD_HTML = `
         .log-entry { margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; font-family: inherit; }
         .log-time { color: var(--accent); font-size: 0.75rem; margin-right: 0.8rem; font-family: inherit; }
 
+        .log-date-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            margin: 1.5rem 0 0.8rem;
+            opacity: 0.5;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .log-date-header::before, .log-date-header::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--glass-border), transparent);
+        }
+
         .dropdown-divider { height: 1px; background: var(--glass-border); margin: 0.4rem 0; }
 
         select {
@@ -873,18 +892,34 @@ export const DASHBOARD_HTML = `
                 const res = await fetch(\`/api/logs?token=\${TOKEN}&_=\${Date.now()}\`);
                 const logs = await res.json();
                 const container = document.getElementById('system-logs');
-                container.innerHTML = logs.map(l => \`<div class="log-entry"><span class="log-time">\${new Date(l.time).toLocaleTimeString()}</span>\${l.msg}</div>\`).join('') || '<div style="opacity:0.5">No logs yet.</div>';
+                
+                let html = '';
+                let lastDateStr = '';
+                
+                logs.forEach(l => {
+                    const dateObj = new Date(l.time);
+                    const dateStr = dateObj.toLocaleDateString('en-GB'); // DD/MM/YYYY
+                    
+                    if (dateStr !== lastDateStr) {
+                        html += \`<div class="log-date-header">\${dateStr}</div>\`;
+                        lastDateStr = dateStr;
+                    }
+                    
+                    html += \`<div class="log-entry"><span class="log-time">\${dateObj.toLocaleTimeString()}</span>\${l.msg}</div>\`;
+                });
+                
+                container.innerHTML = html || '<div style="opacity:0.5">No logs yet.</div>';
             } catch(e) {}
         }
 
-        async function viewNodeLogs(h) {
-            showSection('logs');
-            const liveContainer = document.getElementById('live-logs');
-            document.getElementById('current-log-node').innerText = h;
-            liveContainer.innerHTML = '<div style="opacity:0.5">Fetching logs from ' + h + '...</div>';
-            
-            try {
-                const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=logs\`);
+async function viewNodeLogs(h) {
+    showSection('logs');
+    const liveContainer = document.getElementById('live-logs');
+    document.getElementById('current-log-node').innerText = h;
+    liveContainer.innerHTML = '<div style="opacity:0.5">Fetching logs from ' + h + '...</div>';
+
+    try {
+        const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=logs\`);
                 const data = await res.text();
                 liveContainer.innerHTML = \`<pre style="white-space: pre-wrap; font-family: inherit;">\${data}</pre>\`;
             } catch (e) {
