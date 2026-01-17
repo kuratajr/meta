@@ -416,7 +416,7 @@ export default {
                         headers: { "X-API-Key": "diamon" },
                         signal: AbortSignal.timeout(3000)
                     });
-                    statusMap[h] = resp.ok;
+                    statusMap[h] = resp.status !== 404;
                 } catch (e) {
                     statusMap[h] = false;
                 }
