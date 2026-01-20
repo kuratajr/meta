@@ -963,16 +963,16 @@ export const DASHBOARD_HTML = `
             if (!val) { resetSystemLogs(); return; }
             logState.system.date = val;
             
+            // Check if date header exists in currently loaded logs
             const parts = val.split('-');
-            if (parts.length !== 3) return;
             const searchStr = parts[2] + '/' + parts[1] + '/' + parts[0];
-            
             const headers = Array.from(document.querySelectorAll('#system-logs .log-date-header'));
             const target = headers.find(h => h.innerText.trim() === searchStr);
             
             if (target) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
+                // Not in current list, let's "Jump" to that date
                 fetchSystemLogs(false);
             }
         }
@@ -1379,6 +1379,11 @@ async function fetchNodeInfo(h) {
         };
 
         if (TOKEN) {
+            // Set initial date picker to today
+            const today = new Date().toISOString().split('T')[0];
+            const systemLogDateInput = document.getElementById('system-log-date');
+            if (systemLogDateInput) systemLogDateInput.value = today;
+            
             showSection('nodes');
             refreshData();
         }
