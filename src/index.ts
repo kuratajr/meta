@@ -314,21 +314,36 @@ export default {
 
         if (url.pathname === '/api/logs' && request.method === 'GET') {
             const nodeFilter = url.searchParams.get('hostname');
-            try {
-                let stmt;
-                if (nodeFilter) {
-                    // Search by node tag OR message content for backward compatibility/flexibility
-                    stmt = env.DB.prepare('SELECT * FROM logs WHERE node = ? OR msg LIKE ? ORDER BY id DESC LIMIT 100')
-                        .bind(nodeFilter, `%${nodeFilter}%`);
-                } else {
-                    stmt = env.DB.prepare('SELECT * FROM logs ORDER BY id DESC LIMIT 100');
-                }
-                const { results } = await stmt.all();
+            const dateFilter = url.searchParams.get('date'); // YYYY-MM-DD
+            const limit = parseInt(url.searchParams.get('limit') || '100');
+            const offset = parseInt(url.searchParams.get('offset') || '0');
 
-                // Format for frontend (ensure time is in a format JS Date can parse, though D1 usually handles this)
-                // results.time might be a string like "2026-01-17 14:00:00"
+            try {
+                let query = 'SELECT * FROM logs';
+                let params: any[] = [];
+                let conditions: string[] = [];
+
+                if (nodeFilter) {
+                    conditions.push('(node = ? OR msg LIKE ?)');
+                    params.push(nodeFilter, `%${nodeFilter}%`);
+                }
+
+                if (dateFilter) {
+                    conditions.push('DATE(time) = ?');
+                    params.push(dateFilter);
+                }
+
+                if (conditions.length > 0) {
+                    query += ' WHERE ' + conditions.join(' AND ');
+                }
+
+                query += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+                params.push(limit, offset);
+
+                const { results } = await env.DB.prepare(query).bind(...params).all();
                 return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
-            } catch (e) {
+            } catch (e: any) {
+                console.error("D1 Query Error:", e.message);
                 return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
             }
         }

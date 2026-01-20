@@ -527,14 +527,23 @@ export const DASHBOARD_HTML = `
         <div id="section-logs" class="section">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
                 <div>
-                    <h3 style="margin-bottom:1rem; opacity:0.7;">System Activity</h3>
-                    <div id="system-logs" class="terminal-container" style="background: var(--glass); color: var(--text);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="opacity:0.7; margin:0;">System Activity</h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="date" id="system-log-date" class="btn-s" style="background: var(--glass); border: 1px solid var(--glass-border); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 0.5rem; font-size: 0.8rem;" onchange="handleSystemDateChange(this.value)">
+                            <button class="btn btn-s" onclick="resetSystemLogs()" title="Reset Filter"><i data-lucide="rotate-ccw" style="width:1rem; height:1rem;"></i></button>
+                        </div>
+                    </div>
+                    <div id="system-logs" class="terminal-container" style="height: 500px;" onscroll="handleLogScroll(event, 'system')">
                         <div style="opacity: 0.5;">Loading logs...</div>
                     </div>
                 </div>
                 <div>
-                    <h3 style="margin-bottom:1rem; opacity:0.7;">Live Node Logs: <span id="current-log-node" style="color:var(--accent)">None</span></h3>
-                    <div id="live-logs" class="terminal-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="opacity:0.7; margin:0;">Live Node Logs: <span id="current-log-node" style="color:var(--accent)">None</span></h3>
+                        <button class="btn btn-s" onclick="resetLiveLogs()" id="btn-reset-live" style="display:none;" title="Clear filter"><i data-lucide="x" style="width:1rem; height:1rem;"></i></button>
+                    </div>
+                    <div id="live-logs" class="terminal-container" style="height: 500px;" onscroll="handleLogScroll(event, 'live')">
                         <div style="opacity: 0.5;">Select a node to view live logs...</div>
                     </div>
                 </div>
@@ -637,6 +646,12 @@ export const DASHBOARD_HTML = `
         let previousStatuses = {};
         let currentStatusFilter = 'all';
 
+        // Log states for pagination
+        let logState = {
+            system: { offset: 0, date: '', hostname: '', loading: false, hasMore: true, lastDateStr: '' },
+            live: { offset: 0, date: '', hostname: '', loading: false, hasMore: true, lastDateStr: '' }
+        };
+
         function handleStatusFilter(val) {
             currentStatusFilter = val;
             const table = document.getElementById('table-nodes');
@@ -675,7 +690,7 @@ export const DASHBOARD_HTML = `
             if (id === 'ip') sectionTitle = 'IP Management';
             else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
             else if (id === 'global') sectionTitle = 'Global & Security';
-            else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; fetchSystemLogs(); }
+            else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; resetSystemLogs(); }
             document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
@@ -890,65 +905,169 @@ export const DASHBOARD_HTML = `
             } catch (e) { }
         }
 
-        async function fetchSystemLogs() {
+        async function fetchSystemLogs(append = false) {
+            const state = logState.system;
+            if (state.loading || (!append && !state.hasMore && state.offset > 0)) return;
+            
+            const container = document.getElementById('system-logs');
+            if (!append) {
+                container.innerHTML = '<div style="opacity: 0.5;">Loading logs...</div>';
+                state.offset = 0;
+                state.hasMore = true;
+                state.lastDateStr = '';
+            }
+
+            state.loading = true;
             try {
-                const res = await fetch(\`/api/logs?token=\${TOKEN}&_=\${Date.now()}\`);
+                let url = \`/api/logs?token=\${TOKEN}&offset=\${state.offset}&limit=100\`;
+                if (state.date) url += \`&date=\${state.date}\`;
+                
+                const res = await fetch(\`\${url}&_=\${Date.now()}\`);
                 const logs = await res.json();
-                const container = document.getElementById('system-logs');
+                
+                if (logs.length < 100) state.hasMore = false;
                 
                 let html = '';
-                let lastDateStr = '';
                 
                 logs.forEach(l => {
                     const dateObj = new Date(l.time);
-                    const dateStr = dateObj.toLocaleDateString('en-GB'); // DD/MM/YYYY
+                    const dateStr = dateObj.toLocaleDateString('en-GB');
                     
-                    if (dateStr !== lastDateStr) {
+                    if (dateStr !== state.lastDateStr) {
                         html += \`<div class="log-date-header">\${dateStr}</div>\`;
-                        lastDateStr = dateStr;
+                        state.lastDateStr = dateStr;
                     }
                     
                     html += \`<div class="log-entry"><span class="log-time">\${dateObj.toLocaleTimeString()}</span>\${l.msg}</div>\`;
                 });
                 
-                container.innerHTML = html || '<div style="opacity:0.5">No logs yet.</div>';
-            } catch(e) {}
+                if (!append) {
+                    container.innerHTML = html || '<div style="opacity:0.5">No logs yet.</div>';
+                } else {
+                    if (logs.length > 0) {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = html;
+                        while (temp.firstChild) container.appendChild(temp.firstChild);
+                    }
+                }
+                
+                state.offset += logs.length;
+            } catch(e) {
+                console.error("Fetch system logs error:", e);
+            } finally {
+                state.loading = false;
+            }
         }
 
-async function viewNodeLogs(h) {
-    showSection('logs');
-    const container = document.getElementById('live-logs');
-    document.getElementById('current-log-node').innerText = h;
-    container.innerHTML = '<div style="opacity:0.5">Fetching history for ' + h + '...</div>';
-
-    try {
-        const res = await fetch(\`/api/logs?token=\${TOKEN}&hostname=\${h}&_=\${Date.now()}\`);
-        const logs = await res.json();
-        
-        let html = '<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\\'Courier New\\', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto;">';
-        let lastDateStr = '';
-        
-        logs.forEach(l => {
-            const dateObj = new Date(l.time);
-            const dateStr = dateObj.toLocaleDateString('en-GB');
-            if (dateStr !== lastDateStr) {
-                html += \`<div class="log-date-header" style="margin-top:\${lastDateStr ? '1.5rem' : '0'}">\${dateStr}</div>\`;
-                lastDateStr = dateStr;
+        function handleSystemDateChange(val) {
+            if (!val) { resetSystemLogs(); return; }
+            logState.system.date = val;
+            
+            const parts = val.split('-');
+            if (parts.length !== 3) return;
+            const searchStr = parts[2] + '/' + parts[1] + '/' + parts[0];
+            
+            const headers = Array.from(document.querySelectorAll('#system-logs .log-date-header'));
+            const target = headers.find(h => h.innerText.trim() === searchStr);
+            
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                fetchSystemLogs(false);
             }
-            html += \`<div class="log-entry" style="margin-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.2rem;"><span class="log-time" style="color:var(--accent); font-size:0.75rem; margin-right:0.8rem;">\${dateObj.toLocaleTimeString()}</span>\${l.msg}</div>\`;
-        });
-        
-        html += (logs.length === 0 ? '<div style="opacity:0.5">No history found for this node.</div>' : '') + '</div>';
-        
-        // Add a button to fetch raw shell logs if needed
-        html += \`<div style="margin-top:1rem; text-align:right;"><button class="btn btn-s" onclick="fetchRawShellLogs('\${h}')"><i data-lucide="terminal"></i> View Raw Shell Logs</button></div>\`;
-        
-        container.innerHTML = html;
-        if (window.lucide) lucide.createIcons();
-    } catch (e) {
-        container.innerHTML = '<div style="color:var(--danger)">Failed to fetch node history.</div>';
-    }
-}
+        }
+
+        function resetSystemLogs() {
+            logState.system.date = '';
+            document.getElementById('system-log-date').value = '';
+            fetchSystemLogs(false);
+        }
+
+        function handleLogScroll(e, type) {
+            const el = e.target;
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
+                if (type === 'system' && logState.system.hasMore) {
+                    fetchSystemLogs(true);
+                } else if (type === 'live' && logState.live.hasMore) {
+                    fetchLiveNodeLogs(logState.live.hostname, true);
+                }
+            }
+        }
+
+        async function viewNodeLogs(h) {
+            showSection('logs');
+            logState.live.hostname = h;
+            logState.live.offset = 0;
+            logState.live.hasMore = true;
+            logState.live.lastDateStr = '';
+            document.getElementById('btn-reset-live').style.display = 'block';
+            fetchLiveNodeLogs(h, false);
+        }
+
+        function resetLiveLogs() {
+            logState.live.hostname = '';
+            document.getElementById('current-log-node').innerText = 'None';
+            document.getElementById('live-logs').innerHTML = '<div style="opacity: 0.5;">Select a node to view live logs...</div>';
+            document.getElementById('btn-reset-live').style.display = 'none';
+        }
+
+        async function fetchLiveNodeLogs(h, append = false) {
+            const state = logState.live;
+            if (state.loading) return;
+
+            const container = document.getElementById('live-logs');
+            document.getElementById('current-log-node').innerText = h;
+            
+            if (!append) {
+                container.innerHTML = '<div style="opacity:0.5">Fetching history for ' + h + '...</div>';
+                state.offset = 0;
+                state.hasMore = true;
+                state.lastDateStr = '';
+            }
+
+            state.loading = true;
+            try {
+                const res = await fetch(\`/api/logs?token=\${TOKEN}&hostname=\${h}&offset=\${state.offset}&limit=100&_=\${Date.now()}\`);
+                const logs = await res.json();
+                
+                if (logs.length < 100) state.hasMore = false;
+
+                let html = '';
+                if (!append) {
+                    html += '<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\\'Courier New\\', Courier, monospace; min-height:400px;">';
+                }
+                
+                logs.forEach(l => {
+                    const dateObj = new Date(l.time);
+                    const dateStr = dateObj.toLocaleDateString('en-GB');
+                    if (dateStr !== state.lastDateStr) {
+                        html += \`<div class="log-date-header" style="margin-top:\${state.lastDateStr ? '1.5rem' : '0'}">\${dateStr}</div>\`;
+                        state.lastDateStr = dateStr;
+                    }
+                    html += \`<div class="log-entry" style="margin-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.2rem;"><span class="log-time" style="color:var(--accent); font-size:0.75rem; margin-right:0.8rem;">\${dateObj.toLocaleTimeString()}</span>\${l.msg}</div>\`;
+                });
+                
+                if (!append) {
+                    html += (logs.length === 0 ? '<div style="opacity:0.5">No history found for this node.</div>' : '') + '</div>';
+                    html += \`<div style="margin-top:1rem; text-align:right;"><button class="btn btn-s" onclick="fetchRawShellLogs('\${h}')"><i data-lucide="terminal"></i> View Raw Shell Logs</button></div>\`;
+                    container.innerHTML = html;
+                } else {
+                    const innerContainer = container.querySelector('div[style*="background:#000"]');
+                    if (innerContainer && logs.length > 0) {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = html;
+                        while (temp.firstChild) innerContainer.appendChild(temp.firstChild);
+                    }
+                }
+
+                state.offset += logs.length;
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                if (!append) container.innerHTML = '<div style="color:var(--danger)">Failed to fetch node history.</div>';
+            } finally {
+                state.loading = false;
+            }
+        }
 
 async function fetchRawShellLogs(h) {
     const container = document.getElementById('live-logs');
