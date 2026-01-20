@@ -329,7 +329,9 @@ export default {
                 }
 
                 if (dateFilter) {
-                    conditions.push('DATE(time) = ?');
+                    // Logic: "Jump to date" - show the selected date and all older logs
+                    // We use DATE(?, '+1 day') to get logs starting from the very end of the selected day
+                    conditions.push("time < DATE(?, '+1 day')");
                     params.push(dateFilter);
                 }
 
