@@ -907,7 +907,8 @@ export const DASHBOARD_HTML = `
 
         async function fetchSystemLogs(append = false) {
             const state = logState.system;
-            if (state.loading || (!append && !state.hasMore && state.offset > 0)) return;
+            if (state.loading) return;
+            if (append && !state.hasMore) return;
             
             const container = document.getElementById('system-logs');
             if (!append) {
@@ -918,6 +919,7 @@ export const DASHBOARD_HTML = `
             }
 
             state.loading = true;
+            container.style.opacity = '0.6';
             try {
                 let url = \`/api/logs?token=\${TOKEN}&offset=\${state.offset}&limit=100\`;
                 if (state.date) url += \`&date=\${state.date}\`;
@@ -956,6 +958,7 @@ export const DASHBOARD_HTML = `
                 console.error("Fetch system logs error:", e);
             } finally {
                 state.loading = false;
+                container.style.opacity = '1';
             }
         }
 
@@ -963,18 +966,8 @@ export const DASHBOARD_HTML = `
             if (!val) { resetSystemLogs(); return; }
             logState.system.date = val;
             
-            // Check if date header exists in currently loaded logs
-            const parts = val.split('-');
-            const searchStr = parts[2] + '/' + parts[1] + '/' + parts[0];
-            const headers = Array.from(document.querySelectorAll('#system-logs .log-date-header'));
-            const target = headers.find(h => h.innerText.trim() === searchStr);
-            
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                // Not in current list, let's "Jump" to that date
-                fetchSystemLogs(false);
-            }
+            // Just always jump to the date to ensure fresh results and context
+            fetchSystemLogs(false);
         }
 
         function resetSystemLogs() {
@@ -1016,6 +1009,7 @@ export const DASHBOARD_HTML = `
         async function fetchLiveNodeLogs(h, append = false) {
             const state = logState.live;
             if (state.loading) return;
+            if (append && !state.hasMore) return;
 
             const container = document.getElementById('live-logs');
             document.getElementById('current-log-node').innerText = h;
