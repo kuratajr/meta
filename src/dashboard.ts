@@ -648,7 +648,7 @@ export const DASHBOARD_HTML = `
 
         // Log states for pagination
         let logState = {
-            system: { offset: 0, date: '', hostname: '', loading: false, hasMore: true, lastDateStr: '' },
+            system: { offset: 0, date: new Date().toLocaleDateString('en-CA'), hostname: '', loading: false, hasMore: true, lastDateStr: '' },
             live: { offset: 0, date: '', hostname: '', loading: false, hasMore: true, lastDateStr: '' }
         };
 
@@ -978,8 +978,10 @@ export const DASHBOARD_HTML = `
         }
 
         function resetSystemLogs() {
-            logState.system.date = '';
-            document.getElementById('system-log-date').value = '';
+            const today = new Date().toLocaleDateString('en-CA');
+            logState.system.date = today;
+            const input = document.getElementById('system-log-date');
+            if (input) input.value = today;
             fetchSystemLogs(false);
         }
 
@@ -1379,8 +1381,8 @@ async function fetchNodeInfo(h) {
         };
 
         if (TOKEN) {
-            // Set initial date picker to today
-            const today = new Date().toISOString().split('T')[0];
+            // Set initial date picker to today (local time)
+            const today = new Date().toLocaleDateString('en-CA');
             const systemLogDateInput = document.getElementById('system-log-date');
             if (systemLogDateInput) systemLogDateInput.value = today;
             
