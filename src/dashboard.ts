@@ -1366,6 +1366,7 @@ async function deleteKV(key) {
             document.getElementById('info-container').style.display = mode === 'info' ? 'block' : 'none';
 
             document.getElementById('modal-default-btns').style.display = mode !== 'confirm' ? 'flex' : 'none';
+            document.getElementById('modal-save-btn').style.display = mode === 'editor' ? 'block' : 'none';
             document.getElementById('modal-confirm-btns').style.display = mode === 'confirm' ? 'flex' : 'none';
 
             if (mode === 'confirm' && onConfirm) {
