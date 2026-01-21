@@ -7,9 +7,6 @@ export const DASHBOARD_HTML = `
     <title>VPS Cloud Control Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -432,7 +429,7 @@ export const DASHBOARD_HTML = `
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             position: relative;
         }
-        #terminal-container { width: 100%; height: 100%; padding: 12px; box-sizing: border-box; }
+        .terminal-iframe { width: 100%; height: 100%; border: none; }
         .overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
             display: none; backdrop-filter: blur(2px);
@@ -654,8 +651,8 @@ export const DASHBOARD_HTML = `
                     <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
                 </div>
             </div>
-            <div class="terminal-iframe-container" id="terminal-container">
-                <!-- Xterm.js will render here -->
+            <div class="terminal-iframe-container">
+                <iframe id="terminal-section-iframe" class="terminal-iframe"></iframe>
             </div>
         </div>
     </main>
@@ -1429,97 +1426,23 @@ async function deleteKV(key) {
             document.getElementById('modal').style.display = 'flex';
         }
 
-        let xterm = null;
-        let xtermSocket = null;
-        let xtermFit = null;
-
         function openTerminal(h, hostUrl) {
-            const terminalContainer = document.getElementById('terminal-container');
+            const terminalIframe = document.getElementById('terminal-section-iframe');
             const terminalTitle = document.getElementById('terminal-section-title');
             const newTabBtn = document.getElementById('terminal-new-tab-btn');
 
-            if (!terminalContainer || !terminalTitle || !newTabBtn) return;
+            if (!terminalIframe || !terminalTitle || !newTabBtn) return;
 
             terminalTitle.innerText = \`Terminal: \${h}\`;
             
+            // Link dự phòng cho tab mới
             const originUrl = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
             newTabBtn.dataset.url = originUrl;
 
+            // Dùng Proxy với Token-in-Path để vượt rào CSP & X-Frame
+            terminalIframe.src = \`/terminal-proxy/\${TOKEN}/\${h}/\`;
+
             showSection('terminal');
-
-            if (!xterm) {
-                // @ts-ignore
-                xterm = new Terminal({
-                    cursorBlink: true,
-                    theme: {
-                        background: '#0a0a0a',
-                        foreground: '#ffffff',
-                        cursor: '#6366f1',
-                        selectionBackground: 'rgba(99, 102, 241, 0.3)'
-                    },
-                    fontSize: 14,
-                    fontFamily: '"Fira Code", monospace'
-                });
-                // @ts-ignore
-                xtermFit = new FitAddon.FitAddon();
-                xterm.loadAddon(xtermFit);
-                xterm.open(terminalContainer);
-                
-                window.addEventListener('resize', () => {
-                    xtermFit.fit();
-                    sendResize();
-                });
-            }
-
-            xterm.reset();
-            setTimeout(() => {
-                xtermFit.fit();
-                sendResize();
-            }, 200);
-
-            if (xtermSocket) xtermSocket.close();
-            
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsPath = \`/terminal-proxy/\${TOKEN}/\${h}/ws\`;
-            const wsUrl = \`\${protocol}//\${window.location.host}\${wsPath}\`;
-            
-            xtermSocket = new WebSocket(wsUrl);
-            xtermSocket.binaryType = 'arraybuffer';
-
-            xtermSocket.onopen = () => {
-                xterm.write('\\r\\n\\x1b[1;32mCONNECTED TO TERMINAL PROXY\\x1b[0m\\r\\n');
-                sendResize();
-            };
-
-            xtermSocket.onmessage = (event) => {
-                const raw = new Uint8Array(event.data);
-                const cmd = String.fromCharCode(raw[0]);
-                const data = raw.slice(1);
-                if (cmd === '0') xterm.write(data);
-            };
-
-            xtermSocket.onclose = () => {
-                xterm.write('\\r\\n\\x1b[1;31mCONNECTION CLOSED\\x1b[0m\\r\\n');
-            };
-
-            xterm.onData((data) => {
-                if (xtermSocket && xtermSocket.readyState === WebSocket.OPEN) {
-                    const payload = new Uint8Array(data.length + 1);
-                    payload[0] = '0'.charCodeAt(0);
-                    for (let i = 0; i < data.length; i++) payload[i+1] = data.charCodeAt(i);
-                    xtermSocket.send(payload);
-                }
-            });
-
-            function sendResize() {
-                if (xterm && xtermSocket && xtermSocket.readyState === WebSocket.OPEN) {
-                    const msg = JSON.stringify({ columns: xterm.cols, rows: xterm.rows });
-                    const payload = new Uint8Array(msg.length + 1);
-                    payload[0] = '1'.charCodeAt(0);
-                    for (let i = 0; i < msg.length; i++) payload[i+1] = msg.charCodeAt(i);
-                    xtermSocket.send(payload);
-                }
-            }
         }
 
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
