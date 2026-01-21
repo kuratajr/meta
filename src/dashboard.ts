@@ -416,28 +416,20 @@ export const DASHBOARD_HTML = `
             .btn { min-width: 60px; padding: 0.4rem 0.6rem; }
         }
 
-        /* Terminal Sidebar */
-        .terminal-sidebar {
-            position: fixed; top: 0; right: -70%; width: 70%; height: 100%;
-            background: #0f172a; border-left: 1px solid var(--glass-border);
-            z-index: 25000; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex; flex-direction: column;
-            box-shadow: -20px 0 50px rgba(0,0,0,0.5);
-        }
-        .terminal-sidebar.open { right: 0; }
-        .terminal-header {
-            padding: 1.25rem 2rem; background: #1e293b; border-bottom: 1px solid var(--glass-border);
+        /* Terminal Section */
+        #section-terminal { height: calc(100vh - 200px); display: none; flex-direction: column; }
+        #section-terminal.active { display: flex; }
+        .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 1.5rem; background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 1rem 1rem 0 0;
         }
-        .terminal-body { flex: 1; background: #000; position: relative; }
+        .terminal-iframe-container {
+            flex: 1; background: #000; border: 1px solid var(--glass-border);
+            border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
+            position: relative;
+        }
         .terminal-iframe { width: 100%; height: 100%; border: none; }
-        
-        .terminal-controls { display: flex; gap: 1rem; align-items: center; }
-        .sidebar-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.4); 
-            backdrop-filter: blur(4px); z-index: 24000; display: none;
-        }
-        .sidebar-overlay.show { display: block; }
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
             display: none; backdrop-filter: blur(2px);
         }
@@ -453,22 +445,6 @@ export const DASHBOARD_HTML = `
     <div class="loader" id="loader"></div>
     <div id="toast">Copied!</div>
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-    <div class="sidebar-overlay" id="terminal-overlay" onclick="closeTerminal()"></div>
-
-    <div class="terminal-sidebar" id="terminal-sidebar">
-        <div class="terminal-header">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <i data-lucide="terminal" style="color: var(--accent);"></i>
-                <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-node-name">Terminal</h3>
-            </div>
-            <div class="terminal-controls">
-                <button class="btn btn-s" onclick="closeTerminal()" title="Close Terminal"><i data-lucide="x"></i>Close</button>
-            </div>
-        </div>
-        <div class="terminal-body">
-            <iframe id="terminal-iframe" class="terminal-iframe"></iframe>
-        </div>
-    </div>
     
     <div class="mobile-toggle" onclick="toggleSidebar()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -664,6 +640,19 @@ export const DASHBOARD_HTML = `
                      <div id="list-cert-configs" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
                 </div>
             </div>
+        <div id="section-terminal" class="section">
+            <div class="terminal-header-bar">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button class="btn btn-s" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i>Back to Nodes</button>
+                    <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-section-title">Terminal: None</h3>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
+                </div>
+            </div>
+            <div class="terminal-iframe-container">
+                <iframe id="terminal-section-iframe" class="terminal-iframe"></iframe>
+            </div>
         </div>
     </main>
 
@@ -749,6 +738,12 @@ export const DASHBOARD_HTML = `
             else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
             else if (id === 'global') sectionTitle = 'Global & Security';
             else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; resetSystemLogs(); }
+            else if (id === 'terminal') sectionTitle = 'Remote Terminal';
+
+            // Clear terminal iframe if leaving terminal section
+            const termIframe = document.getElementById('terminal-section-iframe');
+            if (id !== 'terminal' && termIframe) termIframe.src = '';
+
             document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
@@ -1424,30 +1419,19 @@ async function deleteKV(key) {
         }
 
         function openTerminal(h, hostUrl) {
-            const terminalSidebar = document.getElementById('terminal-sidebar');
-            const terminalOverlay = document.getElementById('terminal-overlay');
-            const terminalIframe = document.getElementById('terminal-iframe');
-            const terminalNodeName = document.getElementById('terminal-node-name');
+            const terminalIframe = document.getElementById('terminal-section-iframe');
+            const terminalTitle = document.getElementById('terminal-section-title');
+            const newTabBtn = document.getElementById('terminal-new-tab-btn');
 
-            if (!terminalSidebar || !terminalOverlay || !terminalIframe || !terminalNodeName) return;
+            if (!terminalIframe || !terminalTitle || !newTabBtn) return;
 
-            terminalNodeName.innerText = \`Terminal: \${h}\`;
-            // Construction of terminal URL: prepend 8877- to the host
+            terminalTitle.innerText = \`Terminal: \${h}\`;
             const url = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
+            
+            newTabBtn.dataset.url = url;
             terminalIframe.src = url;
 
-            terminalSidebar.classList.add('open');
-            terminalOverlay.classList.add('show');
-        }
-
-        function closeTerminal() {
-            const terminalSidebar = document.getElementById('terminal-sidebar');
-            const terminalOverlay = document.getElementById('terminal-overlay');
-            const terminalIframe = document.getElementById('terminal-iframe');
-
-            if (terminalSidebar) terminalSidebar.classList.remove('open');
-            if (terminalOverlay) terminalOverlay.classList.remove('show');
-            if (terminalIframe) terminalIframe.src = '';
+            showSection('terminal');
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
