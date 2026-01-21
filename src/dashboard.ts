@@ -1231,6 +1231,8 @@ async function deleteFromRegistry(h) {
             } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
+    });
+}
 
 async function editKV(k) {
     currentKey = k; isNew = false;
@@ -1325,6 +1327,8 @@ async function deleteIP(node) {
             } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
+    });
+}
 
 async function deleteKV(key) {
     showModal({
@@ -1347,6 +1351,8 @@ async function deleteKV(key) {
             } catch (e) { }
             document.getElementById('loader').style.display = 'none';
         }
+    });
+}
 
         function showModal({ title, message, content, mode, onConfirm }) {
             document.getElementById('modal-title').innerText = title || 'Notification';
