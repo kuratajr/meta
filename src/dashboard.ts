@@ -351,7 +351,9 @@ export const DASHBOARD_HTML = `
             width: 100%; height: 400px; background: #0f172a; color: #10b981; border: 1px solid var(--glass-border);
             border-radius: 1rem; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.9rem;
             margin: 1.5rem 0; resize: none; outline: none;
+            scrollbar-width: none; -ms-overflow-style: none;
         }
+        #editor-container textarea::-webkit-scrollbar { display: none; }
         #info-container pre {
             background: #0f172a; color: #10b981; padding: 1.5rem; border-radius: 1rem;
             font-family: 'Fira Code', monospace; font-size: 0.95rem; line-height: 1.6;
