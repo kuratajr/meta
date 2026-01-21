@@ -1,6 +1,8 @@
 /// <reference types="@cloudflare/workers-types" />
 // @ts-ignore
 declare const HTMLRewriter: any;
+// @ts-ignore
+declare const WebSocketPair: any;
 
 export interface Env {
     GITHUB_OWNER: string;
@@ -297,13 +299,28 @@ export default {
 
             const targetUrl = `https://8877-${host}/${remainingPath}`;
             const headers = new Headers(request.headers);
-            headers.set('Host', `8877-${host}`);
+            const targetHost = `8877-${host}`;
+            headers.set('Host', targetHost);
+            headers.set('Origin', `https://${targetHost}`);
             headers.delete('cf-ray');
             headers.delete('cf-connecting-ip');
-
-            // Handle WebSocket
+            // Handle WebSocket Upgrade (Tunneling)
             if (headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-                return fetch(targetUrl, { headers });
+                const [client, server] = new WebSocketPair() as [any, any];
+                const targetHost = `8877-${host}`;
+                headers.set('Host', targetHost);
+                headers.set('Origin', `https://${targetHost}`);
+
+                const wsResponse = await fetch(targetUrl, {
+                    headers: headers,
+                    webSocket: server
+                });
+
+                return new Response(null, {
+                    status: 101,
+                    webSocket: client,
+                    headers: wsResponse.headers
+                });
             }
 
             const response = await fetch(targetUrl, { headers, redirect: 'follow' });
