@@ -932,7 +932,7 @@ export const DASHBOARD_HTML = `
                 let html = '';
                 
                 logs.forEach(l => {
-                    const dateObj = new Date(l.time);
+                    const dateObj = new Date(l.time + " UTC");
                     const dateStr = dateObj.toLocaleDateString('en-GB');
                     
                     if (dateStr !== state.lastDateStr) {
@@ -1034,7 +1034,7 @@ export const DASHBOARD_HTML = `
                 }
                 
                 logs.forEach(l => {
-                    const dateObj = new Date(l.time);
+                    const dateObj = new Date(l.time + " UTC");
                     const dateStr = dateObj.toLocaleDateString('en-GB');
                     if (dateStr !== state.lastDateStr) {
                         html += \`<div class="log-date-header" style="margin-top:\${state.lastDateStr ? '1.5rem' : '0'}">\${dateStr}</div>\`;
