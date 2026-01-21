@@ -281,11 +281,14 @@ export default {
         const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
 
         if (url.pathname.startsWith('/terminal-proxy/')) {
-            if (!isAuthorized) return new Response("Unauthorized", { status: 401 });
-
             const parts = url.pathname.split('/');
-            const nodeHostname = parts[2];
-            const remainingPath = parts.slice(3).join('/') + url.search;
+            // Path: /terminal-proxy/[token]/[node]/...
+            const requestToken = parts[2];
+            const nodeHostname = parts[3];
+            const remainingPath = parts.slice(4).join('/') + url.search;
+
+            const isReqAuthorized = (env.ADMIN_TOKEN && requestToken === env.ADMIN_TOKEN);
+            if (!isReqAuthorized) return new Response("Unauthorized", { status: 401 });
 
             const registryData = await env.CONFIG_KV.get('registry');
             const registry = registryData ? JSON.parse(registryData) : {};
@@ -299,7 +302,7 @@ export default {
             headers.delete('cf-connecting-ip');
 
             // Handle WebSocket
-            if (headers.get('Upgrade') === 'websocket') {
+            if (headers.get('Upgrade')?.toLowerCase() === 'websocket') {
                 return fetch(targetUrl, { headers });
             }
 
@@ -311,8 +314,8 @@ export default {
 
             if (newHeaders.get('Content-Type')?.includes('text/html')) {
                 const rewriter = new HTMLRewriter().on('head', {
-                    element(el) {
-                        el.prepend(`<base href="/terminal-proxy/${nodeHostname}/?token=${queryToken}">`, { html: true });
+                    element(el: any) {
+                        el.prepend(`<base href="/terminal-proxy/${requestToken}/${nodeHostname}/">`, { html: true });
                     }
                 });
                 return rewriter.transform(new Response(response.body, { status: response.status, headers: newHeaders }));

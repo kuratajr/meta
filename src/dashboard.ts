@@ -1427,8 +1427,8 @@ async function deleteKV(key) {
 
             terminalTitle.innerText = \`Terminal: \${h}\`;
             
-            // Dùng Proxy để nhúng vào Dashboard (Bypass CSP)
-            const proxyUrl = \`/terminal-proxy/\${h}/?token=\${TOKEN}\`;
+            // Dùng Proxy với Token-in-Path (Bypass CSP & 401)
+            const proxyUrl = \`/terminal-proxy/\${TOKEN}/\${h}/\`;
             // Giữ URL gốc cho nút Mở Tab mới
             const originUrl = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
             
