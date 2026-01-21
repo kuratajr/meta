@@ -417,7 +417,7 @@ export const DASHBOARD_HTML = `
         }
 
         /* Terminal Section */
-        #section-terminal { height: calc(100vh - 200px); display: none; flex-direction: column; }
+        #section-terminal { height: calc(100vh - 120px); display: none; flex-direction: column; }
         #section-terminal.active { display: flex; }
         .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
@@ -430,6 +430,7 @@ export const DASHBOARD_HTML = `
             position: relative;
         }
         .terminal-iframe { width: 100%; height: 100%; border: none; }
+        .overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
             display: none; backdrop-filter: blur(2px);
         }
@@ -747,6 +748,13 @@ export const DASHBOARD_HTML = `
             document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
+
+            // Hide stats and other controls when in terminal
+            const isTerminal = id === 'terminal';
+            document.querySelector('.stats-grid').style.display = isTerminal ? 'none' : 'grid';
+            document.getElementById('live-indicator').style.display = isTerminal ? 'none' : 'flex';
+            document.getElementById('btn-live').style.display = isTerminal ? 'none' : 'block';
+            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = isTerminal ? 'none' : 'block';
 
             // Conditional search visibility
             const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
