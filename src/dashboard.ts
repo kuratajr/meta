@@ -1426,10 +1426,14 @@ async function deleteKV(key) {
             if (!terminalIframe || !terminalTitle || !newTabBtn) return;
 
             terminalTitle.innerText = \`Terminal: \${h}\`;
-            const url = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
             
-            newTabBtn.dataset.url = url;
-            terminalIframe.src = url;
+            // Dùng Proxy để nhúng vào Dashboard (Bypass CSP)
+            const proxyUrl = \`/terminal-proxy/\${h}/?token=\${TOKEN}\`;
+            // Giữ URL gốc cho nút Mở Tab mới
+            const originUrl = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
+            
+            newTabBtn.dataset.url = originUrl;
+            terminalIframe.src = proxyUrl;
 
             showSection('terminal');
         }

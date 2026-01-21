@@ -1,4 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
+// @ts-ignore
+declare const HTMLRewriter: any;
+
 export interface Env {
     GITHUB_OWNER: string;
     GITHUB_REPO: string;
@@ -272,10 +275,50 @@ export default {
             });
         }
 
-        // --- DASHBOARD API ---
+        // --- AUTH CHECK ---
         const authHeader = request.headers.get('Authorization');
         const queryToken = url.searchParams.get('token');
         const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
+
+        if (url.pathname.startsWith('/terminal-proxy/')) {
+            if (!isAuthorized) return new Response("Unauthorized", { status: 401 });
+
+            const parts = url.pathname.split('/');
+            const nodeHostname = parts[2];
+            const remainingPath = parts.slice(3).join('/') + url.search;
+
+            const registryData = await env.CONFIG_KV.get('registry');
+            const registry = registryData ? JSON.parse(registryData) : {};
+            const host = registry[nodeHostname];
+            if (!host) return new Response("Node not found", { status: 404 });
+
+            const targetUrl = `https://8877-${host}/${remainingPath}`;
+            const headers = new Headers(request.headers);
+            headers.set('Host', `8877-${host}`);
+            headers.delete('cf-ray');
+            headers.delete('cf-connecting-ip');
+
+            // Handle WebSocket
+            if (headers.get('Upgrade') === 'websocket') {
+                return fetch(targetUrl, { headers });
+            }
+
+            const response = await fetch(targetUrl, { headers, redirect: 'follow' });
+            const newHeaders = new Headers(response.headers);
+            newHeaders.delete('Content-Security-Policy');
+            newHeaders.delete('X-Frame-Options');
+            newHeaders.set('Access-Control-Allow-Origin', '*');
+
+            if (newHeaders.get('Content-Type')?.includes('text/html')) {
+                const rewriter = new HTMLRewriter().on('head', {
+                    element(el) {
+                        el.prepend(`<base href="/terminal-proxy/${nodeHostname}/?token=${queryToken}">`, { html: true });
+                    }
+                });
+                return rewriter.transform(new Response(response.body, { status: response.status, headers: newHeaders }));
+            }
+            return new Response(response.body, { status: response.status, headers: newHeaders });
+        }
 
         if (url.pathname.startsWith('/api/') && !isAuthorized) {
             return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
