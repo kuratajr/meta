@@ -416,7 +416,28 @@ export const DASHBOARD_HTML = `
             .btn { min-width: 60px; padding: 0.4rem 0.6rem; }
         }
 
-        .overlay {
+        /* Terminal Sidebar */
+        .terminal-sidebar {
+            position: fixed; top: 0; right: -70%; width: 70%; height: 100%;
+            background: #0f172a; border-left: 1px solid var(--glass-border);
+            z-index: 25000; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column;
+            box-shadow: -20px 0 50px rgba(0,0,0,0.5);
+        }
+        .terminal-sidebar.open { right: 0; }
+        .terminal-header {
+            padding: 1.25rem 2rem; background: #1e293b; border-bottom: 1px solid var(--glass-border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .terminal-body { flex: 1; background: #000; position: relative; }
+        .terminal-iframe { width: 100%; height: 100%; border: none; }
+        
+        .terminal-controls { display: flex; gap: 1rem; align-items: center; }
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); 
+            backdrop-filter: blur(4px); z-index: 24000; display: none;
+        }
+        .sidebar-overlay.show { display: block; }
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
             display: none; backdrop-filter: blur(2px);
         }
@@ -432,6 +453,22 @@ export const DASHBOARD_HTML = `
     <div class="loader" id="loader"></div>
     <div id="toast">Copied!</div>
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-overlay" id="terminal-overlay" onclick="closeTerminal()"></div>
+
+    <div class="terminal-sidebar" id="terminal-sidebar">
+        <div class="terminal-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i data-lucide="terminal" style="color: var(--accent);"></i>
+                <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-node-name">Terminal</h3>
+            </div>
+            <div class="terminal-controls">
+                <button class="btn btn-s" onclick="closeTerminal()" title="Close Terminal"><i data-lucide="x"></i>Close</button>
+            </div>
+        </div>
+        <div class="terminal-body">
+            <iframe id="terminal-iframe" class="terminal-iframe"></iframe>
+        </div>
+    </div>
     
     <div class="mobile-toggle" onclick="toggleSidebar()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -807,8 +844,9 @@ export const DASHBOARD_HTML = `
                                 <button class="btn btn-s dropdown-trigger" onclick="toggleDropdown(event)">More</button>
                                 <div class="dropdown-content">
                                     <div class="dropdown-scroll-area">
+                                        <div class="dropdown-item" onclick="openTerminal('\${h}', '\${regVal}')"><i data-lucide="terminal"></i>Terminal</div>
                                         <div class="dropdown-item" onclick="fetchNodeInfo('\${h}')"><i data-lucide="info"></i>Info</div>
-                                        <div class="dropdown-item" onclick="viewNodeLogs('\${h}')"><i data-lucide="terminal"></i>Logs</div>
+                                        <div class="dropdown-item" onclick="viewNodeLogs('\${h}')"><i data-lucide="align-left"></i>Logs</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
                                         <div class="dropdown-item" onclick="runNodeAction('\${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
                                     </div>
@@ -1383,6 +1421,33 @@ async function deleteKV(key) {
             }
 
             document.getElementById('modal').style.display = 'flex';
+        }
+
+        function openTerminal(h, hostUrl) {
+            const terminalSidebar = document.getElementById('terminal-sidebar');
+            const terminalOverlay = document.getElementById('terminal-overlay');
+            const terminalIframe = document.getElementById('terminal-iframe');
+            const terminalNodeName = document.getElementById('terminal-node-name');
+
+            if (!terminalSidebar || !terminalOverlay || !terminalIframe || !terminalNodeName) return;
+
+            terminalNodeName.innerText = \`Terminal: \${h}\`;
+            // Construction of terminal URL: prepend 8877- to the host
+            const url = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
+            terminalIframe.src = url;
+
+            terminalSidebar.classList.add('open');
+            terminalOverlay.classList.add('show');
+        }
+
+        function closeTerminal() {
+            const terminalSidebar = document.getElementById('terminal-sidebar');
+            const terminalOverlay = document.getElementById('terminal-overlay');
+            const terminalIframe = document.getElementById('terminal-iframe');
+
+            if (terminalSidebar) terminalSidebar.classList.remove('open');
+            if (terminalOverlay) terminalOverlay.classList.remove('show');
+            if (terminalIframe) terminalIframe.src = '';
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
