@@ -10,7 +10,7 @@ export interface Env {
     GITHUB_BRANCH: string;
     GITHUB_TOKEN: string;
     CONFIG_KV: KVNamespace; // Binding for Cloudflare KV
-    DB: D1Database;          // Binding for Cloudflare D1 (SQL)
+    DB: any;          // Binding for Cloudflare D1 (SQL)
     ADMIN_TOKEN?: string;   // Optional admin token for dashboard
 }
 
@@ -314,13 +314,13 @@ export default {
                 const wsResponse = await fetch(targetUrl, {
                     headers: headers,
                     webSocket: server
-                });
+                } as any);
 
                 return new Response(null, {
                     status: 101,
                     webSocket: client,
                     headers: wsResponse.headers
-                });
+                } as any);
             }
 
             const response = await fetch(targetUrl, { headers, redirect: 'follow' });
