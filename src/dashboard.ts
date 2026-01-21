@@ -1439,8 +1439,21 @@ async function deleteKV(key) {
             const originUrl = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
             newTabBtn.dataset.url = originUrl;
 
-            // Dùng Proxy với Token-in-Path để vượt rào CSP & X-Frame
-            terminalIframe.src = \`/terminal-proxy/\${TOKEN}/\${h}/\`;
+            // Xóa src cũ để đảm bảo reload
+            terminalIframe.src = 'about:blank';
+            
+            setTimeout(() => {
+                // Dùng Proxy với Token-in-Path để vượt rào CSP & X-Frame
+                // Thêm trailing slash / để <base href> hoạt động đúng
+                terminalIframe.src = \`/terminal-proxy/\${TOKEN}/\${h}/\`;
+            }, 50);
+
+            // Tự động focus vào terminal khi load xong
+            terminalIframe.onload = () => {
+                try {
+                    terminalIframe.contentWindow.focus();
+                } catch(e) {}
+            };
 
             showSection('terminal');
         }
