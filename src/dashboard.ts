@@ -336,28 +336,33 @@ export const DASHBOARD_HTML = `
 
         /* Modal */
         .modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
             display: none; align-items: center; justify-content: center; z-index: 20000;
         }
         .modal-content {
-            background: #1e293b; width: 95%; max-width: 800px; padding: 2.5rem; border-radius: 2rem;
+            background: #1e293b; width: 95%; max-width: 650px; padding: 2.5rem; border-radius: 2rem;
             border: 1px solid var(--glass-border); max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        textarea {
+        .modal-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem; }
+        #modal-message { font-size: 1.1rem; line-height: 1.6; opacity: 0.9; margin-bottom: 2rem; }
+        
+        #editor-container textarea {
             width: 100%; height: 400px; background: #0f172a; color: #10b981; border: 1px solid var(--glass-border);
             border-radius: 1rem; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.9rem;
-            margin: 1.5rem 0; resize: none;
+            margin: 1.5rem 0; resize: none; outline: none;
         }
-        #info-content {
+        #info-container pre {
             background: #0f172a; color: #10b981; padding: 1.5rem; border-radius: 1rem;
             font-family: 'Fira Code', monospace; font-size: 0.95rem; line-height: 1.6;
             white-space: pre-wrap; word-break: break-all; overflow-y: auto;
             scrollbar-width: none; -ms-overflow-style: none;
         }
-        #info-content::-webkit-scrollbar { display: none; }
-        input {
+        #info-container pre::-webkit-scrollbar { display: none; }
+        
+        #modal-key-input input {
             width: 100%; background: #0f172a; border: 1px solid var(--glass-border); color: white;
-            padding: 1rem; border-radius: 0.8rem; margin-top: 0.5rem;
+            padding: 1rem; border-radius: 0.8rem; margin-top: 0.5rem; outline: none;
         }
 
         /* Toast */
@@ -625,13 +630,27 @@ export const DASHBOARD_HTML = `
 
     <div class="modal" id="modal">
         <div class="modal-content">
-            <h2 id="modal-title">Edit Configuration</h2>
-            <div id="modal-key-input" style="display: none;"><label>Key Name</label><input type="text" id="new-key-name"></div>
-            <div id="editor-container"><textarea id="editor"></textarea></div>
-            <div id="info-container" style="display: none;"><pre id="info-content" style="max-height: 60vh;"></pre></div>
-            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+            <h2 id="modal-title" class="modal-title">Edit Configuration</h2>
+            
+            <div id="modal-key-input" style="display: none; margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.8rem; opacity: 0.6; margin-bottom: 0.5rem;">Key Name</label>
+                <input type="text" id="new-key-name" class="btn-s" style="width: 100%; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem 1rem; border-radius: 0.8rem; font-size: 1rem;">
+            </div>
+
+            <div id="modal-message" style="display: none;"></div>
+            
+            <div id="editor-container" style="display: none;"><textarea id="editor"></textarea></div>
+            
+            <div id="info-container" style="display: none;"><pre id="info-content"></pre></div>
+            
+            <div id="modal-default-btns" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
                 <button class="btn btn-s" onclick="closeModal()">Close</button>
                 <button class="btn btn-p" id="modal-save-btn" onclick="saveData()">Update</button>
+            </div>
+
+            <div id="modal-confirm-btns" style="display: none; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-p" id="modal-confirm-action-btn">Confirm</button>
             </div>
         </div>
     </div>
@@ -1126,38 +1145,43 @@ async function fetchNodeInfo(h) {
     document.getElementById('loader').style.display = 'block';
     try {
         const res = await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=nodeinfo\`);
-                const raw = await res.text();
-                let display = raw;
-                try {
-                    const parsed = JSON.parse(raw);
-                    display = JSON.stringify(parsed, null, 4);
-                } catch (e) { }
+        const raw = await res.text();
+        let display = raw;
+        try { display = JSON.stringify(JSON.parse(raw), null, 4); } catch (e) { }
+        showModal({ title: \`Node Info: \${h}\`, content: display, mode: 'info' });
+    } catch (e) { showModal({ title: 'Error', message: 'Failed to fetch node info.', mode: 'alert' }); }
+    document.getElementById('loader').style.display = 'none';
+}
 
-                document.getElementById('modal-title').innerText = \`Node Info: \${h}\`;
-                document.getElementById('editor-container').style.display = 'none';
-                document.getElementById('info-container').style.display = 'block';
-                document.getElementById('modal-save-btn').style.display = 'none';
-                document.getElementById('info-content').innerText = display;
-                document.getElementById('modal').style.display = 'flex';
-            } catch (e) { }
-            document.getElementById('loader').style.display = 'none';
+async function runNodeAction(h, a) {
+    const executeAction = async () => {
+        document.getElementById('loader').style.display = 'block';
+        try {
+            await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`);
+            const msg = \`Requested action: \${a.toUpperCase()}\`;
+            fetch(\`/api/record-log?token=\${TOKEN}\`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ msg, node: h })
+            }).catch(() => { });
+            showModal({ title: 'Action Sent', message: \`Action \${a} for node \${h} has been requested.\`, mode: 'alert' });
+        } catch (e) {
+            showModal({ title: 'Error', message: \`Failed to execute \${a}.\`, mode: 'alert' });
         }
+        document.getElementById('loader').style.display = 'none';
+    };
 
-        async function runNodeAction(h, a) {
-            if (a === 'destroy' && !confirm(\`Destroy \${h}?\`)) return;
-            document.getElementById('loader').style.display = 'block';
-            try { 
-                await fetch(\`/api/node-proxy?token=\${TOKEN}&hostname=\${h}&endpoint=\${a}\`); 
-                const msg = \`Requested action: \${a.toUpperCase()}\`;
-                fetch(\`/api/record-log?token=\${TOKEN}\`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ msg, node: h })
-                }).catch(() => {});
-                alert('Requested.'); 
-            } catch (e) { }
-            document.getElementById('loader').style.display = 'none';
-        }
+    if (['start', 'stop', 'reboot', 'destroy'].includes(a)) {
+        showModal({
+            title: \`Confirm \${a.toUpperCase()}\`,
+            message: \`Are you sure you want to \${a} node \${h}?\`,
+            mode: 'confirm',
+            onConfirm: executeAction
+        });
+    } else {
+        executeAction();
+    }
+}
 
         async function updateNodeGroup(h, g) {
             document.getElementById('loader').style.display = 'block';
@@ -1176,8 +1200,12 @@ async function fetchNodeInfo(h) {
             } catch (e) { }
         }
 
-        async function deleteFromRegistry(h) {
-            if (!confirm(\`Delete \${h} from Registry?\`)) return;
+async function deleteFromRegistry(h) {
+    showModal({
+        title: 'Delete Node',
+        message: \`Are you sure you want to delete \${h} from the registry?\`,
+        mode: 'confirm',
+        onConfirm: async () => {
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
@@ -1204,37 +1232,29 @@ async function fetchNodeInfo(h) {
             document.getElementById('loader').style.display = 'none';
         }
 
-        async function editKV(k) {
-            currentKey = k; isNew = false;
-            document.getElementById('modal-title').innerText = 'Edit ' + k;
-            document.getElementById('modal-key-input').style.display = 'none';
-            document.getElementById('editor-container').style.display = 'block';
-            document.getElementById('info-container').style.display = 'none';
-            document.getElementById('modal-save-btn').style.display = 'block';
-            document.getElementById('loader').style.display = 'block';
-            try {
-                const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${k}\`);
-                document.getElementById('editor').value = await res.text();
-                document.getElementById('modal').style.display = 'flex';
-            } catch (e) { }
-            document.getElementById('loader').style.display = 'none';
-        }
+async function editKV(k) {
+    currentKey = k; isNew = false;
+    showModal({ title: 'Edit ' + k, mode: 'editor' });
+    document.getElementById('loader').style.display = 'block';
+    try {
+        const res = await fetch(\`/api/get-kv?token=\${TOKEN}&key=\${k}\`);
+        document.getElementById('editor').value = await res.text();
+    } catch (e) { }
+    document.getElementById('loader').style.display = 'none';
+}
 
-        function openCreateModal() {
-            isNew = true;
-            const currentSection = document.querySelector('.section.active').id;
-            document.getElementById('modal-title').innerText = 'Create New Configuration';
-            document.getElementById('modal-key-input').style.display = 'block';
-            document.getElementById('editor-container').style.display = 'block';
-            document.getElementById('info-container').style.display = 'none';
-            document.getElementById('modal-save-btn').style.display = 'block';
-            let defaultKey = '';
-            if (currentSection === 'section-ip') defaultKey = 'ip:';
-            else if (currentSection === 'section-cloud') defaultKey = 'cloud:';
-            document.getElementById('new-key-name').value = defaultKey;
-            document.getElementById('editor').value = '{}';
-            document.getElementById('modal').style.display = 'flex';
-        }
+function openCreateModal() {
+    isNew = true;
+    const currentSection = document.querySelector('.section.active').id;
+    showModal({ title: 'Create New Configuration', mode: 'editor' });
+    document.getElementById('modal-key-input').style.display = 'block';
+    
+    let defaultKey = '';
+    if (currentSection === 'section-ip') defaultKey = 'ip:';
+    else if (currentSection === 'section-cloud') defaultKey = 'cloud:';
+    document.getElementById('new-key-name').value = defaultKey;
+    document.getElementById('editor').value = '{}';
+}
 
         async function editIP(node) {
             currentKey = 'ip:' + node; isNew = false;
@@ -1257,7 +1277,7 @@ async function fetchNodeInfo(h) {
             const currentSection = document.querySelector('.section.active').id;
             const key = isNew ? document.getElementById('new-key-name').value : currentKey;
             const val = document.getElementById('editor').value;
-            if (!key) return alert('Key required.');
+            if (!key) return showModal({ title: 'Input Required', message: 'Key name is required.', mode: 'alert' });
             document.getElementById('loader').style.display = 'block';
             try {
                 if (currentSection === 'section-ip' || (key.startsWith('ip:') && !isNew)) {
@@ -1283,8 +1303,12 @@ async function fetchNodeInfo(h) {
             document.getElementById('loader').style.display = 'none';
         }
 
-        async function deleteIP(node) {
-            if (!confirm(\`Delete ip:\${node}?\`)) return;
+async function deleteIP(node) {
+    showModal({
+        title: 'Delete IP',
+        message: \`Delete ip:\${node}?\`,
+        mode: 'confirm',
+        onConfirm: async () => {
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/data?token=\${TOKEN}\`);
@@ -1302,8 +1326,12 @@ async function fetchNodeInfo(h) {
             document.getElementById('loader').style.display = 'none';
         }
 
-        async function deleteKV(key) {
-            if (!confirm(\`Delete key "\${key}"?\`)) return;
+async function deleteKV(key) {
+    showModal({
+        title: 'Delete Key',
+        message: \`Delete key "\${key}"?\`,
+        mode: 'confirm',
+        onConfirm: async () => {
             document.getElementById('loader').style.display = 'block';
             try {
                 const res = await fetch(\`/api/delete?token=\${TOKEN}\`, {
@@ -1318,6 +1346,34 @@ async function fetchNodeInfo(h) {
                 }
             } catch (e) { }
             document.getElementById('loader').style.display = 'none';
+        }
+
+        function showModal({ title, message, content, mode, onConfirm }) {
+            document.getElementById('modal-title').innerText = title || 'Notification';
+            
+            const msgEl = document.getElementById('modal-message');
+            msgEl.style.display = message ? 'block' : 'none';
+            if (message) msgEl.innerText = message;
+
+            document.getElementById('modal-key-input').style.display = 'none';
+            document.getElementById('editor-container').style.display = mode === 'editor' ? 'block' : 'none';
+            document.getElementById('info-container').style.display = mode === 'info' ? 'block' : 'none';
+
+            document.getElementById('modal-default-btns').style.display = mode !== 'confirm' ? 'flex' : 'none';
+            document.getElementById('modal-confirm-btns').style.display = mode === 'confirm' ? 'flex' : 'none';
+
+            if (mode === 'confirm' && onConfirm) {
+                document.getElementById('modal-confirm-action-btn').onclick = () => {
+                    onConfirm();
+                    closeModal();
+                };
+            }
+
+            if (mode === 'info' && content) {
+                document.getElementById('info-content').innerText = content;
+            }
+
+            document.getElementById('modal').style.display = 'flex';
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
