@@ -1429,11 +1429,11 @@ async function deleteKV(key) {
             document.getElementById('modal').style.display = 'flex';
         }
 
-        let xterm: any = null;
-        let xtermSocket: WebSocket | null = null;
-        let xtermFit: any = null;
+        let xterm = null;
+        let xtermSocket = null;
+        let xtermFit = null;
 
-        function openTerminal(h: string, hostUrl: string) {
+        function openTerminal(h, hostUrl) {
             const terminalContainer = document.getElementById('terminal-container');
             const terminalTitle = document.getElementById('terminal-section-title');
             const newTabBtn = document.getElementById('terminal-new-tab-btn');
@@ -1491,7 +1491,7 @@ async function deleteKV(key) {
                 sendResize();
             };
 
-            xtermSocket.onmessage = (event: MessageEvent) => {
+            xtermSocket.onmessage = (event) => {
                 const raw = new Uint8Array(event.data);
                 const cmd = String.fromCharCode(raw[0]);
                 const data = raw.slice(1);
@@ -1502,7 +1502,7 @@ async function deleteKV(key) {
                 xterm.write('\\r\\n\\x1b[1;31mCONNECTION CLOSED\\x1b[0m\\r\\n');
             };
 
-            xterm.onData((data: string) => {
+            xterm.onData((data) => {
                 if (xtermSocket && xtermSocket.readyState === WebSocket.OPEN) {
                     const payload = new Uint8Array(data.length + 1);
                     payload[0] = '0'.charCodeAt(0);
