@@ -1,15 +1,9 @@
-// @ts-ignore
-import stylesRaw from './styles.css';
-// @ts-ignore
-import bodyRaw from './body.html';
+import { STYLES_CONTENT, BODY_CONTENT } from './assets';
 import { SCRIPTS_COMBINED } from './scripts/index';
 
-const DASHBOARD_STYLES = typeof stylesRaw === 'string' ? stylesRaw : (stylesRaw.default || "");
-const DASHBOARD_BODY = typeof bodyRaw === 'string' ? bodyRaw : (bodyRaw.default || "");
-
 /**
- * Main aggregator for the dashboard HTML.
- * All assets (CSS/HTML/Scripts) are imported as text blobs.
+ * High-reliability UI Aggregator.
+ * Uses explicit TypeScript string constants to avoid Wrangler Text-rule instability.
  */
 export const DASHBOARD_HTML = `
 <!DOCTYPE html>
@@ -24,11 +18,11 @@ export const DASHBOARD_HTML = `
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
-        ${DASHBOARD_STYLES}
+        ${STYLES_CONTENT}
     </style>
 </head>
 <body>
-    ${DASHBOARD_BODY}
+    ${BODY_CONTENT}
     ${SCRIPTS_COMBINED}
 </body>
 </html>
