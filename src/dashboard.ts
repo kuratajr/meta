@@ -425,7 +425,7 @@ export const DASHBOARD_HTML = `
         }
 
         /* Terminal Section */
-        #section-terminal { height: calc(100vh - 120px); display: none; flex-direction: column; }
+        #section-terminal { height: calc(100vh - 160px); display: none; flex-direction: column; margin-bottom: 0; }
         #section-terminal.active { display: flex; }
         .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
@@ -759,9 +759,9 @@ export const DASHBOARD_HTML = `
 
             const isTerminal = id === 'terminal';
             document.querySelector('.stats-grid').style.display = isTerminal ? 'none' : 'grid';
-            document.getElementById('live-indicator').style.display = isTerminal ? 'none' : 'flex';
-            document.getElementById('btn-live').style.display = isTerminal ? 'none' : 'block';
-            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = isTerminal ? 'none' : 'block';
+            document.getElementById('live-indicator').style.display = 'flex';
+            document.getElementById('btn-live').style.display = 'block';
+            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = 'block';
 
             // Conditional search visibility
             const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
