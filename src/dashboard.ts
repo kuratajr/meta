@@ -5,17 +5,13 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap');
         :root {
             --primary: #6366f1;
             --primary-glow: rgba(99, 102, 241, 0.4);
@@ -27,6 +23,10 @@ export const DASHBOARD_HTML = `
             --success: #10b981;
             --danger: #ef4444;
             --accent: #c084fc;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --status-online: #3fb950;
+            --status-error: #da3633;
+            --accent-blue: #58a6ff;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
@@ -434,14 +434,14 @@ export const DASHBOARD_HTML = `
         #section-terminal.active { display: flex; }
         .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 1rem 1.5rem; background: var(--glass); border: 1px solid var(--glass-border);
-            border-radius: 1rem 1rem 0 0;
+            padding: 0.8rem 1.5rem; background: rgba(13, 17, 23, 0.5); border: 1px solid var(--glass-border);
+            border-radius: 1rem 1rem 0 0; backdrop-filter: blur(20px);
         }
         .terminal-body-container {
-            flex: 1; background: var(--glass); backdrop-filter: blur(var(--blur));
+            flex: 1; background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%);
             border: 1px solid var(--glass-border);
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
-            padding: 10px;
+            padding: 10px; box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
         }
         #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
         #xterm-container .xterm-rows { font-family: "Ubuntu Mono", monospace !important; }
@@ -453,6 +453,30 @@ export const DASHBOARD_HTML = `
         .xterm .xterm-viewport { background-color: transparent !important; }
         .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
+
+        /* VNX Status Badge */
+        .status-badge {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.75rem; font-weight: 600;
+            padding: 4px 12px; background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px; border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+        .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .status-badge.online { color: #aff5b4; border-color: rgba(63, 185, 80, 0.3); }
+        .status-badge.online .dot { background: var(--status-online); box-shadow: 0 0 10px var(--status-online); }
+        .status-badge.connecting .dot { 
+            background: var(--accent-blue); box-shadow: 0 0 10px var(--accent-blue);
+            animation: pulse-terminal 1.5s infinite;
+        }
+        .status-badge.offline .dot { background: #484f58; }
+        .status-badge.error .dot { background: var(--status-error); box-shadow: 0 0 10px var(--status-error); }
+
+        @keyframes pulse-terminal {
+            0% { opacity: 0.4; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.4; transform: scale(0.8); }
+        }
 
         .badge {
             padding: 0.25rem 0.5rem; border-radius: 0.5rem; font-size: 0.7rem; font-weight: 600;
@@ -650,18 +674,32 @@ export const DASHBOARD_HTML = `
 
         <div id="font-force" style="font-family: 'Ubuntu Mono', monospace; position: absolute; opacity: 0; pointer-events: none;">font-loading-test</div>
         <div id="section-terminal" class="section">
-            <div class="terminal-header-bar">
+            <div class="terminal-header-bar" id="terminal-wrapper">
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <button class="btn btn-s" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i>Back to Nodes</button>
-                    <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-section-title">Terminal: None</h3>
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 500; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 17 10 11 4 5"></polyline>
+                            <line x1="12" y1="19" x2="20" y2="19"></line>
+                        </svg>
+                        <span id="terminal-section-title">Terminal: None</span>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button class="btn btn-s" onclick="resetTerminal()"><i data-lucide="refresh-cw"></i>Reconnect</button>
-                    <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
+                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                    <div id="status-badge" class="status-badge connecting">
+                        <span class="dot"></span>
+                        <span id="status-text">Đang kết nối...</span>
+                    </div>
+                    <div style="display: flex; gap: 0.8rem;">
+                        <button class="btn btn-s" onclick="resetTerminal()"><i data-lucide="refresh-cw"></i>Reconnect</button>
+                        <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
+                    </div>
                 </div>
             </div>
             <div class="terminal-body-container">
-                <div id="xterm-container"></div>
+                <div id="terminal-container" class="terminal-container">
+                    <div id="xterm-container"></div>
+                </div>
             </div>
         </div>
 
@@ -1447,28 +1485,40 @@ async function deleteKV(key) {
         let currentTerminalNode = '';
         let currentTerminalUrl = '';
 
+        function updateUIStatus(newStatus) {
+            const wrapper = document.getElementById('terminal-wrapper');
+            const statusBadge = document.getElementById('status-badge');
+            const statusText = document.getElementById('status-text');
+            if (!wrapper || !statusBadge || !statusText) return;
+
+            wrapper.className = 'terminal-header-bar ' + newStatus;
+            statusBadge.className = 'status-badge ' + newStatus;
+
+            switch (newStatus) {
+                case 'connecting': statusText.innerText = 'Đang kết nối...'; break;
+                case 'online': statusText.innerText = 'Trực tuyến'; break;
+                case 'offline': statusText.innerText = 'Đã ngắt kết nối'; break;
+                case 'error': statusText.innerText = 'Lỗi kết nối'; break;
+            }
+        }
+
         function openTerminal(h, hostUrl) {
             currentTerminalNode = h;
             currentTerminalUrl = hostUrl;
             showSection('terminal');
             
             const terminalTitle = document.getElementById('terminal-section-title');
-            const newTabBtn = document.getElementById('terminal-new-tab-btn');
-            terminalTitle.innerText = "Terminal: " + h;
+            terminalTitle.innerText = h;
             
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
-            newTabBtn.dataset.url = originUrl;
+            // No newTabBtn in the header anymore? Wait, the person wanted to KEEP original buttons.
+            // Oh, I see I missed the newTabBtn ref in my previous HTML update.
+            // Actually, I should probably use a safer way to set its data.
+            const newTabBtn = document.getElementById('terminal-new-tab-btn');
+            if (newTabBtn) newTabBtn.dataset.url = originUrl;
 
-            // Ensure font is truly ready before opening terminal
-            const fontCheck = async () => {
-                try {
-                    if (document.fonts) {
-                        await document.fonts.load('14px "Ubuntu Mono"');
-                    }
-                } catch (e) {}
-                initXterm(h);
-            };
-            fontCheck();
+            updateUIStatus('connecting');
+            initXterm(h);
         }
 
         function initXterm(h) {
@@ -1480,10 +1530,32 @@ async function deleteKV(key) {
             // @ts-ignore
             xterm = new Terminal({
                 cursorBlink: true,
+                cursorStyle: 'bar',
+                fontFamily: '"Ubuntu Mono", monospace',
                 fontSize: 14,
-                fontFamily: 'Ubuntu Mono, monospace',
-                letterSpacing: 0,
-                theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
+                letterSpacing: 0.5,
+                theme: {
+                    background: 'rgba(0, 0, 0, 0)',
+                    foreground: '#e6edf3',
+                    cursor: '#58a6ff',
+                    selection: 'rgba(88, 166, 255, 0.3)',
+                    black: '#484f58',
+                    red: '#ff7b72',
+                    green: '#3fb950',
+                    yellow: '#d29922',
+                    blue: '#58a6ff',
+                    magenta: '#bc8cff',
+                    cyan: '#39c5cf',
+                    white: '#b1bac4',
+                    brightBlack: '#6e7681',
+                    brightRed: '#ffa198',
+                    brightGreen: '#56d364',
+                    brightYellow: '#e3b341',
+                    brightBlue: '#79c0ff',
+                    brightMagenta: '#d2a8ff',
+                    brightCyan: '#56d4dd',
+                    brightWhite: '#ffffff',
+                },
                 allowTransparency: true,
                 cols: 100,
                 rows: 30
@@ -1494,24 +1566,20 @@ async function deleteKV(key) {
             xterm.loadAddon(xtermFit);
             xterm.open(container);
             
-            // Critical: Wait for font to settle and re-apply to force xterm to re-calculate character widths
+            // Fit terminal after load
             setTimeout(() => {
-                xterm.options.fontFamily = '"Ubuntu Mono", monospace';
                 try {
                     xtermFit.fit();
-                    // Force a re-render of all characters
-                    xterm.refresh(0, xterm.rows - 1);
-                    if (xterm.cols < 10) xterm.resize(100, 30);
+                    connectWs(h);
                 } catch (e) {
-                    xterm.resize(100, 30);
+                    console.error("Fit error:", e);
+                    connectWs(h);
                 }
-                connectWs(h);
-            }, 800);
+            }, 150);
         }
 
         function connectWs(h) {
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Path structure for our proxy: /terminal-proxy/[token]/[node]/ws
             const wsUrl = protocol + "//" + location.host + "/terminal-proxy/" + TOKEN + "/" + h + "/ws";
             
             // @ts-ignore
@@ -1521,42 +1589,45 @@ async function deleteKV(key) {
             const decoder = new TextDecoder();
             
             termWs.onopen = () => {
-                // Small delay to ensure the server is ready to receive the init JSON
-                setTimeout(() => {
-                    const initMsg = JSON.stringify({
-                        "AuthToken": "",
-                        "columns": xterm.cols,
-                        "rows": xterm.rows
-                    });
-                    termWs.send(initMsg);
-                }, 200);
+                updateUIStatus('online');
+                // Show VNX System Message in green
+                xterm.write('\\x1b[38;5;82m[Hệ thống] Kết nối thành công! Đang đồng bộ hóa...\\x1b[0m\\r\\n');
+                
+                const initMsg = JSON.stringify({
+                    "AuthToken": "",
+                    "columns": xterm.cols || 100,
+                    "rows": xterm.rows || 30
+                });
+                termWs.send(initMsg);
             };
 
             termWs.onmessage = (ev) => {
-                let msg = "";
-                if (ev.data instanceof ArrayBuffer) {
-                    msg = decoder.decode(new Uint8Array(ev.data));
-                } else {
-                    msg = ev.data;
-                }
-
-                if (typeof msg === 'string') {
+                const processString = (msg) => {
                     if (msg.startsWith('0')) {
                         xterm.write(msg.slice(1));
-                    } else if (msg.startsWith('1') || msg.startsWith('2')) {
-                        // Protocol messages, ignore for raw terminal output
-                    } else {
+                    } else if (!/^[12]/.test(msg)) {
                         xterm.write(msg);
                     }
+                };
+
+                if (ev.data instanceof ArrayBuffer) {
+                    processString(decoder.decode(new Uint8Array(ev.data)));
+                } else if (typeof ev.data === 'string') {
+                    processString(ev.data);
+                } else if (ev.data instanceof Blob) {
+                    ev.data.text().then(processString);
                 }
             };
 
             termWs.onclose = () => {
-                xterm.write('\\r\\n\\x1b[31m[System] Connection closed.\\x1b[0m\\r\\n');
+                updateUIStatus('offline');
+                xterm.write('\\r\\n\\x1b[31m[Hệ thống] Kết nối đã đóng.\\x1b[0m\\r\\n');
             };
 
-            termWs.onerror = () => {
-                xterm.write('\\r\\n\\x1b[31m[System] Connection error.\\x1b[0m\\r\\n');
+            termWs.onerror = (err) => {
+                updateUIStatus('error');
+                xterm.write('\\r\\n\\x1b[31m[Lỗi] Không thể kết nối tới server.\\x1b[0m\\r\\n');
+                console.error('WebSocket Error:', err);
             };
 
             xterm.onData(data => {
