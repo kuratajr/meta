@@ -430,24 +430,32 @@ export const DASHBOARD_HTML = `
         #section-terminal.active { display: flex; }
         .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 1rem 1.5rem; background: var(--glass); border: 1px solid var(--glass-border);
-            border-radius: 1rem 1rem 0 0;
+            padding: 1rem 1.5rem; background: rgba(17, 24, 39, 0.95); border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem 1rem 0 0; color: #94a3b8; font-family: "Outfit", sans-serif;
         }
         .terminal-body-container {
-            flex: 1; background: var(--glass); backdrop-filter: blur(var(--blur));
-            border: 1px solid var(--glass-border);
+            flex: 1; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
-            padding: 10px;
+            padding: 1.5rem; position: relative;
         }
-        #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
-        #xterm-container .xterm-rows { font-family: "Ubuntu Mono", monospace !important; }
+        .terminal-footer {
+            padding: 0.5rem 1.5rem; font-size: 0.75rem; color: #4b5563; text-align: center;
+            font-family: "Outfit", sans-serif; opacity: 0.8;
+        }
+        .badge-terminal-online {
+            display: flex; align-items: center; gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1); color: #10b981;
+            padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; 
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .dot-online {
+            width: 6px; height: 6px; background: #10b981; border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+        }
+        #xterm-container { width: 100%; height: 100%; }
         #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
         #xterm-container .xterm-viewport { scrollbar-width: none; }
-        #xterm-container .xterm-screen canvas { opacity: 1 !important; }
-        #xterm-container .xterm-main-font { font-family: "Ubuntu Mono", monospace !important; font-kerning: none; }
-        .xterm .xterm-screen { background-color: transparent !important; }
-        .xterm .xterm-viewport { background-color: transparent !important; }
-        .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
 
         .badge {
@@ -647,17 +655,25 @@ export const DASHBOARD_HTML = `
         <div id="font-force" style="font-family: 'Ubuntu Mono', monospace; position: absolute; opacity: 0; pointer-events: none;">font-loading-test</div>
         <div id="section-terminal" class="section">
             <div class="terminal-header-bar">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <button class="btn btn-s" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i>Back to Nodes</button>
-                    <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-section-title">Terminal: None</h3>
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <i data-lucide="terminal" style="width: 16px; height: 16px;"></i>
+                    <span style="font-size: 0.85rem; font-weight: 500; letter-spacing: 0.05em;">VNX CLOUD TERMINAL</span>
+                    <span style="opacity: 0.4; margin: 0 0.5rem;">|</span>
+                    <span style="font-size: 0.8rem; opacity: 0.7;" id="terminal-section-title">thoainx01-17777777</span>
+                    <button class="btn btn-s" style="margin-left: 1rem; opacity: 0.6;" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i></button>
                 </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button class="btn btn-s" onclick="resetTerminal()"><i data-lucide="refresh-cw"></i>Reconnect</button>
-                    <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="badge-terminal-online">
+                        <div class="dot-online"></div>
+                        Trực tuyến
+                    </div>
                 </div>
             </div>
             <div class="terminal-body-container">
                 <div id="xterm-container"></div>
+            </div>
+            <div class="terminal-footer">
+                @ 2026 VNX Cloud Platform. Nhấn Ctrl+L để xóa màn hình.
             </div>
         </div>
 
@@ -1449,22 +1465,12 @@ async function deleteKV(key) {
             showSection('terminal');
             
             const terminalTitle = document.getElementById('terminal-section-title');
-            const newTabBtn = document.getElementById('terminal-new-tab-btn');
-            terminalTitle.innerText = "Terminal: " + h;
+            terminalTitle.innerText = h;
             
-            const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
-            newTabBtn.dataset.url = originUrl;
-
-            // Ensure font is truly ready before opening terminal
-            const fontCheck = async () => {
-                try {
-                    if (document.fonts) {
-                        await document.fonts.load('14px "Ubuntu Mono"');
-                    }
-                } catch (e) {}
-                initXterm(h);
-            };
-            fontCheck();
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+            
+            initXterm(h);
         }
 
         function initXterm(h) {
@@ -1477,9 +1483,20 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 14,
-                fontFamily: 'Ubuntu Mono, monospace',
-                letterSpacing: 0,
-                theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
+                fontFamily: '"Ubuntu Mono", monospace',
+                theme: { 
+                    background: 'transparent',
+                    foreground: '#10b981', // Prompt green
+                    cursor: '#ffffff',
+                    black: '#1f2937',
+                    red: '#ef4444',
+                    green: '#10b981',
+                    yellow: '#f59e0b',
+                    blue: '#3b82f6',
+                    magenta: '#8b5cf6',
+                    cyan: '#06b6d4',
+                    white: '#f3f4f6'
+                },
                 allowTransparency: true,
                 cols: 100,
                 rows: 30
@@ -1517,6 +1534,9 @@ async function deleteKV(key) {
             const decoder = new TextDecoder();
             
             termWs.onopen = () => {
+                // Show VNX System Message
+                xterm.write('\x1b[1;32m[Hệ thống] Kết nối thành công! Đang đồng bộ hóa...\x1b[0m\r\n');
+                
                 // Small delay to ensure the server is ready to receive the init JSON
                 setTimeout(() => {
                     const initMsg = JSON.stringify({
