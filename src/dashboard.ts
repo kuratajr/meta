@@ -757,9 +757,11 @@ export const DASHBOARD_HTML = `
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
 
-            document.getElementById('live-indicator').style.display = 'flex';
-            document.getElementById('btn-live').style.display = 'block';
-            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = 'block';
+            const isTerminal = id === 'terminal';
+            document.querySelector('.stats-grid').style.display = isTerminal ? 'none' : 'grid';
+            document.getElementById('live-indicator').style.display = isTerminal ? 'none' : 'flex';
+            document.getElementById('btn-live').style.display = isTerminal ? 'none' : 'block';
+            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = isTerminal ? 'none' : 'block';
 
             // Conditional search visibility
             const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
