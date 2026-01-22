@@ -443,16 +443,21 @@ export const DASHBOARD_HTML = `
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             padding: 10px; box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
         }
-        #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
-        #xterm-container .xterm-rows { font-family: "Ubuntu Mono", monospace !important; }
-        #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
-        #xterm-container .xterm-viewport { scrollbar-width: none; }
-        #xterm-container .xterm-screen canvas { opacity: 1 !important; }
-        #xterm-container .xterm-main-font { font-family: "Ubuntu Mono", monospace !important; font-kerning: none; }
-        .xterm .xterm-screen { background-color: transparent !important; }
-        .xterm .xterm-viewport { background-color: transparent !important; }
-        .xterm { font-family: "Ubuntu Mono", monospace !important; }
-        .overlay.show { display: block; }
+        .xterm,
+        .xterm-screen,
+        .xterm-viewport,
+        .xterm-rows {
+        background-color: transparent !important;
+        }
+
+        .xterm-viewport {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        }
+
+        .xterm-viewport::-webkit-scrollbar {
+        display: none !important;
+        }
 
         /* VNX Status Badge */
         .status-badge {
