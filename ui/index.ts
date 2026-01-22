@@ -1,8 +1,11 @@
 // @ts-ignore
-import DASHBOARD_STYLES from './styles.css';
+import stylesRaw from './styles.css';
 // @ts-ignore
-import DASHBOARD_BODY from './body.html';
+import bodyRaw from './body.html';
 import { SCRIPTS_COMBINED } from './scripts/index';
+
+const DASHBOARD_STYLES = typeof stylesRaw === 'string' ? stylesRaw : (stylesRaw.default || "");
+const DASHBOARD_BODY = typeof bodyRaw === 'string' ? bodyRaw : (bodyRaw.default || "");
 
 /**
  * Main aggregator for the dashboard HTML.

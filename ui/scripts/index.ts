@@ -1,17 +1,27 @@
 // @ts-ignore
-import SCRIPTS_GLOBALS from './globals.ts';
+import gRaw from './globals.ts';
 // @ts-ignore
-import SCRIPTS_UI from './ui.ts';
+import uRaw from './ui.ts';
 // @ts-ignore
-import SCRIPTS_DATA from './data.ts';
+import dRaw from './data.ts';
 // @ts-ignore
-import SCRIPTS_TERMINAL from './terminal.ts';
+import tRaw from './terminal.ts';
 // @ts-ignore
-import SCRIPTS_MODALS from './modals.ts';
+import mRaw from './modals.ts';
 // @ts-ignore
-import SCRIPTS_LOGS from './logs.ts';
+import lRaw from './logs.ts';
 // @ts-ignore
-import SCRIPTS_MAIN from './main.ts';
+import maRaw from './main.ts';
+
+const extract = (r: any) => typeof r === 'string' ? r : (r.default || "");
+
+const SCRIPTS_GLOBALS = extract(gRaw);
+const SCRIPTS_UI = extract(uRaw);
+const SCRIPTS_DATA = extract(dRaw);
+const SCRIPTS_TERMINAL = extract(tRaw);
+const SCRIPTS_MODALS = extract(mRaw);
+const SCRIPTS_LOGS = extract(lRaw);
+const SCRIPTS_MAIN = extract(maRaw);
 
 /**
  * These are imported as raw strings via Wrangler's Text rules.

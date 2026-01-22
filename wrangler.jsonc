@@ -27,7 +27,9 @@
 		{
 			"type": "Text",
 			"globs": [
-				"ui/**/*"
+				"ui/**/*.html",
+				"ui/**/*.css",
+				"ui/scripts/*.ts"
 			],
 			"fallthrough": true
 		}
