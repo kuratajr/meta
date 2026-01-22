@@ -304,6 +304,7 @@ export default {
                 const proxyHeaders = new Headers(request.headers);
                 proxyHeaders.set('Host', targetHost);
                 proxyHeaders.set('Origin', `https://${targetHost}`);
+                proxyHeaders.set('Referer', `https://${targetHost}/`);
                 const protocol = request.headers.get('Sec-WebSocket-Protocol') || 'tty';
                 proxyHeaders.set('Sec-WebSocket-Protocol', protocol);
 

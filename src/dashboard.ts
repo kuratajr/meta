@@ -1488,23 +1488,31 @@ async function deleteKV(key) {
             
             // @ts-ignore
             termWs = new WebSocket(wsUrl, 'tty');
+            termWs.binaryType = 'arraybuffer';
+            
+            const decoder = new TextDecoder();
             
             termWs.onopen = () => {
+                console.log("[Terminal] WS Open");
                 xterm.write('\\x1b[32m[System] Connected! Synchronizing...\\r\\n\\x1b[0m');
                 const initMsg = JSON.stringify({
                     "AuthToken": "",
                     "columns": xterm.cols,
                     "rows": xterm.rows
                 });
+                console.log("[Terminal] Sending Init:", initMsg);
                 termWs.send(initMsg);
             };
 
-            termWs.onmessage = async (ev) => {
-                let msg = ev.data;
-                // Handle binary data from ttyd
-                if (msg instanceof Blob) {
-                    msg = await msg.text();
+            termWs.onmessage = (ev) => {
+                let msg = "";
+                if (ev.data instanceof ArrayBuffer) {
+                    msg = decoder.decode(ev.data);
+                } else {
+                    msg = ev.data;
                 }
+
+                console.log("[Terminal] Received:", msg);
 
                 if (typeof msg === 'string') {
                     if (msg.startsWith('0')) {
@@ -1525,6 +1533,7 @@ async function deleteKV(key) {
 
             xterm.onData(data => {
                 if (termWs && termWs.readyState === WebSocket.OPEN) {
+                    console.log("[Terminal] Sending Data:", data);
                     termWs.send('0' + data);
                 }
             });
