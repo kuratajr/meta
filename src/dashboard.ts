@@ -7,6 +7,9 @@ export const DASHBOARD_HTML = `
     <title>VPS Cloud Control Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -420,6 +423,21 @@ export const DASHBOARD_HTML = `
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
             display: none; backdrop-filter: blur(2px);
         }
+
+        /* Terminal Section */
+        #section-terminal { height: calc(100vh - 120px); display: none; flex-direction: column; }
+        #section-terminal.active { display: flex; }
+        .terminal-header-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 1.5rem; background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 1rem 1rem 0 0;
+        }
+        .terminal-body-container {
+            flex: 1; background: #000; border: 1px solid var(--glass-border);
+            border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
+            padding: 10px;
+        }
+        #xterm-container { width: 100%; height: 100%; }
         .overlay.show { display: block; }
 
         .badge {
@@ -613,6 +631,22 @@ export const DASHBOARD_HTML = `
                      <h3 style="margin-bottom:1rem; opacity:0.7;">Node Overrides</h3>
                      <div id="list-node-configs" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
                 </div>
+            </div>
+        </div>
+
+        <div id="section-terminal" class="section">
+            <div class="terminal-header-bar">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button class="btn btn-s" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i>Back to Nodes</button>
+                    <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-section-title">Terminal: None</h3>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-s" onclick="resetTerminal()"><i data-lucide="refresh-cw"></i>Reconnect</button>
+                    <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
+                </div>
+            </div>
+            <div class="terminal-body-container">
+                <div id="xterm-container"></div>
             </div>
         </div>
 
@@ -1389,10 +1423,102 @@ async function deleteKV(key) {
             document.getElementById('modal').style.display = 'flex';
         }
 
+
+        let xterm = null;
+        let xtermFit = null;
+        let termWs = null;
+        let currentTerminalNode = '';
+        let currentTerminalUrl = '';
+
         function openTerminal(h, hostUrl) {
-            // Link trực tiếp cho tab mới
+            currentTerminalNode = h;
+            currentTerminalUrl = hostUrl;
+            showSection('terminal');
+            
+            const terminalTitle = document.getElementById('terminal-section-title');
+            const newTabBtn = document.getElementById('terminal-new-tab-btn');
+            terminalTitle.innerText = "Terminal: " + h;
+            
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
-        window.open(originUrl, '_blank');
+            newTabBtn.dataset.url = originUrl;
+
+            initXterm(h);
+        }
+
+        function initXterm(h) {
+            if (termWs) { termWs.close(); termWs = null; }
+            const container = document.getElementById('xterm-container');
+            container.innerHTML = '';
+
+            // @ts-ignore
+            xterm = new Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: '"Fira Code", monospace',
+                theme: { background: '#000', foreground: '#0f0' }
+            });
+
+            // @ts-ignore
+            xtermFit = new FitAddon.FitAddon();
+            xterm.loadAddon(xtermFit);
+            xterm.open(container);
+            xtermFit.fit();
+
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Path structure for our proxy: /terminal-proxy/[token]/[node]/ws
+            const wsUrl = protocol + "//" + location.host + "/terminal-proxy/" + TOKEN + "/" + h + "/ws";
+            
+            xterm.write('\x1b[32m[System] Connecting to ' + h + '...\r\n\x1b[0m');
+            
+            // @ts-ignore
+            termWs = new WebSocket(wsUrl, 'tty');
+            
+            termWs.onopen = () => {
+                xterm.write('\x1b[32m[System] Connected! Synchronizing...\r\n\x1b[0m');
+                const initMsg = JSON.stringify({
+                    "AuthToken": "",
+                    "columns": xterm.cols,
+                    "rows": xterm.rows
+                });
+                termWs.send(initMsg);
+            };
+
+            termWs.onmessage = (ev) => {
+                const msg = ev.data;
+                if (typeof msg === 'string') {
+                    if (msg.startsWith('0')) {
+                        xterm.write(msg.slice(1));
+                    } else if (!/^[12]/.test(msg)) {
+                        xterm.write(msg);
+                    }
+                }
+            };
+
+            termWs.onclose = () => {
+                xterm.write('\r\n\x1b[31m[System] Connection closed.\x1b[0m\r\n');
+            };
+
+            termWs.onerror = () => {
+                xterm.write('\r\n\x1b[31m[System] Connection error.\x1b[0m\r\n');
+            };
+
+            xterm.onData(data => {
+                if (termWs && termWs.readyState === WebSocket.OPEN) {
+                    termWs.send('0' + data);
+                }
+            });
+
+            xterm.onResize(size => {
+                if (termWs && termWs.readyState === WebSocket.OPEN) {
+                    termWs.send(JSON.stringify({ columns: size.cols, rows: size.rows }));
+                }
+            });
+
+            window.addEventListener('resize', () => xtermFit.fit());
+        }
+
+        function resetTerminal() {
+            if (currentTerminalNode) initXterm(currentTerminalNode);
         }
 
 function closeModal() { document.getElementById('modal').style.display = 'none'; }

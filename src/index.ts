@@ -282,7 +282,53 @@ export default {
         const queryToken = url.searchParams.get('token');
         const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
 
+        if (url.pathname.startsWith('/terminal-proxy/')) {
+            const parts = url.pathname.split('/');
+            const requestToken = parts[2];
+            const nodeHostname = parts[3];
+            const remainingPath = parts.slice(4).join('/') + url.search;
 
+            const isReqAuthorized = (env.ADMIN_TOKEN && requestToken === env.ADMIN_TOKEN);
+            if (!isReqAuthorized) return new Response("Unauthorized", { status: 401 });
+
+            const registryData = await env.CONFIG_KV.get('registry');
+            const registry = registryData ? JSON.parse(registryData) : {};
+            const host = registry[nodeHostname];
+            if (!host) return new Response("Node not found", { status: 404 });
+
+            const targetUrl = `https://8877-${host}/${remainingPath}`;
+            const targetHost = `8877-${host}`;
+
+            if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+                const [client, server] = new WebSocketPair() as [any, any];
+                const proxyHeaders = new Headers(request.headers);
+                proxyHeaders.set('Host', targetHost);
+                proxyHeaders.set('Origin', `https://${targetHost}`);
+                const protocol = request.headers.get('Sec-WebSocket-Protocol') || 'tty';
+                proxyHeaders.set('Sec-WebSocket-Protocol', protocol);
+
+                const wsResponse = await fetch(targetUrl, {
+                    headers: proxyHeaders,
+                    webSocket: server
+                } as any);
+
+                return new Response(null, {
+                    status: 101,
+                    webSocket: client,
+                    headers: wsResponse.headers
+                } as any);
+            }
+
+            const headers = new Headers(request.headers);
+            headers.set('Host', targetHost);
+            headers.set('Origin', `https://${targetHost}`);
+            const response = await fetch(targetUrl, { headers, redirect: 'follow' });
+            const newHeaders = new Headers(response.headers);
+            newHeaders.delete('Content-Security-Policy');
+            newHeaders.delete('X-Frame-Options');
+            newHeaders.set('Access-Control-Allow-Origin', '*');
+            return new Response(response.body, { status: response.status, headers: newHeaders });
+        }
 
         if (url.pathname.startsWith('/api/') && !isAuthorized) {
             return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
