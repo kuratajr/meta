@@ -4,7 +4,7 @@ import DASHBOARD_STYLES from './styles.css';
 import DASHBOARD_BODY from './body.html';
 import { SCRIPTS_COMBINED } from './scripts/index';
 
-export const DASHBOARD_HTML = \`
+export const DASHBOARD_HTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,4 +25,4 @@ export const DASHBOARD_HTML = \`
     \${SCRIPTS_COMBINED}
 </body>
 </html>
-\`;
+`;
