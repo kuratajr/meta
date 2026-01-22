@@ -438,13 +438,15 @@ export const DASHBOARD_HTML = `
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             padding: 10px;
         }
-        #xterm-container { width: 100%; height: 100%; }
+        #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
+        #xterm-container .xterm-rows { font-family: "Ubuntu Mono", monospace !important; }
         #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
         #xterm-container .xterm-viewport { scrollbar-width: none; }
         #xterm-container .xterm-screen canvas { opacity: 1 !important; }
-        #xterm-container .xterm-main-font { font-kerning: none; }
+        #xterm-container .xterm-main-font { font-family: "Ubuntu Mono", monospace !important; font-kerning: none; }
         .xterm .xterm-screen { background-color: transparent !important; }
         .xterm .xterm-viewport { background-color: transparent !important; }
+        .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
 
         .badge {
@@ -1451,7 +1453,14 @@ async function deleteKV(key) {
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
             newTabBtn.dataset.url = originUrl;
 
-            initXterm(h);
+            // Wait for font to load before initializing terminal
+            if (document.fonts) {
+                document.fonts.load('14px "Ubuntu Mono"').then(() => {
+                    initXterm(h);
+                });
+            } else {
+                initXterm(h);
+            }
         }
 
         function initXterm(h) {
