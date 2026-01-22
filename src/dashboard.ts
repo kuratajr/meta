@@ -441,6 +441,10 @@ export const DASHBOARD_HTML = `
         #xterm-container { width: 100%; height: 100%; }
         #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
         #xterm-container .xterm-viewport { scrollbar-width: none; }
+        #xterm-container .xterm-screen canvas { opacity: 1 !important; }
+        #xterm-container .xterm-main-font { font-kerning: none; }
+        .xterm .xterm-screen { background-color: transparent !important; }
+        .xterm .xterm-viewport { background-color: transparent !important; }
         .overlay.show { display: block; }
 
         .badge {
@@ -1458,10 +1462,11 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 13,
-                fontFamily: '"Outfit", "JetBrains Mono", monospace',
-                theme: { background: 'transparent', foreground: '#0f0' },
+                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                letterSpacing: 0,
+                theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
-                cols: 100, // Default fallback
+                cols: 100,
                 rows: 30
             });
 
