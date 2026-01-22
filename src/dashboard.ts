@@ -433,7 +433,8 @@ export const DASHBOARD_HTML = `
             border-radius: 1rem 1rem 0 0;
         }
         .terminal-body-container {
-            flex: 1; background: transparent; border: 1px solid var(--glass-border);
+            flex: 1; background: var(--glass); backdrop-filter: blur(var(--blur));
+            border: 1px solid var(--glass-border);
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             padding: 10px;
         }
@@ -1456,8 +1457,8 @@ async function deleteKV(key) {
             // @ts-ignore
             xterm = new Terminal({
                 cursorBlink: true,
-                fontSize: 14,
-                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                fontSize: 13,
+                fontFamily: '"Outfit", "JetBrains Mono", monospace',
                 theme: { background: 'transparent', foreground: '#0f0' },
                 allowTransparency: true,
                 cols: 100, // Default fallback
