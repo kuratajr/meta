@@ -27,11 +27,11 @@
 		{
 			"type": "Text",
 			"globs": [
-				"**/*.html",
-				"**/*.css",
-				"src/dashboard/scripts/*.ts"
+				"ui/**/*.html",
+				"ui/**/*.css",
+				"ui/scripts/*.ts"
 			],
-			"fallthrough": true
+			"fallthrough": false
 		}
 	]
 }

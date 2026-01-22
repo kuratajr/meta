@@ -13,6 +13,10 @@ import SCRIPTS_LOGS from './logs.ts';
 // @ts-ignore
 import SCRIPTS_MAIN from './main.ts';
 
+/**
+ * These are imported as raw strings via Wrangler's Text rules.
+ * Because they are in the ui/ folder, they are NOT compiled as modules.
+ */
 export const SCRIPTS_COMBINED = `
     <script>
         ${SCRIPTS_GLOBALS}

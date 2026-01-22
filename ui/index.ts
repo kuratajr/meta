@@ -4,6 +4,10 @@ import DASHBOARD_STYLES from './styles.css';
 import DASHBOARD_BODY from './body.html';
 import { SCRIPTS_COMBINED } from './scripts/index';
 
+/**
+ * Main aggregator for the dashboard HTML.
+ * All assets (CSS/HTML/Scripts) are imported as text blobs.
+ */
 export const DASHBOARD_HTML = `
 <!DOCTYPE html>
 <html lang="en">

@@ -1,1 +1,1 @@
-export * from './dashboard/index';
+export * from '../ui/index';
