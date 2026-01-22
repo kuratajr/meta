@@ -644,6 +644,7 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
+        <div id="font-force" style="font-family: 'Ubuntu Mono', monospace; position: absolute; opacity: 0; pointer-events: none;">font-loading-test</div>
         <div id="section-terminal" class="section">
             <div class="terminal-header-bar">
                 <div style="display: flex; align-items: center; gap: 1rem;">
@@ -1454,14 +1455,16 @@ async function deleteKV(key) {
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
             newTabBtn.dataset.url = originUrl;
 
-            // Wait for font to load before initializing terminal
-            if (document.fonts) {
-                document.fonts.load('14px "Ubuntu Mono"').then(() => {
-                    initXterm(h);
-                });
-            } else {
+            // Ensure font is truly ready before opening terminal
+            const fontCheck = async () => {
+                try {
+                    if (document.fonts) {
+                        await document.fonts.load('14px "Ubuntu Mono"');
+                    }
+                } catch (e) {}
                 initXterm(h);
-            }
+            };
+            fontCheck();
         }
 
         function initXterm(h) {
@@ -1487,17 +1490,19 @@ async function deleteKV(key) {
             xterm.loadAddon(xtermFit);
             xterm.open(container);
             
-            // Force font refresh after a short delay to ensure it's loaded to Canvas
+            // Critical: Wait for font to settle and re-apply to force xterm to re-calculate character widths
             setTimeout(() => {
-                xterm.options.fontFamily = 'Ubuntu Mono, monospace';
+                xterm.options.fontFamily = '"Ubuntu Mono", monospace';
                 try {
                     xtermFit.fit();
+                    // Force a re-render of all characters
+                    xterm.refresh(0, xterm.rows - 1);
                     if (xterm.cols < 10) xterm.resize(100, 30);
                 } catch (e) {
                     xterm.resize(100, 30);
                 }
                 connectWs(h);
-            }, 500);
+            }, 800);
         }
 
         function connectWs(h) {
