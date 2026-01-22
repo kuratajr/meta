@@ -430,33 +430,53 @@ export const DASHBOARD_HTML = `
         }
 
         /* Terminal Section */
-        #section-terminal { height: calc(100vh - 200px); display: none; flex-direction: column; margin-bottom: 0; }
-        #section-terminal.active { display: flex; }
+        #section-terminal { 
+            height: calc(100vh - 200px); display: none; flex-direction: column; 
+            margin-bottom: 0; position: relative; overflow: visible;
+        }
+        #section-terminal.active { display: flex; animation: slideUp-terminal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        
+        /* Background Glow behind terminal */
+        #section-terminal::before {
+            content: ''; position: absolute; width: 600px; height: 400px;
+            background: radial-gradient(circle, rgba(88, 166, 255, 0.12) 0%, transparent 70%);
+            top: 20%; left: 50%; transform: translateX(-50%); z-index: 0; filter: blur(60px);
+            pointer-events: none;
+        }
+
+        .terminal-outer-wrapper {
+            position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column;
+            background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid var(--glass-border); border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
         .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0.8rem 1.5rem; background: rgba(13, 17, 23, 0.5); border: 1px solid var(--glass-border);
-            border-radius: 1rem 1rem 0 0; backdrop-filter: blur(20px);
+            padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--glass-border);
         }
+
         .terminal-body-container {
-            flex: 1; background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%);
-            border: 1px solid var(--glass-border);
-            border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
-            padding: 10px; box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-        }
-        .xterm,
-        .xterm-screen,
-        .xterm-viewport,
-        .xterm-rows {
-        background-color: transparent !important;
+            flex: 1; background: transparent; padding: 20px; overflow: hidden;
         }
 
-        .xterm-viewport {
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
+        .terminal-title-box {
+            display: flex; align-items: center; gap: 10px; font-size: 0.85rem;
+            font-weight: 500; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em;
         }
 
-        .xterm-viewport::-webkit-scrollbar {
-        display: none !important;
+        #xterm-container { width: 100%; height: 100%; }
+        
+        .xterm, .xterm-screen, .xterm-viewport, .xterm-rows { background-color: transparent !important; }
+        .xterm-viewport { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+        .xterm-viewport::-webkit-scrollbar { display: none !important; }
+
+        @keyframes slideUp-terminal {
+            from { opacity: 0; transform: translateY(30px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         /* VNX Status Badge */
@@ -470,12 +490,19 @@ export const DASHBOARD_HTML = `
         .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
         .status-badge.online { color: #aff5b4; border-color: rgba(63, 185, 80, 0.3); }
         .status-badge.online .dot { background: var(--status-online); box-shadow: 0 0 10px var(--status-online); }
+        
         .status-badge.connecting .dot { 
             background: var(--accent-blue); box-shadow: 0 0 10px var(--accent-blue);
             animation: pulse-terminal 1.5s infinite;
         }
+        
+        /* Status modifiers for the outer box (like in user project) */
+        .terminal-outer-wrapper.online { border-color: rgba(63, 185, 80, 0.2); }
+        .terminal-outer-wrapper.error { border-color: rgba(218, 54, 51, 0.3); }
+
         .status-badge.offline .dot { background: #484f58; }
         .status-badge.error .dot { background: var(--status-error); box-shadow: 0 0 10px var(--status-error); }
+
 
         @keyframes pulse-terminal {
             0% { opacity: 0.4; transform: scale(0.8); }
@@ -679,30 +706,36 @@ export const DASHBOARD_HTML = `
 
         <div id="font-force" style="font-family: 'Ubuntu Mono', monospace; position: absolute; opacity: 0; pointer-events: none;">font-loading-test</div>
         <div id="section-terminal" class="section">
-            <div class="terminal-header-bar" id="terminal-wrapper">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <button class="btn btn-s" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i>Back to Nodes</button>
-                    <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 500; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="4 17 10 11 4 5"></polyline>
-                            <line x1="12" y1="19" x2="20" y2="19"></line>
-                        </svg>
-                        <span id="terminal-section-title">Terminal: None</span>
+            <div class="terminal-outer-wrapper" id="terminal-wrapper">
+                <div class="terminal-header-bar">
+                    <div style="display: flex; align-items: center; gap: 1.2rem;">
+                        <button class="btn btn-s" onclick="showSection('nodes')">
+                            <i data-lucide="arrow-left"></i>Back to Nodes
+                        </button>
+                        <div class="terminal-title-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="4 17 10 11 4 5"></polyline>
+                                <line x1="12" y1="19" x2="20" y2="19"></line>
+                            </svg>
+                            <span id="terminal-section-title">Terminal: None</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1.5rem;">
+                        <div id="status-badge" class="status-badge connecting">
+                            <span class="dot"></span>
+                            <span id="status-text">Đang kết nối...</span>
+                        </div>
+                        <div style="display: flex; gap: 0.8rem;">
+                            <button class="btn btn-s" onclick="resetTerminal()">
+                                <i data-lucide="refresh-cw"></i>Reconnect
+                            </button>
+                            <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')">
+                                <i data-lucide="external-link"></i>Open in New Tab
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 1.5rem;">
-                    <div id="status-badge" class="status-badge connecting">
-                        <span class="dot"></span>
-                        <span id="status-text">Đang kết nối...</span>
-                    </div>
-                    <div style="display: flex; gap: 0.8rem;">
-                        <button class="btn btn-s" onclick="resetTerminal()"><i data-lucide="refresh-cw"></i>Reconnect</button>
-                        <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
-                    </div>
-                </div>
-            </div>
-            <div class="terminal-body-container">
-                <div id="terminal-container" class="terminal-container">
+                <div class="terminal-body-container">
                     <div id="xterm-container"></div>
                 </div>
             </div>
@@ -1496,7 +1529,7 @@ async function deleteKV(key) {
             const statusText = document.getElementById('status-text');
             if (!wrapper || !statusBadge || !statusText) return;
 
-            wrapper.className = 'terminal-header-bar ' + newStatus;
+            wrapper.className = 'terminal-outer-wrapper ' + newStatus;
             statusBadge.className = 'status-badge ' + newStatus;
 
             switch (newStatus) {
