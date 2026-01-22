@@ -5,7 +5,7 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
@@ -25,7 +25,7 @@ export const DASHBOARD_HTML = `
             --accent: #c084fc;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'JetBrains Mono', monospace; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
 
         body {
             background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
@@ -449,16 +449,6 @@ export const DASHBOARD_HTML = `
         .xterm .xterm-viewport { background-color: transparent !important; }
         .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
-
-        #xterm-container {
-            padding: 15px;
-            background: #1a1b26; /* Màu nền sâu */
-            border-radius: 4px;
-        }
-        /* Đảm bảo xterm-helper-textarea không làm lệch giao diện */
-        .xterm-helper-textarea {
-            display: none;
-        }
 
         .badge {
             padding: 0.25rem 0.5rem; border-radius: 0.5rem; font-size: 0.7rem; font-weight: 600;
@@ -1477,7 +1467,7 @@ async function deleteKV(key) {
             fontCheck();
         }
 
-       function initXterm(h) {
+        function initXterm(h) {
             if (termWs) { try { termWs.close(); } catch(e){} }
             termWs = null;
             const container = document.getElementById('xterm-container');
@@ -1487,7 +1477,7 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 14,
-                fontFamily: "'Ubuntu Mono', monospace",
+                fontFamily: 'Ubuntu Mono, monospace',
                 letterSpacing: 0,
                 theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
