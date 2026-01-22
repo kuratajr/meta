@@ -1,4 +1,4 @@
-export const DASHBOARD_HTML = \`
+export const DASHBOARD_HTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -395,4 +395,4 @@ export const DASHBOARD_HTML = \`
     </script>
 </body>
 </html>
-\`;
+`;
