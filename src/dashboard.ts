@@ -1477,64 +1477,42 @@ async function deleteKV(key) {
             fontCheck();
         }
 
-        async function initXterm(h) {
+       function initXterm(h) {
             if (termWs) { try { termWs.close(); } catch(e){} }
             termWs = null;
             const container = document.getElementById('xterm-container');
             container.innerHTML = '';
 
-            // Khởi tạo Terminal với cấu hình tối ưu
+            // @ts-ignore
             xterm = new Terminal({
                 cursorBlink: true,
-                cursorStyle: 'bar', // Kiểu con trỏ thanh đứng cho hiện đại
-                fontSize: 15,
+                fontSize: 14,
                 fontFamily: "'Ubuntu Mono', monospace",
-                fontWeight: 'normal',
                 letterSpacing: 0,
-                lineHeight: 1.1, // Căn chỉnh khoảng cách dòng cho khít
-                theme: {
-                    background: '#1a1b26', // Màu nền hơi xanh sâu (Tokyo Night style)
-                    foreground: '#a9b1d6',
-                    cursor: '#f7768e',
-                    selection: '#33467c',
-                    black: '#000000',
-                    green: '#9ece6a',  // Màu xanh lá cho user@host
-                    cyan: '#7dcfff'
-                },
+                theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
-                scrollback: 1000
+                cols: 100,
+                rows: 30
             });
 
+            // @ts-ignore
             xtermFit = new FitAddon.FitAddon();
             xterm.loadAddon(xtermFit);
-            
-            // Mở terminal
             xterm.open(container);
-
-            // QUAN TRỌNG: Đợi Font chữ Load xong hoàn toàn mới Fit
-            await document.fonts.ready;
             
-            // Xử lý Resize chuẩn
-            const resizeTerminal = () => {
+            // Critical: Wait for font to settle and re-apply to force xterm to re-calculate character widths
+            setTimeout(() => {
+                xterm.options.fontFamily = '"Ubuntu Mono", monospace';
                 try {
                     xtermFit.fit();
-                    // Gửi kích thước mới cho backend ttyd nếu cần
-                    if (termWs && termWs.readyState === WebSocket.OPEN) {
-                        const msg = JSON.stringify({ columns: xterm.cols, rows: xterm.rows });
-                        termWs.send('1' + msg); 
-                    }
-                } catch (e) { console.error(e); }
-            };
-
-            // Đợi một chút để DOM ổn định rồi mới Fit lần đầu
-            setTimeout(() => {
-                resizeTerminal();
-                xterm.focus();
+                    // Force a re-render of all characters
+                    xterm.refresh(0, xterm.rows - 1);
+                    if (xterm.cols < 10) xterm.resize(100, 30);
+                } catch (e) {
+                    xterm.resize(100, 30);
+                }
                 connectWs(h);
-            }, 200);
-
-            // Lắng nghe sự kiện cửa sổ thay đổi để terminal luôn đẹp
-            window.addEventListener('resize', resizeTerminal);
+            }, 800);
         }
 
         function connectWs(h) {
