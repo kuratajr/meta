@@ -1463,8 +1463,8 @@ async function deleteKV(key) {
             // @ts-ignore
             xterm = new Terminal({
                 cursorBlink: true,
-                fontSize: 13,
-                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                fontSize: 14,
+                fontFamily: 'Consolas, "Courier New", monospace',
                 letterSpacing: 0,
                 theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
