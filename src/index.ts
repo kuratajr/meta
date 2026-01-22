@@ -282,63 +282,7 @@ export default {
         const queryToken = url.searchParams.get('token');
         const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
 
-        if (url.pathname.startsWith('/terminal-proxy/')) {
-            const parts = url.pathname.split('/');
-            // Path: /terminal-proxy/[token]/[node]/...
-            const requestToken = parts[2];
-            const nodeHostname = parts[3];
-            const remainingPath = parts.slice(4).join('/') + url.search;
 
-            const isReqAuthorized = (env.ADMIN_TOKEN && requestToken === env.ADMIN_TOKEN);
-            if (!isReqAuthorized) return new Response("Unauthorized", { status: 401 });
-
-            const registryData = await env.CONFIG_KV.get('registry');
-            const registry = registryData ? JSON.parse(registryData) : {};
-            const host = registry[nodeHostname];
-            if (!host) return new Response("Node not found", { status: 404 });
-
-            const targetUrl = `https://8877-${host}/${remainingPath}`;
-            const headers = new Headers(request.headers);
-            const targetHost = `8877-${host}`;
-            headers.set('Host', targetHost);
-            headers.set('Origin', `https://${targetHost}`);
-            headers.delete('cf-ray');
-            headers.delete('cf-connecting-ip');
-            // Handle WebSocket Upgrade (Tunneling)
-            if (headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-                const [client, server] = new WebSocketPair() as [any, any];
-                const targetHost = `8877-${host}`;
-                headers.set('Host', targetHost);
-                headers.set('Origin', `https://${targetHost}`);
-
-                const wsResponse = await fetch(targetUrl, {
-                    headers: headers,
-                    webSocket: server
-                } as any);
-
-                return new Response(null, {
-                    status: 101,
-                    webSocket: client,
-                    headers: wsResponse.headers
-                } as any);
-            }
-
-            const response = await fetch(targetUrl, { headers, redirect: 'follow' });
-            const newHeaders = new Headers(response.headers);
-            newHeaders.delete('Content-Security-Policy');
-            newHeaders.delete('X-Frame-Options');
-            newHeaders.set('Access-Control-Allow-Origin', '*');
-
-            if (newHeaders.get('Content-Type')?.includes('text/html')) {
-                const rewriter = new HTMLRewriter().on('head', {
-                    element(el: any) {
-                        el.prepend(`<base href="/terminal-proxy/${requestToken}/${nodeHostname}/">`, { html: true });
-                    }
-                });
-                return rewriter.transform(new Response(response.body, { status: response.status, headers: newHeaders }));
-            }
-            return new Response(response.body, { status: response.status, headers: newHeaders });
-        }
 
         if (url.pathname.startsWith('/api/') && !isAuthorized) {
             return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });

@@ -416,20 +416,6 @@ export const DASHBOARD_HTML = `
             .btn { min-width: 60px; padding: 0.4rem 0.6rem; }
         }
 
-        /* Terminal Section */
-        #section-terminal { height: calc(100vh - 120px); display: none; flex-direction: column; }
-        #section-terminal.active { display: flex; }
-        .terminal-header-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 1rem 1.5rem; background: var(--glass); border: 1px solid var(--glass-border);
-            border-radius: 1rem 1rem 0 0;
-        }
-        .terminal-iframe-container {
-            flex: 1; background: #0a0a0a; border: 1px solid var(--glass-border);
-            border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
-            position: relative;
-        }
-        .terminal-iframe { width: 100%; height: 100%; border: none; }
         .overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999;
             display: none; backdrop-filter: blur(2px);
@@ -641,20 +627,7 @@ export const DASHBOARD_HTML = `
                      <div id="list-cert-configs" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
                 </div>
             </div>
-        <div id="section-terminal" class="section">
-            <div class="terminal-header-bar">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <button class="btn btn-s" onclick="showSection('nodes')"><i data-lucide="arrow-left"></i>Back to Nodes</button>
-                    <h3 style="margin: 0; font-size: 1.1rem;" id="terminal-section-title">Terminal: None</h3>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button class="btn btn-p" id="terminal-new-tab-btn" onclick="window.open(this.dataset.url, '_blank')"><i data-lucide="external-link"></i>Open in New Tab</button>
-                </div>
-            </div>
-            <div class="terminal-iframe-container">
-                <iframe id="terminal-section-iframe" class="terminal-iframe"></iframe>
-            </div>
-        </div>
+
     </main>
 
     <div class="modal" id="modal">
@@ -739,22 +712,13 @@ export const DASHBOARD_HTML = `
             else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
             else if (id === 'global') sectionTitle = 'Global & Security';
             else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; resetSystemLogs(); }
-            else if (id === 'terminal') sectionTitle = 'Remote Terminal';
-
-            // Clear terminal iframe if leaving terminal section
-            const termIframe = document.getElementById('terminal-section-iframe');
-            if (id !== 'terminal' && termIframe) termIframe.src = '';
-
             document.getElementById('section-title').innerText = sectionTitle;
             const btn = document.getElementById('btn-create');
             btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
 
-            // Hide stats and other controls when in terminal
-            const isTerminal = id === 'terminal';
-            document.querySelector('.stats-grid').style.display = isTerminal ? 'none' : 'grid';
-            document.getElementById('live-indicator').style.display = isTerminal ? 'none' : 'flex';
-            document.getElementById('btn-live').style.display = isTerminal ? 'none' : 'block';
-            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = isTerminal ? 'none' : 'block';
+            document.getElementById('live-indicator').style.display = 'flex';
+            document.getElementById('btn-live').style.display = 'block';
+            document.querySelector('.header').querySelector('button[onclick="refreshData()"]').style.display = 'block';
 
             // Conditional search visibility
             const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
@@ -1422,40 +1386,13 @@ async function deleteKV(key) {
             if (mode === 'info' && content) {
                 document.getElementById('info-content').innerText = content;
             }
-
             document.getElementById('modal').style.display = 'flex';
         }
 
         function openTerminal(h, hostUrl) {
-            const terminalIframe = document.getElementById('terminal-section-iframe');
-            const terminalTitle = document.getElementById('terminal-section-title');
-            const newTabBtn = document.getElementById('terminal-new-tab-btn');
-
-            if (!terminalIframe || !terminalTitle || !newTabBtn) return;
-
-            terminalTitle.innerText = \`Terminal: \${h}\`;
-            
-            // Link dự phòng cho tab mới
-            const originUrl = hostUrl.startsWith('http') ? hostUrl : \`https://8877-\${hostUrl}\`;
-            newTabBtn.dataset.url = originUrl;
-
-            // Xóa src cũ để đảm bảo reload
-            terminalIframe.src = 'about:blank';
-            
-            setTimeout(() => {
-                // Dùng Proxy với Token-in-Path để vượt rào CSP & X-Frame
-                // Thêm trailing slash / để <base href> hoạt động đúng
-                terminalIframe.src = \`/terminal-proxy/\${TOKEN}/\${h}/\`;
-            }, 50);
-
-            // Tự động focus vào terminal khi load xong
-            terminalIframe.onload = () => {
-                try {
-                    terminalIframe.contentWindow.focus();
-                } catch(e) {}
-            };
-
-            showSection('terminal');
+            // Link trực tiếp cho tab mới
+            const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
+        window.open(originUrl, '_blank');
         }
 
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
@@ -1502,7 +1439,7 @@ function stopAutoRefresh() {
 }
 
 function updateLiveText() {
-    document.getElementById('live-text').innerText = \`Live in \${countdown}s\`;
+    document.getElementById('live-text').innerText = "Live in " + countdown + "s";
         }
 
         // Reset timer on manual sync
