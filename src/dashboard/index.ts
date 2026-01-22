@@ -17,12 +17,12 @@ export const DASHBOARD_HTML = `
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
-        \${DASHBOARD_STYLES}
+        ${DASHBOARD_STYLES}
     </style>
 </head>
 <body>
-    \${DASHBOARD_BODY}
-    \${SCRIPTS_COMBINED}
+    ${DASHBOARD_BODY}
+    ${SCRIPTS_COMBINED}
 </body>
 </html>
 `;
