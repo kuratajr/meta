@@ -19,6 +19,7 @@ if (typeof window !== 'undefined') {
         const type = document.getElementById('log-type-select').value;
         const host = document.getElementById('log-host-filter').value;
         const container = type === 'system' ? document.getElementById('logs-list-system') : document.getElementById('logs-list-live');
+        if (!container) return;
         container.innerHTML = '<div style="opacity: 0.5; padding: 2rem;">Fetching logs...</div>';
         try {
             let url = `/api/logs?token=${window.TOKEN}&offset=0&limit=100`;
