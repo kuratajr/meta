@@ -5,12 +5,13 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap');
         :root {
             --primary: #6366f1;
             --primary-glow: rgba(99, 102, 241, 0.4);
@@ -438,13 +439,15 @@ export const DASHBOARD_HTML = `
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             padding: 10px;
         }
-        #xterm-container { 
-            width: 100%; height: 100%; 
-            background: transparent;
-        }
-        .xterm-rows { font-family: 'JetBrains Mono', monospace !important; }
-        .xterm-viewport::-webkit-scrollbar { display: none; }
-        .xterm-viewport { scrollbar-width: none; }
+        #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
+        #xterm-container .xterm-rows { font-family: "Ubuntu Mono", monospace !important; }
+        #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
+        #xterm-container .xterm-viewport { scrollbar-width: none; }
+        #xterm-container .xterm-screen canvas { opacity: 1 !important; }
+        #xterm-container .xterm-main-font { font-family: "Ubuntu Mono", monospace !important; font-kerning: none; }
+        .xterm .xterm-screen { background-color: transparent !important; }
+        .xterm .xterm-viewport { background-color: transparent !important; }
+        .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
 
         .badge {
@@ -641,6 +644,7 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
+        <div id="font-force" style="font-family: 'Ubuntu Mono', monospace; position: absolute; opacity: 0; pointer-events: none;">font-loading-test</div>
         <div id="section-terminal" class="section">
             <div class="terminal-header-bar">
                 <div style="display: flex; align-items: center; gap: 1rem;">
@@ -1451,7 +1455,16 @@ async function deleteKV(key) {
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
             newTabBtn.dataset.url = originUrl;
 
-            initXterm(h);
+            // Ensure font is truly ready before opening terminal
+            const fontCheck = async () => {
+                try {
+                    if (document.fonts) {
+                        await document.fonts.load('14px "Ubuntu Mono"');
+                    }
+                } catch (e) {}
+                initXterm(h);
+            };
+            fontCheck();
         }
 
         function initXterm(h) {
@@ -1463,16 +1476,13 @@ async function deleteKV(key) {
             // @ts-ignore
             xterm = new Terminal({
                 cursorBlink: true,
-                fontSize: 13,
-                fontFamily: "'JetBrains Mono', monospace",
-                theme: { 
-                    background: 'transparent', 
-                    foreground: '#10b981', // Emerald green
-                    cursor: '#10b981'
-                },
+                fontSize: 14,
+                fontFamily: 'Ubuntu Mono, monospace',
+                letterSpacing: 0,
+                theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
-                rows: 30,
-                cols: 100
+                cols: 100,
+                rows: 30
             });
 
             // @ts-ignore
@@ -1480,11 +1490,19 @@ async function deleteKV(key) {
             xterm.loadAddon(xtermFit);
             xterm.open(container);
             
-            // Re-fit after short delays to handle glassmorphism and font loading
+            // Critical: Wait for font to settle and re-apply to force xterm to re-calculate character widths
             setTimeout(() => {
-                xtermFit.fit();
+                xterm.options.fontFamily = '"Ubuntu Mono", monospace';
+                try {
+                    xtermFit.fit();
+                    // Force a re-render of all characters
+                    xterm.refresh(0, xterm.rows - 1);
+                    if (xterm.cols < 10) xterm.resize(100, 30);
+                } catch (e) {
+                    xterm.resize(100, 30);
+                }
                 connectWs(h);
-            }, 200);
+            }, 800);
         }
 
         function connectWs(h) {
