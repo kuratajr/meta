@@ -11,6 +11,7 @@ export const DASHBOARD_HTML = `
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap');
         :root {
             --primary: #6366f1;
             --primary-glow: rgba(99, 102, 241, 0.4);
@@ -1473,7 +1474,7 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 14,
-                fontFamily: '"Ubuntu Mono", monospace',
+                fontFamily: 'Ubuntu Mono, monospace',
                 letterSpacing: 0,
                 theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
@@ -1486,17 +1487,17 @@ async function deleteKV(key) {
             xterm.loadAddon(xtermFit);
             xterm.open(container);
             
-            // Wait for DOM to settle to get correct dimensions
+            // Force font refresh after a short delay to ensure it's loaded to Canvas
             setTimeout(() => {
+                xterm.options.fontFamily = 'Ubuntu Mono, monospace';
                 try {
                     xtermFit.fit();
-                    // Ensure we don't have 0 cols
                     if (xterm.cols < 10) xterm.resize(100, 30);
                 } catch (e) {
                     xterm.resize(100, 30);
                 }
                 connectWs(h);
-            }, 100);
+            }, 500);
         }
 
         function connectWs(h) {
