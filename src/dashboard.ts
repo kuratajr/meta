@@ -1535,7 +1535,7 @@ async function deleteKV(key) {
             
             termWs.onopen = () => {
                 // Show VNX System Message
-                xterm.write('\x1b[1;32m[Hệ thống] Kết nối thành công! Đang đồng bộ hóa...\x1b[0m\r\n');
+                xterm.write('\\x1b[1;32m[Hệ thống] Kết nối thành công! Đang đồng bộ hóa...\\x1b[0m\\r\\n');
                 
                 // Small delay to ensure the server is ready to receive the init JSON
                 setTimeout(() => {
