@@ -5,7 +5,7 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
@@ -25,7 +25,7 @@ export const DASHBOARD_HTML = `
             --accent: #c084fc;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'JetBrains Mono', monospace; }
 
         body {
             background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
@@ -449,6 +449,16 @@ export const DASHBOARD_HTML = `
         .xterm .xterm-viewport { background-color: transparent !important; }
         .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
+
+        #xterm-container {
+            padding: 15px;
+            background: #1a1b26; /* Màu nền sâu */
+            border-radius: 4px;
+        }
+        /* Đảm bảo xterm-helper-textarea không làm lệch giao diện */
+        .xterm-helper-textarea {
+            display: none;
+        }
 
         .badge {
             padding: 0.25rem 0.5rem; border-radius: 0.5rem; font-size: 0.7rem; font-weight: 600;
@@ -1473,57 +1483,60 @@ async function deleteKV(key) {
             const container = document.getElementById('xterm-container');
             container.innerHTML = '';
 
-            // Khởi tạo Terminal với cấu hình tối ưu
             xterm = new Terminal({
                 cursorBlink: true,
-                cursorStyle: 'bar', // Kiểu con trỏ thanh đứng cho hiện đại
-                fontSize: 15,
+                cursorStyle: 'block', // Đổi về block để giống terminal thật hơn
+                fontSize: 14,         // 14px thường là kích thước chuẩn nhất cho hiển thị lưới
                 fontFamily: "'Ubuntu Mono', monospace",
-                fontWeight: 'normal',
+                fontWeight: '400',
                 letterSpacing: 0,
-                lineHeight: 1.1, // Căn chỉnh khoảng cách dòng cho khít
+                lineHeight: 1.0,      // Để 1.0 để ký tự không bị kéo giãn theo chiều dọc
                 theme: {
-                    background: '#1a1b26', // Màu nền hơi xanh sâu (Tokyo Night style)
+                    background: '#1a1b26',
                     foreground: '#a9b1d6',
                     cursor: '#f7768e',
                     selection: '#33467c',
-                    black: '#000000',
-                    green: '#9ece6a',  // Màu xanh lá cho user@host
+                    green: '#9ece6a', 
                     cyan: '#7dcfff'
                 },
                 allowTransparency: true,
-                scrollback: 1000
+                scrollback: 1000,
+                rendererType: 'canvas' // Ép sử dụng canvas nếu gặp lỗi render thưa chữ
             });
 
             xtermFit = new FitAddon.FitAddon();
             xterm.loadAddon(xtermFit);
-            
-            // Mở terminal
             xterm.open(container);
 
-            // QUAN TRỌNG: Đợi Font chữ Load xong hoàn toàn mới Fit
+            // Bước quan trọng nhất: Đợi font thực sự sẵn sàng
             await document.fonts.ready;
-            
-            // Xử lý Resize chuẩn
+
             const resizeTerminal = () => {
                 try {
+                    // Trước khi fit, xóa cache char measure của xterm
+                    xterm._core._charSizeService.reload(); 
                     xtermFit.fit();
-                    // Gửi kích thước mới cho backend ttyd nếu cần
+                    
                     if (termWs && termWs.readyState === WebSocket.OPEN) {
-                        const msg = JSON.stringify({ columns: xterm.cols, rows: xterm.rows });
+                        // Định dạng gói tin resize dựa trên log Firefox của bạn
+                        const msg = JSON.stringify({ 
+                            "AuthToken": "", 
+                            "columns": xterm.cols, 
+                            "rows": xterm.rows 
+                        });
                         termWs.send('1' + msg); 
                     }
                 } catch (e) { console.error(e); }
             };
 
-            // Đợi một chút để DOM ổn định rồi mới Fit lần đầu
+            // Thực hiện fit lần đầu với độ trễ ngắn để DOM ổn định hoàn toàn
             setTimeout(() => {
                 resizeTerminal();
+                xterm.refresh(0, xterm.rows - 1); // Vẽ lại toàn bộ màn hình
                 xterm.focus();
                 connectWs(h);
-            }, 200);
+            }, 50);
 
-            // Lắng nghe sự kiện cửa sổ thay đổi để terminal luôn đẹp
             window.addEventListener('resize', resizeTerminal);
         }
 
