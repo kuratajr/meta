@@ -11,7 +11,7 @@ export const DASHBOARD_HTML = `
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=block');
         :root {
             --primary: #6366f1;
             --primary-glow: rgba(99, 102, 241, 0.4);
@@ -440,14 +440,13 @@ export const DASHBOARD_HTML = `
             padding: 10px;
         }
         #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
-        #xterm-container .xterm-rows { font-family: "Ubuntu Mono", monospace !important; }
+        #xterm-container * { font-family: "Ubuntu Mono", monospace !important; }
+        .xterm-rows, .xterm-rows span, .xterm-rows div { font-family: "Ubuntu Mono", monospace !important; }
         #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
         #xterm-container .xterm-viewport { scrollbar-width: none; }
         #xterm-container .xterm-screen canvas { opacity: 1 !important; }
-        #xterm-container .xterm-main-font { font-family: "Ubuntu Mono", monospace !important; font-kerning: none; }
         .xterm .xterm-screen { background-color: transparent !important; }
         .xterm .xterm-viewport { background-color: transparent !important; }
-        .xterm { font-family: "Ubuntu Mono", monospace !important; }
         .overlay.show { display: block; }
 
         .badge {
@@ -1455,14 +1454,19 @@ async function deleteKV(key) {
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
             newTabBtn.dataset.url = originUrl;
 
-            // Ensure font is truly ready before opening terminal
+            // Ultimate font-readiness check
             const fontCheck = async () => {
                 try {
-                    if (document.fonts) {
+                    // Try to wait for the font to be ready natively
+                    await document.fonts.ready;
+                    if (document.fonts.check('14px "Ubuntu Mono"')) {
+                        console.log("Ubuntu Mono is ready.");
+                    } else {
                         await document.fonts.load('14px "Ubuntu Mono"');
                     }
                 } catch (e) {}
-                initXterm(h);
+                // Give it an extra bit of time to settle in Canvas
+                setTimeout(() => initXterm(h), 300);
             };
             fontCheck();
         }
@@ -1477,8 +1481,7 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 14,
-                fontFamily: 'Ubuntu Mono, monospace',
-                letterSpacing: 0,
+                fontFamily: '"Ubuntu Mono", monospace',
                 theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
                 cols: 100,
@@ -1490,19 +1493,24 @@ async function deleteKV(key) {
             xterm.loadAddon(xtermFit);
             xterm.open(container);
             
-            // Critical: Wait for font to settle and re-apply to force xterm to re-calculate character widths
+            // Critical: Wait for canvas to settle and force character width re-calculation
             setTimeout(() => {
                 xterm.options.fontFamily = '"Ubuntu Mono", monospace';
                 try {
                     xtermFit.fit();
-                    // Force a re-render of all characters
+                    // Force a full refresh of the screen buffer
+                    // @ts-ignore
+                    if (xterm._core && xterm._core.viewport) {
+                        // @ts-ignore
+                        xterm._core.clearBuffer();
+                    }
                     xterm.refresh(0, xterm.rows - 1);
                     if (xterm.cols < 10) xterm.resize(100, 30);
                 } catch (e) {
                     xterm.resize(100, 30);
                 }
                 connectWs(h);
-            }, 800);
+            }, 600);
         }
 
         function connectWs(h) {
