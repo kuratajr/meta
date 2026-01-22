@@ -5,7 +5,7 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
@@ -1464,7 +1464,7 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 14,
-                fontFamily: 'Consolas, "Courier New", monospace',
+                fontFamily: '"Ubuntu Mono", monospace',
                 letterSpacing: 0,
                 theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
                 allowTransparency: true,
