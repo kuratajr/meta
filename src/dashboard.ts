@@ -433,11 +433,13 @@ export const DASHBOARD_HTML = `
             border-radius: 1rem 1rem 0 0;
         }
         .terminal-body-container {
-            flex: 1; background: #000; border: 1px solid var(--glass-border);
+            flex: 1; background: transparent; border: 1px solid var(--glass-border);
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             padding: 10px;
         }
         #xterm-container { width: 100%; height: 100%; }
+        #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
+        #xterm-container .xterm-viewport { scrollbar-width: none; }
         .overlay.show { display: block; }
 
         .badge {
@@ -1455,8 +1457,9 @@ async function deleteKV(key) {
             xterm = new Terminal({
                 cursorBlink: true,
                 fontSize: 14,
-                fontFamily: '"Fira Code", monospace',
-                theme: { background: '#000', foreground: '#0f0' },
+                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                theme: { background: 'transparent', foreground: '#0f0' },
+                allowTransparency: true,
                 cols: 100, // Default fallback
                 rows: 30
             });
@@ -1484,8 +1487,6 @@ async function deleteKV(key) {
             // Path structure for our proxy: /terminal-proxy/[token]/[node]/ws
             const wsUrl = protocol + "//" + location.host + "/terminal-proxy/" + TOKEN + "/" + h + "/ws";
             
-            xterm.write('\\x1b[32m[System] Connecting to ' + h + '...\\r\\n\\x1b[0m');
-            
             // @ts-ignore
             termWs = new WebSocket(wsUrl, 'tty');
             termWs.binaryType = 'arraybuffer';
@@ -1493,9 +1494,6 @@ async function deleteKV(key) {
             const decoder = new TextDecoder();
             
             termWs.onopen = () => {
-                console.log("[Terminal] WS Opened successfully to:", wsUrl);
-                xterm.write('\\x1b[32m[System] Connected! Starting session...\\r\\n\\x1b[0m');
-                
                 // Small delay to ensure the server is ready to receive the init JSON
                 setTimeout(() => {
                     const initMsg = JSON.stringify({
@@ -1503,7 +1501,6 @@ async function deleteKV(key) {
                         "columns": xterm.cols,
                         "rows": xterm.rows
                     });
-                    console.log("[Terminal] Sending Init Msg:", initMsg);
                     termWs.send(initMsg);
                 }, 200);
             };
@@ -1515,8 +1512,6 @@ async function deleteKV(key) {
                 } else {
                     msg = ev.data;
                 }
-
-                if (msg) console.log("[Terminal] Data Received (" + msg.length + " chars):", msg);
 
                 if (typeof msg === 'string') {
                     if (msg.startsWith('0')) {
@@ -1539,7 +1534,6 @@ async function deleteKV(key) {
 
             xterm.onData(data => {
                 if (termWs && termWs.readyState === WebSocket.OPEN) {
-                    console.log("[Terminal] Sending Data:", data);
                     termWs.send('0' + data);
                 }
             });
