@@ -1483,60 +1483,57 @@ async function deleteKV(key) {
             const container = document.getElementById('xterm-container');
             container.innerHTML = '';
 
+            // Khởi tạo Terminal với cấu hình tối ưu
             xterm = new Terminal({
                 cursorBlink: true,
-                cursorStyle: 'block', // Đổi về block để giống terminal thật hơn
-                fontSize: 14,         // 14px thường là kích thước chuẩn nhất cho hiển thị lưới
+                cursorStyle: 'bar', // Kiểu con trỏ thanh đứng cho hiện đại
+                fontSize: 15,
                 fontFamily: "'Ubuntu Mono', monospace",
-                fontWeight: '400',
+                fontWeight: 'normal',
                 letterSpacing: 0,
-                lineHeight: 1.0,      // Để 1.0 để ký tự không bị kéo giãn theo chiều dọc
+                lineHeight: 1.1, // Căn chỉnh khoảng cách dòng cho khít
                 theme: {
-                    background: '#1a1b26',
+                    background: '#1a1b26', // Màu nền hơi xanh sâu (Tokyo Night style)
                     foreground: '#a9b1d6',
                     cursor: '#f7768e',
                     selection: '#33467c',
-                    green: '#9ece6a', 
+                    black: '#000000',
+                    green: '#9ece6a',  // Màu xanh lá cho user@host
                     cyan: '#7dcfff'
                 },
                 allowTransparency: true,
-                scrollback: 1000,
-                rendererType: 'canvas' // Ép sử dụng canvas nếu gặp lỗi render thưa chữ
+                scrollback: 1000
             });
 
             xtermFit = new FitAddon.FitAddon();
             xterm.loadAddon(xtermFit);
+            
+            // Mở terminal
             xterm.open(container);
 
-            // Bước quan trọng nhất: Đợi font thực sự sẵn sàng
+            // QUAN TRỌNG: Đợi Font chữ Load xong hoàn toàn mới Fit
             await document.fonts.ready;
-
+            
+            // Xử lý Resize chuẩn
             const resizeTerminal = () => {
                 try {
-                    // Trước khi fit, xóa cache char measure của xterm
-                    xterm._core._charSizeService.reload(); 
                     xtermFit.fit();
-                    
+                    // Gửi kích thước mới cho backend ttyd nếu cần
                     if (termWs && termWs.readyState === WebSocket.OPEN) {
-                        // Định dạng gói tin resize dựa trên log Firefox của bạn
-                        const msg = JSON.stringify({ 
-                            "AuthToken": "", 
-                            "columns": xterm.cols, 
-                            "rows": xterm.rows 
-                        });
+                        const msg = JSON.stringify({ columns: xterm.cols, rows: xterm.rows });
                         termWs.send('1' + msg); 
                     }
                 } catch (e) { console.error(e); }
             };
 
-            // Thực hiện fit lần đầu với độ trễ ngắn để DOM ổn định hoàn toàn
+            // Đợi một chút để DOM ổn định rồi mới Fit lần đầu
             setTimeout(() => {
                 resizeTerminal();
-                xterm.refresh(0, xterm.rows - 1); // Vẽ lại toàn bộ màn hình
                 xterm.focus();
                 connectWs(h);
-            }, 50);
+            }, 200);
 
+            // Lắng nghe sự kiện cửa sổ thay đổi để terminal luôn đẹp
             window.addEventListener('resize', resizeTerminal);
         }
 
