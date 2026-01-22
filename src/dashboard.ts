@@ -425,7 +425,7 @@ export const DASHBOARD_HTML = `
         }
 
         /* Terminal Section */
-        #section-terminal { height: calc(100vh - 160px); display: none; flex-direction: column; margin-bottom: 0; }
+        #section-terminal { height: calc(100vh - 180px); display: none; flex-direction: column; margin-bottom: 0; }
         #section-terminal.active { display: flex; }
         .terminal-header-bar {
             display: flex; justify-content: space-between; align-items: center;
