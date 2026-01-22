@@ -1468,13 +1468,13 @@ async function deleteKV(key) {
             // Path structure for our proxy: /terminal-proxy/[token]/[node]/ws
             const wsUrl = protocol + "//" + location.host + "/terminal-proxy/" + TOKEN + "/" + h + "/ws";
             
-            xterm.write('\x1b[32m[System] Connecting to ' + h + '...\r\n\x1b[0m');
+            xterm.write('\\x1b[32m[System] Connecting to ' + h + '...\\r\\n\\x1b[0m');
             
             // @ts-ignore
             termWs = new WebSocket(wsUrl, 'tty');
             
             termWs.onopen = () => {
-                xterm.write('\x1b[32m[System] Connected! Synchronizing...\r\n\x1b[0m');
+                xterm.write('\\x1b[32m[System] Connected! Synchronizing...\\r\\n\\x1b[0m');
                 const initMsg = JSON.stringify({
                     "AuthToken": "",
                     "columns": xterm.cols,
@@ -1495,11 +1495,11 @@ async function deleteKV(key) {
             };
 
             termWs.onclose = () => {
-                xterm.write('\r\n\x1b[31m[System] Connection closed.\x1b[0m\r\n');
+                xterm.write('\\r\\n\\x1b[31m[System] Connection closed.\\x1b[0m\\r\\n');
             };
 
             termWs.onerror = () => {
-                xterm.write('\r\n\x1b[31m[System] Connection error.\x1b[0m\r\n');
+                xterm.write('\\r\\n\\x1b[31m[System] Connection error.\\x1b[0m\\r\\n');
             };
 
             xterm.onData(data => {
