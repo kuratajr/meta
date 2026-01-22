@@ -300,24 +300,16 @@ export default {
             const targetHost = `8877-${host}`;
 
             if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-                const [client, server] = new WebSocketPair() as [any, any];
                 const proxyHeaders = new Headers(request.headers);
                 proxyHeaders.set('Host', targetHost);
                 proxyHeaders.set('Origin', `https://${targetHost}`);
-                proxyHeaders.set('Referer', `https://${targetHost}/`);
                 const protocol = request.headers.get('Sec-WebSocket-Protocol') || 'tty';
                 proxyHeaders.set('Sec-WebSocket-Protocol', protocol);
 
-                const wsResponse = await fetch(targetUrl, {
+                return fetch(targetUrl, {
                     headers: proxyHeaders,
-                    webSocket: server
-                } as any);
-
-                return new Response(null, {
-                    status: 101,
-                    webSocket: client,
-                    headers: wsResponse.headers
-                } as any);
+                    redirect: 'follow'
+                });
             }
 
             const headers = new Headers(request.headers);
