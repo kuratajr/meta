@@ -5,13 +5,12 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=block');
         :root {
             --primary: #6366f1;
             --primary-glow: rgba(99, 102, 241, 0.4);
@@ -439,14 +438,13 @@ export const DASHBOARD_HTML = `
             border-top: none; border-radius: 0 0 1rem 1rem; overflow: hidden;
             padding: 10px;
         }
-        #xterm-container { width: 100%; height: 100%; font-family: "Ubuntu Mono", monospace !important; }
-        #xterm-container * { font-family: "Ubuntu Mono", monospace !important; }
-        .xterm-rows, .xterm-rows span, .xterm-rows div { font-family: "Ubuntu Mono", monospace !important; }
-        #xterm-container .xterm-viewport::-webkit-scrollbar { display: none; }
-        #xterm-container .xterm-viewport { scrollbar-width: none; }
-        #xterm-container .xterm-screen canvas { opacity: 1 !important; }
-        .xterm .xterm-screen { background-color: transparent !important; }
-        .xterm .xterm-viewport { background-color: transparent !important; }
+        #xterm-container { 
+            width: 100%; height: 100%; 
+            background: transparent;
+        }
+        .xterm-rows { font-family: 'JetBrains Mono', monospace !important; }
+        .xterm-viewport::-webkit-scrollbar { display: none; }
+        .xterm-viewport { scrollbar-width: none; }
         .overlay.show { display: block; }
 
         .badge {
@@ -643,7 +641,6 @@ export const DASHBOARD_HTML = `
             </div>
         </div>
 
-        <div id="font-force" style="font-family: 'Ubuntu Mono', monospace; position: absolute; opacity: 0; pointer-events: none;">font-loading-test</div>
         <div id="section-terminal" class="section">
             <div class="terminal-header-bar">
                 <div style="display: flex; align-items: center; gap: 1rem;">
@@ -1454,21 +1451,7 @@ async function deleteKV(key) {
             const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
             newTabBtn.dataset.url = originUrl;
 
-            // Ultimate font-readiness check
-            const fontCheck = async () => {
-                try {
-                    // Try to wait for the font to be ready natively
-                    await document.fonts.ready;
-                    if (document.fonts.check('14px "Ubuntu Mono"')) {
-                        console.log("Ubuntu Mono is ready.");
-                    } else {
-                        await document.fonts.load('14px "Ubuntu Mono"');
-                    }
-                } catch (e) {}
-                // Give it an extra bit of time to settle in Canvas
-                setTimeout(() => initXterm(h), 300);
-            };
-            fontCheck();
+            initXterm(h);
         }
 
         function initXterm(h) {
@@ -1480,12 +1463,16 @@ async function deleteKV(key) {
             // @ts-ignore
             xterm = new Terminal({
                 cursorBlink: true,
-                fontSize: 14,
-                fontFamily: '"Ubuntu Mono", monospace',
-                theme: { background: 'rgba(0,0,0,0)', foreground: '#0f0' },
+                fontSize: 13,
+                fontFamily: "'JetBrains Mono', monospace",
+                theme: { 
+                    background: 'transparent', 
+                    foreground: '#10b981', // Emerald green
+                    cursor: '#10b981'
+                },
                 allowTransparency: true,
-                cols: 100,
-                rows: 30
+                rows: 30,
+                cols: 100
             });
 
             // @ts-ignore
@@ -1493,24 +1480,11 @@ async function deleteKV(key) {
             xterm.loadAddon(xtermFit);
             xterm.open(container);
             
-            // Critical: Wait for canvas to settle and force character width re-calculation
+            // Re-fit after short delays to handle glassmorphism and font loading
             setTimeout(() => {
-                xterm.options.fontFamily = '"Ubuntu Mono", monospace';
-                try {
-                    xtermFit.fit();
-                    // Force a full refresh of the screen buffer
-                    // @ts-ignore
-                    if (xterm._core && xterm._core.viewport) {
-                        // @ts-ignore
-                        xterm._core.clearBuffer();
-                    }
-                    xterm.refresh(0, xterm.rows - 1);
-                    if (xterm.cols < 10) xterm.resize(100, 30);
-                } catch (e) {
-                    xterm.resize(100, 30);
-                }
+                xtermFit.fit();
                 connectWs(h);
-            }, 600);
+            }, 200);
         }
 
         function connectWs(h) {
