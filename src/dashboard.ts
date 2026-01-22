@@ -1493,31 +1493,37 @@ async function deleteKV(key) {
             const decoder = new TextDecoder();
             
             termWs.onopen = () => {
-                console.log("[Terminal] WS Open");
-                xterm.write('\\x1b[32m[System] Connected! Synchronizing...\\r\\n\\x1b[0m');
-                const initMsg = JSON.stringify({
-                    "AuthToken": "",
-                    "columns": xterm.cols,
-                    "rows": xterm.rows
-                });
-                console.log("[Terminal] Sending Init:", initMsg);
-                termWs.send(initMsg);
+                console.log("[Terminal] WS Opened successfully to:", wsUrl);
+                xterm.write('\\x1b[32m[System] Connected! Starting session...\\r\\n\\x1b[0m');
+                
+                // Small delay to ensure the server is ready to receive the init JSON
+                setTimeout(() => {
+                    const initMsg = JSON.stringify({
+                        "AuthToken": "",
+                        "columns": xterm.cols,
+                        "rows": xterm.rows
+                    });
+                    console.log("[Terminal] Sending Init Msg:", initMsg);
+                    termWs.send(initMsg);
+                }, 200);
             };
 
             termWs.onmessage = (ev) => {
                 let msg = "";
                 if (ev.data instanceof ArrayBuffer) {
-                    msg = decoder.decode(ev.data);
+                    msg = decoder.decode(new Uint8Array(ev.data));
                 } else {
                     msg = ev.data;
                 }
 
-                console.log("[Terminal] Received:", msg);
+                if (msg) console.log("[Terminal] Data Received (" + msg.length + " chars):", msg);
 
                 if (typeof msg === 'string') {
                     if (msg.startsWith('0')) {
                         xterm.write(msg.slice(1));
-                    } else if (!/^[12]/.test(msg)) {
+                    } else if (msg.startsWith('1') || msg.startsWith('2')) {
+                        // Protocol messages, ignore for raw terminal output
+                    } else {
                         xterm.write(msg);
                     }
                 }
