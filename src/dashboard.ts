@@ -1446,7 +1446,8 @@ async function deleteKV(key) {
         }
 
         function initXterm(h) {
-            if (termWs) { termWs.close(); termWs = null; }
+            if (termWs) { try { termWs.close(); } catch(e){} }
+            termWs = null;
             const container = document.getElementById('xterm-container');
             container.innerHTML = '';
 
@@ -1455,15 +1456,30 @@ async function deleteKV(key) {
                 cursorBlink: true,
                 fontSize: 14,
                 fontFamily: '"Fira Code", monospace',
-                theme: { background: '#000', foreground: '#0f0' }
+                theme: { background: '#000', foreground: '#0f0' },
+                cols: 100, // Default fallback
+                rows: 30
             });
 
             // @ts-ignore
             xtermFit = new FitAddon.FitAddon();
             xterm.loadAddon(xtermFit);
             xterm.open(container);
-            xtermFit.fit();
+            
+            // Wait for DOM to settle to get correct dimensions
+            setTimeout(() => {
+                try {
+                    xtermFit.fit();
+                    // Ensure we don't have 0 cols
+                    if (xterm.cols < 10) xterm.resize(100, 30);
+                } catch (e) {
+                    xterm.resize(100, 30);
+                }
+                connectWs(h);
+            }, 100);
+        }
 
+        function connectWs(h) {
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             // Path structure for our proxy: /terminal-proxy/[token]/[node]/ws
             const wsUrl = protocol + "//" + location.host + "/terminal-proxy/" + TOKEN + "/" + h + "/ws";
@@ -1483,8 +1499,13 @@ async function deleteKV(key) {
                 termWs.send(initMsg);
             };
 
-            termWs.onmessage = (ev) => {
-                const msg = ev.data;
+            termWs.onmessage = async (ev) => {
+                let msg = ev.data;
+                // Handle binary data from ttyd
+                if (msg instanceof Blob) {
+                    msg = await msg.text();
+                }
+
                 if (typeof msg === 'string') {
                     if (msg.startsWith('0')) {
                         xterm.write(msg.slice(1));
