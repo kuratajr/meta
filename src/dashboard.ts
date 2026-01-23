@@ -469,6 +469,13 @@ export const DASHBOARD_HTML = `
         }
 
         #xterm-container { width: 100%; height: 100%; }
+
+        .terminal-container {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+            background: transparent !important;
+        }
         
         .xterm, .xterm-screen, .xterm-viewport, .xterm-rows { background-color: transparent !important; }
         .xterm-viewport { scrollbar-width: none !important; -ms-overflow-style: none !important; }
@@ -736,7 +743,7 @@ export const DASHBOARD_HTML = `
                     </div>
                 </div>
                 <div class="terminal-body-container">
-                    <div id="xterm-container"></div>
+                    <div id="xterm-container" class="terminal-container"></div>
                 </div>
             </div>
         </div>
