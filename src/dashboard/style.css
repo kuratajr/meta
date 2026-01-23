@@ -897,7 +897,7 @@ pre {
 [class*="xterm"] {
     font-family: "Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", "Courier New", monospace !important;
     font-weight: 400 !important;
-    font-size: 16px !important;
+    font-size: 14px !important;
     font-feature-settings: normal !important;
     font-variant-ligatures: none !important;
     font-variant-numeric: normal !important;
