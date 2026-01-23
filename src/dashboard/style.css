@@ -1125,8 +1125,14 @@ pre {
     border-color: rgba(218, 54, 51, 0.3);
 }
 
+.status-badge.offline {
+    color: #ff6b6b;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
 .status-badge.offline .dot {
-    background: #484f58;
+    background: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
 }
 
 .status-badge.error .dot {

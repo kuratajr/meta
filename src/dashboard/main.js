@@ -892,10 +892,10 @@ function updateUIStatus(newStatus) {
     statusBadge.className = 'status-badge ' + newStatus;
 
     switch (newStatus) {
-        case 'connecting': statusText.innerText = 'Đang kết nối...'; break;
-        case 'online': statusText.innerText = 'Trực tuyến'; break;
-        case 'offline': statusText.innerText = 'Đã ngắt kết nối'; break;
-        case 'error': statusText.innerText = 'Lỗi kết nối'; break;
+        case 'connecting': statusText.innerText = 'Connecting...'; break;
+        case 'online': statusText.innerText = 'Online'; break;
+        case 'offline': statusText.innerText = 'Offline'; break;
+        case 'error': statusText.innerText = 'Connection Error'; break;
     }
 }
 
