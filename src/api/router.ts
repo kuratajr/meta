@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 import { Env } from '../index';
 import { DASHBOARD_HTML } from '../dashboard';
 import { recordLog } from '../utils/db';

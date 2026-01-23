@@ -22,5 +22,16 @@
 	],
 	"observability": {
 		"enabled": true
-	}
+	},
+	"rules": [
+		{
+			"type": "Text",
+			"globs": [
+				"**/*.html",
+				"**/*.css",
+				"**/*.js"
+			],
+			"fallthrough": true
+		}
+	]
 }

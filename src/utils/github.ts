@@ -15,11 +15,12 @@ export async function fetchGithubFile(path: string, env: Env, isJson: boolean = 
                 "User-Agent": "Cloudflare-Worker",
                 "Cache-Control": "no-cache"
             },
+            // @ts-ignore
             cf: {
                 cacheTtl: 0,
                 cacheEverything: false
             }
-        });
+        } as any);
 
         clearTimeout(timeoutId);
         if (response.status === 404) return null;
