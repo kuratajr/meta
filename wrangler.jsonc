@@ -27,9 +27,9 @@
 		{
 			"type": "Text",
 			"globs": [
-				"**/*.html",
-				"**/*.css",
-				"**/*.js"
+				"src/dashboard/**/*.html",
+				"src/dashboard/**/*.css",
+				"src/dashboard/**/*.js"
 			],
 			"fallthrough": true
 		}
