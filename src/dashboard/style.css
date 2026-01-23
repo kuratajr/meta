@@ -890,10 +890,10 @@ pre {
     height: 100%;
     background: radial-gradient(
         ellipse 100% 80% at 50% 50%,
-        rgba(160, 170, 180, 0.25) 0%,
-        rgba(140, 150, 160, 0.15) 30%,
-        rgba(120, 130, 140, 0.08) 50%,
-        rgba(100, 110, 120, 0.04) 70%,
+        rgba(100, 150, 200, 0.25) 0%,
+        rgba(80, 130, 180, 0.15) 30%,
+        rgba(60, 110, 160, 0.08) 50%,
+        rgba(40, 90, 140, 0.04) 70%,
         transparent 100%
     );
     pointer-events: none;
@@ -913,9 +913,9 @@ pre {
     height: 100%;
     background: radial-gradient(
         ellipse 80% 60% at 50% 50%,
-        rgba(150, 160, 170, 0.2) 0%,
-        rgba(130, 140, 150, 0.12) 40%,
-        rgba(110, 120, 130, 0.06) 65%,
+        rgba(120, 170, 220, 0.2) 0%,
+        rgba(100, 150, 200, 0.12) 40%,
+        rgba(80, 130, 180, 0.06) 65%,
         transparent 90%
     );
     pointer-events: none;
