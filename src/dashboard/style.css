@@ -858,14 +858,24 @@ pre {
     height: 100%;
 }
 
-/* Fix font rendering for Vietnamese characters */
+/* Terminal font - clean and readable */
 .xterm,
 .xterm * {
-    font-family: "JetBrains Mono", "Ubuntu Mono", "Consolas", "Courier New", monospace !important;
-    font-feature-settings: "liga" 1, "calt" 1;
+    font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
+    font-weight: 400 !important;
+    font-feature-settings: normal !important;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-variant-ligatures: none !important;
+}
+
+.xterm .xterm-rows {
+    font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
+}
+
+.xterm .xterm-screen {
+    font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
 }
 
 .xterm,
