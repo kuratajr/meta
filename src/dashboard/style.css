@@ -859,33 +859,65 @@ pre {
 }
 
 /* Terminal font - clean and readable - Force override all xterm elements */
+/* Load after xterm.css to ensure override */
 #xterm-container,
 #xterm-container *,
+#xterm-container *::before,
+#xterm-container *::after,
 .xterm,
 .xterm *,
+.xterm *::before,
+.xterm *::after,
 .xterm-screen,
 .xterm-screen *,
+.xterm-screen *::before,
+.xterm-screen *::after,
 .xterm-rows,
 .xterm-rows *,
+.xterm-rows *::before,
+.xterm-rows *::after,
 .xterm-viewport,
 .xterm-viewport *,
+.xterm-viewport *::before,
+.xterm-viewport *::after,
 .xterm-text-layer,
 .xterm-text-layer *,
+.xterm-text-layer *::before,
+.xterm-text-layer *::after,
 .xterm-char,
+.xterm-char *,
 .xterm-cursor-layer,
 .xterm-cursor-layer *,
+.xterm-cursor-layer *::before,
+.xterm-cursor-layer *::after,
 .xterm-selection-layer,
-.xterm-selection-layer * {
-    font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
+.xterm-selection-layer *,
+.xterm-selection-layer *::before,
+.xterm-selection-layer *::after,
+[class*="xterm"] {
+    font-family: "Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", "Courier New", monospace !important;
     font-weight: 400 !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
     font-feature-settings: normal !important;
     font-variant-ligatures: none !important;
-    text-rendering: optimizeLegibility !important;
+    font-variant-numeric: normal !important;
+    font-variant-east-asian: normal !important;
+    text-rendering: geometricPrecision !important;
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale !important;
     letter-spacing: 0 !important;
     line-height: 1.4 !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+    unicode-bidi: normal !important;
+    direction: ltr !important;
+}
+
+/* Additional fix for Vietnamese diacritics */
+.xterm-char {
+    font-family: "Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", "Courier New", monospace !important;
+    font-kerning: none !important;
+    font-variant-ligatures: none !important;
 }
 
 .xterm,

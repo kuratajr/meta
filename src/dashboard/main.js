@@ -924,10 +924,14 @@ function initXterm(h) {
     xterm = new Terminal({
         cursorBlink: true,
         cursorStyle: 'bar',
-        fontFamily: '"Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace',
-        fontSize: 15,
+        fontFamily: '"Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", monospace',
+        fontSize: 16,
         letterSpacing: 0,
         lineHeight: 1.4,
+        fastScrollModifier: 'alt',
+        macOptionIsMeta: true,
+        macOptionClickForcesSelection: false,
+        rightClickSelectsWord: true,
         theme: {
             background: 'rgba(0, 0, 0, 0)',
             foreground: '#e6edf3',
@@ -959,23 +963,31 @@ function initXterm(h) {
     xterm.loadAddon(xtermFit);
     xterm.open(container);
 
-    // Force apply font to all xterm elements
+    // Force apply font to all xterm elements with better Vietnamese support
     setTimeout(() => {
         const applyFont = () => {
+            const fontStack = '"Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", monospace';
             const xtermEls = container.querySelectorAll('*');
             xtermEls.forEach(el => {
                 if (el.style) {
-                    el.style.fontFamily = '"Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace';
-                    el.style.fontWeight = '400';
-                    el.style.letterSpacing = '0';
-                    el.style.webkitFontSmoothing = 'antialiased';
-                    el.style.mozOsxFontSmoothing = 'grayscale';
+                    el.style.setProperty('font-family', fontStack, 'important');
+                    el.style.setProperty('font-weight', '400', 'important');
+                    el.style.setProperty('letter-spacing', '0', 'important');
+                    el.style.setProperty('-webkit-font-smoothing', 'antialiased', 'important');
+                    el.style.setProperty('-moz-osx-font-smoothing', 'grayscale', 'important');
+                    el.style.setProperty('text-rendering', 'geometricPrecision', 'important');
                 }
             });
+            // Also apply to container itself
+            if (container.style) {
+                container.style.setProperty('font-family', fontStack, 'important');
+            }
         };
         applyFont();
-        // Re-apply after a short delay to catch any dynamically created elements
+        // Re-apply multiple times to catch dynamically created elements
         setTimeout(applyFont, 100);
+        setTimeout(applyFont, 300);
+        setTimeout(applyFont, 500);
     }, 50);
 
     setTimeout(() => {
