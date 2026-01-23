@@ -837,9 +837,10 @@ pre {
 
 .terminal-body-container {
     flex: 1;
-    background: transparent;
+    background: #080b208c;
     padding: 20px;
     overflow: hidden;
+    border-radius: 0 0 16px 16px;
 }
 
 .terminal-title-box {
@@ -946,7 +947,7 @@ pre {
 .xterm-screen,
 .xterm-viewport,
 .xterm-rows {
-    background-color: transparent !important;
+    background-color: #0a0e27ad !important;
 }
 
 .xterm-viewport {

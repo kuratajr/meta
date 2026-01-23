@@ -933,7 +933,7 @@ function initXterm(h) {
         macOptionClickForcesSelection: false,
         rightClickSelectsWord: true,
         theme: {
-            background: 'rgba(0, 0, 0, 0)',
+            background: 'rgba(93, 168, 255, 0.33)',
             foreground: '#e6edf3',
             cursor: '#58a6ff',
             selection: 'rgba(88, 166, 255, 0.3)',
