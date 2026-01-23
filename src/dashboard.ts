@@ -483,16 +483,22 @@ export const DASHBOARD_HTML = `
         .xterm-screen,
         .xterm-viewport,
         .xterm-rows {
-        background-color: transparent !important;
+            background-color: transparent !important;
         }
 
         .xterm-viewport {
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
         }
 
         .xterm-viewport::-webkit-scrollbar {
-        display: none !important;
+            display: none !important;
+        }
+
+        .xterm-rows {
+            font-feature-settings: "liga" 1, "calt" 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
 
@@ -1592,8 +1598,10 @@ async function deleteKV(key) {
                 cursorBlink: true,
                 cursorStyle: 'bar',
                 fontFamily: '"Ubuntu Mono", monospace',
-                fontSize: 14,
-                letterSpacing: 0.5,
+                fontSize: 15,
+                fontWeight: '400',
+                lineHeight: 1.2,
+                letterSpacing: 0,
                 theme: {
                     background: 'rgba(0, 0, 0, 0)',
                     foreground: '#e6edf3',
@@ -1601,9 +1609,9 @@ async function deleteKV(key) {
                     selection: 'rgba(88, 166, 255, 0.3)',
                     black: '#484f58',
                     red: '#ff7b72',
-                    green: '#3fb950',
+                    green: '#3fb950', // Vibrant green
                     yellow: '#d29922',
-                    blue: '#58a6ff',
+                    blue: '#58a6ff',  // Vibrant blue
                     magenta: '#bc8cff',
                     cyan: '#39c5cf',
                     white: '#b1bac4',
