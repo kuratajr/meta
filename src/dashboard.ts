@@ -1566,7 +1566,7 @@ async function deleteKV(key) {
             container.innerHTML = '';
 
             // @ts-ignore
-            xterm = new Terminal({
+            xterm = new XTerm({
                 cursorBlink: true,
                 cursorStyle: 'bar',
                 fontFamily: '"Ubuntu Mono", monospace',
@@ -1595,8 +1595,6 @@ async function deleteKV(key) {
                     brightWhite: '#ffffff',
                 },
                 allowTransparency: true,
-                cols: 100,
-                rows: 30
             });
 
             // @ts-ignore
