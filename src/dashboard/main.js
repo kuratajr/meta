@@ -959,6 +959,25 @@ function initXterm(h) {
     xterm.loadAddon(xtermFit);
     xterm.open(container);
 
+    // Force apply font to all xterm elements
+    setTimeout(() => {
+        const applyFont = () => {
+            const xtermEls = container.querySelectorAll('*');
+            xtermEls.forEach(el => {
+                if (el.style) {
+                    el.style.fontFamily = '"Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace';
+                    el.style.fontWeight = '400';
+                    el.style.letterSpacing = '0';
+                    el.style.webkitFontSmoothing = 'antialiased';
+                    el.style.mozOsxFontSmoothing = 'grayscale';
+                }
+            });
+        };
+        applyFont();
+        // Re-apply after a short delay to catch any dynamically created elements
+        setTimeout(applyFont, 100);
+    }, 50);
+
     setTimeout(() => {
         try {
             xtermFit.fit();

@@ -858,24 +858,34 @@ pre {
     height: 100%;
 }
 
-/* Terminal font - clean and readable */
+/* Terminal font - clean and readable - Force override all xterm elements */
+#xterm-container,
+#xterm-container *,
 .xterm,
-.xterm * {
+.xterm *,
+.xterm-screen,
+.xterm-screen *,
+.xterm-rows,
+.xterm-rows *,
+.xterm-viewport,
+.xterm-viewport *,
+.xterm-text-layer,
+.xterm-text-layer *,
+.xterm-char,
+.xterm-cursor-layer,
+.xterm-cursor-layer *,
+.xterm-selection-layer,
+.xterm-selection-layer * {
     font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
     font-weight: 400 !important;
+    font-size: 15px !important;
     font-feature-settings: normal !important;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     font-variant-ligatures: none !important;
-}
-
-.xterm .xterm-rows {
-    font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
-}
-
-.xterm .xterm-screen {
-    font-family: "Fira Code", "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    letter-spacing: 0 !important;
+    line-height: 1.4 !important;
 }
 
 .xterm,
