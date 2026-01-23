@@ -923,7 +923,7 @@ function initXterm(h) {
 
     xterm = new Terminal({
         cursorBlink: true,
-        cursorStyle: 'underline',
+        cursorStyle: 'bar',
         fontFamily: '"Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", monospace',
         fontSize: 14,
         letterSpacing: -0.5,
