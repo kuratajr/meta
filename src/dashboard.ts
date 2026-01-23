@@ -1595,8 +1595,6 @@ async function deleteKV(key) {
                     brightWhite: '#ffffff',
                 },
                 allowTransparency: true,
-                cols: 100,
-                rows: 30
             });
 
             // @ts-ignore
