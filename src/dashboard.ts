@@ -5,6 +5,8 @@ export const DASHBOARD_HTML = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPS Cloud Control Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -477,9 +479,22 @@ export const DASHBOARD_HTML = `
             background: transparent !important;
         }
         
-        .xterm, .xterm-screen, .xterm-viewport, .xterm-rows { background-color: transparent !important; }
-        .xterm-viewport { scrollbar-width: none !important; -ms-overflow-style: none !important; }
-        .xterm-viewport::-webkit-scrollbar { display: none !important; }
+        .xterm,
+        .xterm-screen,
+        .xterm-viewport,
+        .xterm-rows {
+        background-color: transparent !important;
+        }
+
+        .xterm-viewport {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        }
+
+        .xterm-viewport::-webkit-scrollbar {
+        display: none !important;
+        }
+
 
         @keyframes slideUp-terminal {
             from { opacity: 0; transform: translateY(30px) scale(0.98); }
