@@ -920,15 +920,21 @@ pre {
     font-variant-ligatures: none !important;
 }
 
-/* Adjust cursor spacing to be closer to text */
+/* Adjust cursor - make it smaller or hide */
 .xterm-cursor-layer {
     position: relative !important;
 }
 
 .xterm-cursor-layer .xterm-cursor {
-    width: 1.5px !important;
-    margin-left: -0.5px !important;
-    position: relative !important;
+    /* Option 1: Small underline cursor */
+    height: 2px !important;
+    width: auto !important;
+    margin-top: 12px !important;
+    background-color: #58a6ff !important;
+    opacity: 0.8 !important;
+    
+    /* Option 2: To completely hide cursor, uncomment below and comment above */
+    /* display: none !important; */
 }
 
 /* Make text slightly tighter for better cursor alignment */
