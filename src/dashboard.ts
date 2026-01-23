@@ -451,7 +451,7 @@ export const DASHBOARD_HTML = `
             background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%);
             -webkit-backdrop-filter: blur(40px) saturate(180%);
             border: 1px solid var(--glass-border); border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
             overflow: hidden;
         }
 
@@ -741,11 +741,11 @@ export const DASHBOARD_HTML = `
                             <i data-lucide="arrow-left"></i>Back to Nodes
                         </button>
                         <div class="terminal-title-box">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="4 17 10 11 4 5"></polyline>
                                 <line x1="12" y1="19" x2="20" y2="19"></line>
                             </svg>
-                            <span id="terminal-section-title">Terminal: None</span>
+                            <span id="terminal-section-title">VNX Cloud Terminal</span>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 1.5rem;">
@@ -1598,10 +1598,8 @@ async function deleteKV(key) {
                 cursorBlink: true,
                 cursorStyle: 'bar',
                 fontFamily: '"Ubuntu Mono", monospace',
-                fontSize: 15,
-                fontWeight: '400',
-                lineHeight: 1.2,
-                letterSpacing: 0,
+                fontSize: 14,
+                letterSpacing: 0.5,
                 theme: {
                     background: 'rgba(0, 0, 0, 0)',
                     foreground: '#e6edf3',
@@ -1609,9 +1607,9 @@ async function deleteKV(key) {
                     selection: 'rgba(88, 166, 255, 0.3)',
                     black: '#484f58',
                     red: '#ff7b72',
-                    green: '#3fb950', // Vibrant green
+                    green: '#3fb950',
                     yellow: '#d29922',
-                    blue: '#58a6ff',  // Vibrant blue
+                    blue: '#58a6ff',
                     magenta: '#bc8cff',
                     cyan: '#39c5cf',
                     white: '#b1bac4',
