@@ -6,5 +6,5 @@ import scripts from './dashboard/scripts.js';
 import htmlTemplate from './dashboard/index.html';
 
 export const DASHBOARD_HTML = htmlTemplate
-    .replace('{{STYLES}}', styles)
-    .replace('{{SCRIPTS}}', scripts);
+    .replace(/\{\{STYLES\}\}/g, styles)
+    .replace(/\{\{SCRIPTS\}\}/g, scripts);
