@@ -920,6 +920,22 @@ pre {
     font-variant-ligatures: none !important;
 }
 
+/* Adjust cursor spacing to be closer to text */
+.xterm-cursor-layer {
+    position: relative !important;
+}
+
+.xterm-cursor-layer .xterm-cursor {
+    width: 1.5px !important;
+    margin-left: -0.5px !important;
+    position: relative !important;
+}
+
+/* Make text slightly tighter for better cursor alignment */
+.xterm-char {
+    letter-spacing: -0.02em !important;
+}
+
 .xterm,
 .xterm-screen,
 .xterm-viewport,

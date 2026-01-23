@@ -926,7 +926,7 @@ function initXterm(h) {
         cursorStyle: 'bar',
         fontFamily: '"Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", monospace',
         fontSize: 14,
-        letterSpacing: 0,
+        letterSpacing: -0.5,
         lineHeight: 1.4,
         fastScrollModifier: 'alt',
         macOptionIsMeta: true,
