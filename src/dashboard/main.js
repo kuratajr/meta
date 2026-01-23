@@ -1,11 +1,10 @@
-// @ts-ignore
 const TOKEN = new URLSearchParams(window.location.search).get('token');
 let currentKey = '';
 let isNew = false;
-let groupsData: any[] = [];
-let lastData: any = null;
+let groupsData = [];
+let lastData = null;
 let currentSearch = '';
-let previousStatuses: Record<string, boolean> = {};
+let previousStatuses = {};
 let currentStatusFilter = 'all';
 
 // Log states for pagination
@@ -14,7 +13,7 @@ let logState = {
     live: { offset: 0, date: '', hostname: '', loading: false, hasMore: true, lastDateStr: '' }
 };
 
-export function handleStatusFilter(val: string) {
+export function handleStatusFilter(val) {
     currentStatusFilter = val;
     const table = document.getElementById('table-nodes');
     const label = document.getElementById('filter-label');
@@ -37,7 +36,7 @@ export function toggleSidebar() {
     document.getElementById('overlay')?.classList.toggle('show');
 }
 
-export function showSection(id: string) {
+export function showSection(id) {
     if (window.innerWidth <= 768) toggleSidebar();
     document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -63,7 +62,7 @@ export function showSection(id: string) {
     if (btn) btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
 
     const isTerminal = id === 'terminal';
-    const statsGrid = document.querySelector('.stats-grid') as HTMLElement;
+    const statsGrid = document.querySelector('.stats-grid');
     if (statsGrid) statsGrid.style.display = isTerminal ? 'none' : 'grid';
 
     const liveIndicator = document.getElementById('live-indicator');
@@ -72,7 +71,7 @@ export function showSection(id: string) {
     const btnLive = document.getElementById('btn-live');
     if (btnLive) btnLive.style.display = 'block';
 
-    const refreshBtn = document.querySelector('.header')?.querySelector('button[onclick="refreshData()"]') as HTMLElement;
+    const refreshBtn = document.querySelector('.header')?.querySelector('button[onclick="refreshData()"]');
     if (refreshBtn) refreshBtn.style.display = 'block';
 
     // Conditional search visibility
@@ -106,7 +105,6 @@ export async function refreshData() {
         lastData = data;
         renderUI(data);
 
-        // @ts-ignore
         if (window.lucide) lucide.createIcons();
         if (connStatus) {
             connStatus.innerText = '● Online';
@@ -122,7 +120,7 @@ export async function refreshData() {
     if (loader) loader.style.display = 'none';
 }
 
-export function handleSearch(val: string) {
+export function handleSearch(val) {
     currentSearch = val.toLowerCase();
     if (!lastData) return;
     const activeSection = document.querySelector('.section.active');
@@ -137,7 +135,7 @@ export function handleSearch(val: string) {
     else if (activeId === 'templates') renderTemplates(lastData);
 }
 
-function renderUI(data: any) {
+function renderUI(data) {
     groupsData = data.groups || [];
     const statNodes = document.getElementById('stat-nodes');
     if (statNodes) statNodes.innerText = Object.keys(data.registry).length.toString();
@@ -159,16 +157,15 @@ function renderUI(data: any) {
     if (globalArea) {
         globalArea.innerHTML = data.hasGlobal ? `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>` : 'None.';
     }
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
-const getGroupOf = (node: string) => {
-    const g = groupsData.find(g => (g.listnode || "").split(',').map((s: string) => s.trim()).includes(node));
+const getGroupOf = (node) => {
+    const g = groupsData.find(g => (g.listnode || "").split(',').map(s => s.trim()).includes(node));
     return g ? g.config : "None";
 };
 
-function renderNodes(data: any) {
+function renderNodes(data) {
     const nBody = document.querySelector('#table-nodes tbody');
     if (!nBody) return;
     let html = '';
@@ -213,35 +210,32 @@ function renderNodes(data: any) {
     }
     nBody.innerHTML = html;
     refreshStatusDots();
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
-function renderGroups(data: any) {
+function renderGroups(data) {
     const mBody = document.querySelector('#table-mapping tbody');
     if (!mBody) return;
-    mBody.innerHTML = (data.groups || []).filter((g: any) => !currentSearch || g.config.toLowerCase().includes(currentSearch) || (g.listnode || '').toLowerCase().includes(currentSearch)).map((g: any) => `<tr>
+    mBody.innerHTML = (data.groups || []).filter(g => !currentSearch || g.config.toLowerCase().includes(currentSearch) || (g.listnode || '').toLowerCase().includes(currentSearch)).map(g => `<tr>
         <td style="font-weight:600; padding-left: 1.5rem;">${g.config}</td>
         <td style="opacity:0.8; font-size:0.85rem; line-height: 1.4; word-break: break-all; padding-right: 1rem;">${(g.listnode || 'None').split(',').join(', ')}</td>
         <td style="text-align: right; padding-right: 1.5rem;"><div class="action-flex" style="justify-content: flex-end;"><button class="btn btn-s" onclick="editKV('group:${g.config}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('group:${g.config}')"><i data-lucide="trash"></i>Delete</button></div></td>
     </tr>`).join('');
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
-function renderTemplates(data: any) {
+function renderTemplates(data) {
     const tGrid = document.getElementById('grid-templates');
     if (!tGrid) return;
-    tGrid.innerHTML = data.templates.filter((t: string) => !currentSearch || t.toLowerCase().includes(currentSearch)).map((t: string) => `<div class="card">
+    tGrid.innerHTML = data.templates.filter(t => !currentSearch || t.toLowerCase().includes(currentSearch)).map(t => `<div class="card">
         <div style="font-weight:600; margin-bottom:0.8rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="file-text" style="color: var(--accent); width: 0.95rem; height: 0.95rem;"></i>${t.replace('template:', '')}</div>
         <div class="action-flex"><button class="btn btn-s" onclick="editKV('${t}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('${t}')"><i data-lucide="trash"></i>Delete</button></div>
     </div>`).join('');
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
-function renderConfigs(data: any) {
-    const filter = (arr: string[]) => arr.filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => `<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('${c}')"><i data-lucide="trash"></i>Delete</button></div></div>`).join('');
+function renderConfigs(data) {
+    const filter = (arr) => arr.filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => `<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; margin-bottom: 0.5rem;"><span>${c}</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('${c}')"><i data-lucide="trash"></i>Delete</button></div></div>`).join('');
 
     const groupConfigs = document.getElementById('list-group-configs');
     if (groupConfigs) groupConfigs.innerHTML = filter(data.groupConfigs);
@@ -252,11 +246,10 @@ function renderConfigs(data: any) {
     const certConfigs = document.getElementById('list-cert-configs');
     if (certConfigs) certConfigs.innerHTML = filter(data.certConfigs);
 
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
-function renderIPs(data: any) {
+function renderIPs(data) {
     const ipBody = document.querySelector('#table-ips tbody');
     if (!ipBody) return;
     ipBody.innerHTML = Object.keys(data.ips || {}).filter(node => !currentSearch || node.toLowerCase().includes(currentSearch) || (data.ips[node] || '').toLowerCase().includes(currentSearch)).map(node => `<tr>
@@ -264,19 +257,17 @@ function renderIPs(data: any) {
         <td class="copyable" onclick="copyToClipboard('${data.ips[node]}')"><div style="opacity: 0.8; font-size: 0.85rem;">${data.ips[node]}</div></td>
         <td style="text-align: right; padding-right: 1.5rem;"><div class="action-flex" style="justify-content: flex-end;"><button class="btn btn-s" onclick="editIP('${node}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteIP('${node}')"><i data-lucide="trash"></i>Delete</button></div></td>
     </tr>`).join('');
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
-function renderCloudInit(data: any) {
+function renderCloudInit(data) {
     const cloudBody = document.querySelector('#table-cloud tbody');
     if (!cloudBody) return;
-    cloudBody.innerHTML = (data.cloudConfigs || []).filter((c: string) => !currentSearch || c.toLowerCase().includes(currentSearch)).map((c: string) => `<tr>
+    cloudBody.innerHTML = (data.cloudConfigs || []).filter(c => !currentSearch || c.toLowerCase().includes(currentSearch)).map(c => `<tr>
         <td style="font-weight:600; padding-left: 1.5rem;">${c}</td>
         <td><span class="badge badge-accent">KV Storage</span></td>
         <td style="text-align: right; padding-right: 1.5rem;"><div class="action-flex" style="justify-content: flex-end;"><button class="btn btn-s" onclick="editKV('${c}')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('${c}')"><i data-lucide="trash"></i>Delete</button></div></td>
     </tr>`).join('');
-    // @ts-ignore
     if (window.lucide) lucide.createIcons();
 }
 
@@ -286,7 +277,7 @@ async function refreshStatusDots() {
     const batchSize = 40;
     const total = hostnames.length;
 
-    const promises: Promise<any>[] = [];
+    const promises = [];
     for (let i = 0; i < total; i += batchSize) {
         promises.push(
             fetch(`/api/batch-check-nodes?token=${TOKEN}&offset=${i}&limit=${batchSize}&_=${Date.now()}`)
@@ -358,7 +349,7 @@ export async function fetchSystemLogs(append = false) {
 
         let html = '';
 
-        logs.forEach((l: any) => {
+        logs.forEach((l) => {
             const dateObj = new Date(l.time + " UTC");
             const dateStr = dateObj.toLocaleDateString('en-GB');
 
@@ -389,7 +380,7 @@ export async function fetchSystemLogs(append = false) {
     }
 }
 
-export function handleSystemDateChange(val: string) {
+export function handleSystemDateChange(val) {
     if (!val) { resetSystemLogs(); return; }
     logState.system.date = val;
     fetchSystemLogs(false);
@@ -398,13 +389,13 @@ export function handleSystemDateChange(val: string) {
 export function resetSystemLogs() {
     const today = new Date().toLocaleDateString('en-CA');
     logState.system.date = today;
-    const input = document.getElementById('system-log-date') as HTMLInputElement;
+    const input = document.getElementById('system-log-date');
     if (input) input.value = today;
     fetchSystemLogs(false);
 }
 
-export function handleLogScroll(e: Event, type: 'system' | 'live') {
-    const el = e.target as HTMLElement;
+export function handleLogScroll(e, type) {
+    const el = e.target;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
         if (type === 'system' && logState.system.hasMore) {
             fetchSystemLogs(true);
@@ -414,7 +405,7 @@ export function handleLogScroll(e: Event, type: 'system' | 'live') {
     }
 }
 
-export async function viewNodeLogs(h: string) {
+export async function viewNodeLogs(h) {
     showSection('logs');
     logState.live.hostname = h;
     logState.live.offset = 0;
@@ -435,7 +426,7 @@ export function resetLiveLogs() {
     if (resetBtn) resetBtn.style.display = 'none';
 }
 
-async function fetchLiveNodeLogs(h: string, append = false) {
+async function fetchLiveNodeLogs(h, append = false) {
     const state = logState.live;
     if (state.loading) return;
     if (append && !state.hasMore) return;
@@ -465,7 +456,7 @@ async function fetchLiveNodeLogs(h: string, append = false) {
             html += '<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\'Courier New\', Courier, monospace; min-height:400px;">';
         }
 
-        logs.forEach((l: any) => {
+        logs.forEach((l) => {
             const dateObj = new Date(l.time + " UTC");
             const dateStr = dateObj.toLocaleDateString('en-GB');
             if (dateStr !== state.lastDateStr) {
@@ -489,7 +480,6 @@ async function fetchLiveNodeLogs(h: string, append = false) {
         }
 
         state.offset += logs.length;
-        // @ts-ignore
         if (window.lucide) lucide.createIcons();
     } catch (e) {
         if (!append) container.innerHTML = '<div style="color:var(--danger)">Failed to fetch node history.</div>';
@@ -499,19 +489,19 @@ async function fetchLiveNodeLogs(h: string, append = false) {
 }
 
 // Global exposure for event handlers in HTML
-(window as any).handleStatusFilter = handleStatusFilter;
-(window as any).toggleSidebar = toggleSidebar;
-(window as any).showSection = showSection;
-(window as any).refreshData = refreshData;
-(window as any).handleSearch = handleSearch;
-(window as any).handleSystemDateChange = handleSystemDateChange;
-(window as any).resetSystemLogs = resetSystemLogs;
-(window as any).handleLogScroll = handleLogScroll;
-(window as any).viewNodeLogs = viewNodeLogs;
-(window as any).resetLiveLogs = resetLiveLogs;
+window.handleStatusFilter = handleStatusFilter;
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;
+window.refreshData = refreshData;
+window.handleSearch = handleSearch;
+window.handleSystemDateChange = handleSystemDateChange;
+window.resetSystemLogs = resetSystemLogs;
+window.handleLogScroll = handleLogScroll;
+window.viewNodeLogs = viewNodeLogs;
+window.resetLiveLogs = resetLiveLogs;
 
 
-export async function fetchRawShellLogs(h: string) {
+export async function fetchRawShellLogs(h) {
     const container = document.getElementById('live-logs');
     if (!container) return;
     container.innerHTML = '<div style="opacity:0.5">Fetching raw shell logs from ' + h + '...</div>';
@@ -521,17 +511,16 @@ export async function fetchRawShellLogs(h: string) {
         let html = `<div style="margin-bottom:1rem;"><button class="btn btn-s" onclick="viewNodeLogs('${h}')"><i data-lucide="arrow-left"></i> Back to History</button></div>`;
         html += `<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
         container.innerHTML = html;
-        // @ts-ignore
         if (window.lucide) lucide.createIcons();
     } catch (e) {
         container.innerHTML = '<div style="color:var(--danger)">Failed to fetch raw shell logs.</div>';
     }
 }
 
-export function toggleDropdown(event: Event) {
+export function toggleDropdown(event) {
     event.stopPropagation();
-    const btn = event.currentTarget as HTMLElement;
-    const content = btn.nextElementSibling as HTMLElement;
+    const btn = event.currentTarget;
+    const content = btn.nextElementSibling;
     if (!content) return;
     const isShow = content.classList.contains('show');
 
@@ -552,8 +541,8 @@ export function toggleDropdown(event: Event) {
     }
 }
 
-window.onclick = function (event: MouseEvent) {
-    if (!(event.target as HTMLElement).matches('.dropdown-trigger')) {
+window.onclick = function (event) {
+    if (!event.target.matches('.dropdown-trigger')) {
         document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
     }
 }
@@ -564,14 +553,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 });
 
-export async function copyToClipboard(text: string) {
+export async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
         showToast("Copied!");
     } catch (err) { }
 }
 
-function showToast(msg: string) {
+function showToast(msg) {
     const t = document.getElementById('toast');
     if (t) {
         t.innerText = msg; t.style.display = 'block';
@@ -579,7 +568,7 @@ function showToast(msg: string) {
     }
 }
 
-export async function fetchNodeInfo(h: string) {
+export async function fetchNodeInfo(h) {
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'block';
     try {
@@ -592,7 +581,7 @@ export async function fetchNodeInfo(h: string) {
     if (loader) loader.style.display = 'none';
 }
 
-export async function runNodeAction(h: string, a: string) {
+export async function runNodeAction(h, a) {
     const executeAction = async () => {
         const loader = document.getElementById('loader');
         if (loader) loader.style.display = 'block';
@@ -623,11 +612,11 @@ export async function runNodeAction(h: string, a: string) {
     }
 }
 
-export async function updateNodeGroup(h: string, g: string) {
+export async function updateNodeGroup(h, g) {
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'block';
-    const updated = groupsData.map((item: any) => {
-        let nodes = (item.listnode || "").split(',').map((s: string) => s.trim()).filter((s: string) => s && s !== h);
+    const updated = groupsData.map((item) => {
+        let nodes = (item.listnode || "").split(',').map((s) => s.trim()).filter((s) => s && s !== h);
         if (item.config === g) nodes.push(h);
         return { ...item, listnode: nodes.join(',') };
     });
@@ -641,7 +630,7 @@ export async function updateNodeGroup(h: string, g: string) {
     } catch (e) { }
 }
 
-export async function deleteFromRegistry(h: string) {
+export async function deleteFromRegistry(h) {
     showModal({
         title: 'Delete Node',
         message: `Are you sure you want to delete ${h} from the registry?`,
@@ -659,8 +648,8 @@ export async function deleteFromRegistry(h: string) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'registry', value: JSON.stringify(registry, null, 4) })
                 });
-                const updatedGroups = (data.groups || []).map((item: any) => {
-                    let nodes = (item.listnode || "").split(',').map((s: string) => s.trim()).filter((s: string) => s && s !== h);
+                const updatedGroups = (data.groups || []).map((item) => {
+                    let nodes = (item.listnode || "").split(',').map((s) => s.trim()).filter((s) => s && s !== h);
                     return { ...item, listnode: nodes.join(',') };
                 });
                 await fetch(`/api/save?token=${TOKEN}`, {
@@ -676,14 +665,14 @@ export async function deleteFromRegistry(h: string) {
     });
 }
 
-export async function editKV(k: string) {
+export async function editKV(k) {
     currentKey = k; isNew = false;
     showModal({ title: 'Edit ' + k, mode: 'editor' });
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'block';
     try {
         const res = await fetch(`/api/get-kv?token=${TOKEN}&key=${k}`);
-        const editor = document.getElementById('editor') as HTMLTextAreaElement;
+        const editor = document.getElementById('editor');
         if (editor) editor.value = await res.text();
     } catch (e) { }
     if (loader) loader.style.display = 'none';
@@ -701,14 +690,14 @@ export function openCreateModal() {
     if (currentSection === 'section-ip') defaultKey = 'ip:';
     else if (currentSection === 'section-cloud') defaultKey = 'cloud:';
 
-    const keyNameInput = document.getElementById('new-key-name') as HTMLInputElement;
+    const keyNameInput = document.getElementById('new-key-name');
     if (keyNameInput) keyNameInput.value = defaultKey;
 
-    const editor = document.getElementById('editor') as HTMLTextAreaElement;
+    const editor = document.getElementById('editor');
     if (editor) editor.value = '{}';
 }
 
-export async function editIP(node: string) {
+export async function editIP(node) {
     currentKey = 'ip:' + node; isNew = false;
     const modalTitle = document.getElementById('modal-title');
     if (modalTitle) modalTitle.innerText = 'Edit IP: ' + node;
@@ -731,7 +720,7 @@ export async function editIP(node: string) {
     try {
         const res = await fetch(`/api/data?token=${TOKEN}`);
         const data = await res.json();
-        const editor = document.getElementById('editor') as HTMLTextAreaElement;
+        const editor = document.getElementById('editor');
         if (editor) editor.value = data.ips[node] || "";
         const modal = document.getElementById('modal');
         if (modal) modal.style.display = 'flex';
@@ -742,9 +731,9 @@ export async function editIP(node: string) {
 export async function saveData() {
     const activeSection = document.querySelector('.section.active');
     const currentSection = activeSection ? activeSection.id : '';
-    const keyNameInput = document.getElementById('new-key-name') as HTMLInputElement;
+    const keyNameInput = document.getElementById('new-key-name');
     const key = isNew ? keyNameInput.value : currentKey;
-    const editor = document.getElementById('editor') as HTMLTextAreaElement;
+    const editor = document.getElementById('editor');
     const val = editor ? editor.value : '';
 
     if (!key) return showModal({ title: 'Input Required', message: 'Key name is required.', mode: 'alert' });
@@ -776,7 +765,7 @@ export async function saveData() {
     if (loader) loader.style.display = 'none';
 }
 
-export async function deleteIP(node: string) {
+export async function deleteIP(node) {
     showModal({
         title: 'Delete IP',
         message: `Delete ip:${node}?`,
@@ -802,7 +791,7 @@ export async function deleteIP(node: string) {
     });
 }
 
-export async function deleteKV(key: string) {
+export async function deleteKV(key) {
     showModal({
         title: 'Delete Key',
         message: `Delete key "${key}"?`,
@@ -827,7 +816,7 @@ export async function deleteKV(key: string) {
     });
 }
 
-function showModal({ title, message, content, mode, onConfirm }: { title: string, message?: string, content?: string, mode: string, onConfirm?: Function }) {
+function showModal({ title, message, content, mode, onConfirm }) {
     const titleEl = document.getElementById('modal-title');
     if (titleEl) titleEl.innerText = title || 'Notification';
 
@@ -871,31 +860,29 @@ function showModal({ title, message, content, mode, onConfirm }: { title: string
     if (modal) modal.style.display = 'flex';
 }
 
-(window as any).fetchRawShellLogs = fetchRawShellLogs;
-(window as any).toggleDropdown = toggleDropdown;
-(window as any).copyToClipboard = copyToClipboard;
-(window as any).fetchNodeInfo = fetchNodeInfo;
-(window as any).runNodeAction = runNodeAction;
-(window as any).updateNodeGroup = updateNodeGroup;
-(window as any).deleteFromRegistry = deleteFromRegistry;
-(window as any).editKV = editKV;
-(window as any).openCreateModal = openCreateModal;
-(window as any).editIP = editIP;
-(window as any).saveData = saveData;
-(window as any).deleteIP = deleteIP;
-(window as any).deleteKV = deleteKV;
-(window as any).closeModal = closeModal;
+window.fetchRawShellLogs = fetchRawShellLogs;
+window.toggleDropdown = toggleDropdown;
+window.copyToClipboard = copyToClipboard;
+window.fetchNodeInfo = fetchNodeInfo;
+window.runNodeAction = runNodeAction;
+window.updateNodeGroup = updateNodeGroup;
+window.deleteFromRegistry = deleteFromRegistry;
+window.editKV = editKV;
+window.openCreateModal = openCreateModal;
+window.editIP = editIP;
+window.saveData = saveData;
+window.deleteIP = deleteIP;
+window.deleteKV = deleteKV;
+window.closeModal = closeModal;
 
 // Terminal and logic
-// @ts-ignore
-let xterm: any = null;
-// @ts-ignore
-let xtermFit: any = null;
-let termWs: WebSocket | null = null;
+let xterm = null;
+let xtermFit = null;
+let termWs = null;
 let currentTerminalNode = '';
 let currentTerminalUrl = '';
 
-function updateUIStatus(newStatus: string) {
+function updateUIStatus(newStatus) {
     const wrapper = document.getElementById('terminal-wrapper');
     const statusBadge = document.getElementById('status-badge');
     const statusText = document.getElementById('status-text');
@@ -912,7 +899,7 @@ function updateUIStatus(newStatus: string) {
     }
 }
 
-export function openTerminal(h: string, hostUrl: string) {
+export function openTerminal(h, hostUrl) {
     currentTerminalNode = h;
     currentTerminalUrl = hostUrl;
     showSection('terminal');
@@ -921,20 +908,19 @@ export function openTerminal(h: string, hostUrl: string) {
     if (terminalTitle) terminalTitle.innerText = h;
 
     const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
-    const newTabBtn = document.getElementById('terminal-new-tab-btn') as HTMLElement;
+    const newTabBtn = document.getElementById('terminal-new-tab-btn');
     if (newTabBtn) newTabBtn.dataset.url = originUrl;
 
     updateUIStatus('connecting');
     initXterm(h);
 }
 
-function initXterm(h: string) {
+function initXterm(h) {
     if (termWs) { try { termWs.close(); } catch (e) { } }
     termWs = null;
     const container = document.getElementById('xterm-container');
     if (container) container.innerHTML = '';
 
-    // @ts-ignore
     xterm = new Terminal({
         cursorBlink: true,
         cursorStyle: 'bar',
@@ -968,7 +954,6 @@ function initXterm(h: string) {
         rows: 30
     });
 
-    // @ts-ignore
     xtermFit = new FitAddon.FitAddon();
     xterm.loadAddon(xtermFit);
     xterm.open(container);
@@ -984,7 +969,7 @@ function initXterm(h: string) {
     }, 150);
 }
 
-function connectWs(h: string) {
+function connectWs(h) {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = protocol + "//" + location.host + "/terminal-proxy/" + TOKEN + "/" + h + "/ws";
 
@@ -1002,11 +987,11 @@ function connectWs(h: string) {
             "columns": xterm.cols || 100,
             "rows": xterm.rows || 30
         });
-        termWs!.send(initMsg);
+        termWs.send(initMsg);
     };
 
     termWs.onmessage = (ev) => {
-        const processString = (msg: string) => {
+        const processString = (msg) => {
             if (msg.startsWith('0')) {
                 xterm.write(msg.slice(1));
             } else if (!/^[12]/.test(msg)) {
@@ -1034,13 +1019,13 @@ function connectWs(h: string) {
         console.error('WebSocket Error:', err);
     };
 
-    xterm.onData((data: string) => {
+    xterm.onData((data) => {
         if (termWs && termWs.readyState === WebSocket.OPEN) {
             termWs.send('0' + data);
         }
     });
 
-    xterm.onResize((size: { cols: number, rows: number }) => {
+    xterm.onResize((size) => {
         if (termWs && termWs.readyState === WebSocket.OPEN) {
             termWs.send(JSON.stringify({ columns: size.cols, rows: size.rows }));
         }
@@ -1053,7 +1038,12 @@ export function resetTerminal() {
     if (currentTerminalNode) initXterm(currentTerminalNode);
 }
 
-let autoRefreshInterval: any = null;
+export function closeModal() {
+    const modal = document.getElementById('modal');
+    if (modal) modal.style.display = 'none';
+}
+
+let autoRefreshInterval = null;
 let countdown = 30;
 let isLive = false;
 
@@ -1103,16 +1093,15 @@ function updateLiveText() {
 }
 
 // Global exposure for everything
-(window as any).originalRefreshData = refreshData;
-(window as any).refreshData = async () => {
-    // @ts-ignore
-    await (window as any).originalRefreshData();
+window.originalRefreshData = refreshData;
+window.refreshData = async () => {
+    await window.originalRefreshData();
     if (isLive) countdown = 30;
 };
 
 if (TOKEN) {
     const today = new Date().toLocaleDateString('en-CA');
-    const systemLogDateInput = document.getElementById('system-log-date') as HTMLInputElement;
+    const systemLogDateInput = document.getElementById('system-log-date');
     if (systemLogDateInput) systemLogDateInput.value = today;
 
     showSection('nodes');
@@ -1122,8 +1111,28 @@ if (TOKEN) {
     if (authWarning) authWarning.style.display = 'block';
 }
 
-(window as any).openTerminal = openTerminal;
-(window as any).resetTerminal = resetTerminal;
-(window as any).toggleAutoRefresh = toggleAutoRefresh;
-(window as any).closeModal = closeModal;
-
+window.openTerminal = openTerminal;
+window.resetTerminal = resetTerminal;
+window.toggleAutoRefresh = toggleAutoRefresh;
+window.closeModal = closeModal;
+window.editIP = editIP;
+window.editKV = editKV;
+window.deleteIP = deleteIP;
+window.deleteKV = deleteKV;
+window.saveData = saveData;
+window.openCreateModal = openCreateModal;
+window.runNodeAction = runNodeAction;
+window.fetchNodeInfo = fetchNodeInfo;
+window.viewNodeLogs = viewNodeLogs;
+window.deleteFromRegistry = deleteFromRegistry;
+window.updateNodeGroup = updateNodeGroup;
+window.copyToClipboard = copyToClipboard;
+window.resetLiveLogs = resetLiveLogs;
+window.resetSystemLogs = resetSystemLogs;
+window.handleSystemDateChange = handleSystemDateChange;
+window.handleLogScroll = handleLogScroll;
+window.handleSearch = handleSearch;
+window.toggleDropdown = toggleDropdown;
+window.handleStatusFilter = handleStatusFilter;
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;

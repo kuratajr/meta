@@ -69,8 +69,8 @@ export default {
             return new Response(css, { headers: { "Content-Type": "text/css" } });
         }
 
-        if (url.pathname === '/src/dashboard/main.ts') {
-            const js = await fetchGithubFile('src/dashboard/main.ts', env, false);
+        if (url.pathname === '/src/dashboard/main.js') {
+            const js = await fetchGithubFile('src/dashboard/main.js', env, false);
             return new Response(js, { headers: { "Content-Type": "application/javascript" } });
         }
 
