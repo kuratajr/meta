@@ -858,6 +858,16 @@ pre {
     height: 100%;
 }
 
+/* Fix font rendering for Vietnamese characters */
+.xterm,
+.xterm * {
+    font-family: "JetBrains Mono", "Ubuntu Mono", "Consolas", "Courier New", monospace !important;
+    font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
 .xterm,
 .xterm-screen,
 .xterm-viewport,

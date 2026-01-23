@@ -924,7 +924,7 @@ function initXterm(h) {
     xterm = new Terminal({
         cursorBlink: true,
         cursorStyle: 'bar',
-        fontFamily: '"Ubuntu Mono", monospace',
+        fontFamily: '"JetBrains Mono", "Ubuntu Mono", "Consolas", "Courier New", monospace',
         fontSize: 14,
         letterSpacing: 0.5,
         theme: {
