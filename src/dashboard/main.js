@@ -882,6 +882,19 @@ let termWs = null;
 let currentTerminalNode = '';
 let currentTerminalUrl = '';
 
+function showSystemMessage(message, type = 'success') {
+    const messageEl = document.getElementById('terminal-system-message');
+    if (!messageEl) return;
+    
+    messageEl.textContent = message;
+    messageEl.className = 'terminal-system-message ' + type;
+    messageEl.style.display = 'block';
+    
+    setTimeout(() => {
+        messageEl.style.display = 'none';
+    }, 2000);
+}
+
 function updateUIStatus(newStatus) {
     const wrapper = document.getElementById('terminal-wrapper');
     const statusBadge = document.getElementById('status-badge');
@@ -892,10 +905,21 @@ function updateUIStatus(newStatus) {
     statusBadge.className = 'status-badge ' + newStatus;
 
     switch (newStatus) {
-        case 'connecting': statusText.innerText = 'Connecting...'; break;
-        case 'online': statusText.innerText = 'Online'; break;
-        case 'offline': statusText.innerText = 'Offline'; break;
-        case 'error': statusText.innerText = 'Connection Error'; break;
+        case 'connecting': 
+            statusText.innerText = 'Connecting...'; 
+            break;
+        case 'online': 
+            statusText.innerText = 'Online';
+            showSystemMessage('[System] Connection successful! Synchronizing...', 'success');
+            break;
+        case 'offline': 
+            statusText.innerText = 'Offline';
+            showSystemMessage('[System] Connection closed.', 'error');
+            break;
+        case 'error': 
+            statusText.innerText = 'Connection Error';
+            showSystemMessage('[Error] Unable to connect to server.', 'error');
+            break;
     }
 }
 
@@ -1012,7 +1036,7 @@ function connectWs(h) {
 
     termWs.onopen = () => {
         updateUIStatus('online');
-        xterm.write('\x1b[38;5;82m[Hệ thống] Kết nối thành công! Đang đồng bộ hóa...\x1b[0m\r\n');
+        // System message now shown in header bar only
 
         const initMsg = JSON.stringify({
             "AuthToken": "",
@@ -1042,12 +1066,12 @@ function connectWs(h) {
 
     termWs.onclose = () => {
         updateUIStatus('offline');
-        xterm.write('\r\n\x1b[31m[Hệ thống] Kết nối đã đóng.\x1b[0m\r\n');
+        // System message now shown in header bar only
     };
 
     termWs.onerror = (err) => {
         updateUIStatus('error');
-        xterm.write('\r\n\x1b[31m[Lỗi] Không thể kết nối tới server.\x1b[0m\r\n');
+        // System message now shown in header bar only
         console.error('WebSocket Error:', err);
     };
 
