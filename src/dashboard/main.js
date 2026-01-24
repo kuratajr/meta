@@ -892,7 +892,7 @@ function showSystemMessage(message, type = 'success') {
     
     setTimeout(() => {
         messageEl.style.display = 'none';
-    }, 2000);
+    }, 4000);
 }
 
 function updateUIStatus(newStatus) {
