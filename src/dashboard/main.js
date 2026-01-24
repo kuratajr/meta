@@ -882,7 +882,7 @@ let termWs = null;
 let currentTerminalNode = '';
 let currentTerminalUrl = '';
 
-function showSystemMessage(message, type = 'success') {
+function showSystemMessage(message, type = 'success', autoHide = true) {
     const messageEl = document.getElementById('terminal-system-message');
     if (!messageEl) return;
     
@@ -890,9 +890,13 @@ function showSystemMessage(message, type = 'success') {
     messageEl.className = 'terminal-system-message ' + type;
     messageEl.style.display = 'block';
     
-    setTimeout(() => {
-        messageEl.style.display = 'none';
-    }, 4000);
+    // Chỉ tự ẩn nếu autoHide = true (chỉ cho success/online)
+    if (autoHide) {
+        setTimeout(() => {
+            messageEl.style.display = 'none';
+        }, 5000);
+    }
+    // Nếu autoHide = false (error/offline), hiển thị luôn, không tự ẩn
 }
 
 function updateUIStatus(newStatus) {
@@ -910,15 +914,18 @@ function updateUIStatus(newStatus) {
             break;
         case 'online': 
             statusText.innerText = 'Online';
-            showSystemMessage('[System] Connection successful! Synchronizing...', 'success');
+            // Online: hiển thị 2 giây rồi tự ẩn
+            showSystemMessage('[System] Connection successful! Synchronizing...', 'success', true);
             break;
         case 'offline': 
             statusText.innerText = 'Offline';
-            showSystemMessage('[System] Connection closed.', 'error');
+            // Offline: hiển thị luôn, không tự ẩn
+            showSystemMessage('[System] Connection closed.', 'error', false);
             break;
         case 'error': 
             statusText.innerText = 'Connection Error';
-            showSystemMessage('[Error] Unable to connect to server.', 'error');
+            // Error: hiển thị luôn, không tự ẩn
+            showSystemMessage('[Error] Unable to connect to server.', 'error', false);
             break;
     }
 }
