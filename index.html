@@ -127,10 +127,9 @@
         <div id="section-logs" class="section">
             <div>
                 <div style="display: flex; flex-direction: column;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="opacity:0.7; margin:0;">System Activity</h3>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="logs-panel-header">
+                        <h3 class="logs-panel-title">System Activity</h3>
+                        <div class="logs-panel-controls">
                             <input type="date" id="system-log-date" class="btn-s"
                                 style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 0.5rem; font-size: 0.8rem;"
                                 onchange="handleSystemDateChange(this.value)">
@@ -144,12 +143,9 @@
                     </div>
                 </div>
                 <div style="display: flex; flex-direction: column;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="opacity:0.7; margin:0; white-space: nowrap;">
-                            Live Node Logs
-                        </h3>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; flex: 1; justify-content: flex-end;">
+                    <div class="logs-panel-header">
+                        <h3 class="logs-panel-title">Live Node Logs</h3>
+                        <div class="logs-panel-controls">
                             <select id="node-select-dropdown" onchange="handleNodeSelect(this.value)" 
                                 class="node-select-dropdown">
                                 <option value="">Select a node...</option>
