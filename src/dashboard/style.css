@@ -515,7 +515,12 @@ td {
     padding: 1.5rem;
     border-radius: 1rem;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 
+        0 0 15px rgba(255, 255, 255, 0.15),
+        inset 0 0 25px rgba(255, 255, 255, 0.08),
+        0 0 40px rgba(99, 102, 241, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     line-height: 1.5;
     font-size: 0.85rem;
     scrollbar-width: none;
@@ -534,7 +539,12 @@ td {
     font-family: 'Courier New', Courier, monospace;
     padding: 1.5rem;
     border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 
+        0 0 15px rgba(255, 255, 255, 0.15),
+        inset 0 0 25px rgba(255, 255, 255, 0.08),
+        0 0 40px rgba(99, 102, 241, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     line-height: 1.5;
     font-size: 0.85rem;
     overflow-y: auto;
@@ -555,7 +565,12 @@ td {
     background: rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(15px) saturate(150%);
     -webkit-backdrop-filter: blur(15px) saturate(150%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 
+        0 0 15px rgba(255, 255, 255, 0.15),
+        inset 0 0 25px rgba(255, 255, 255, 0.08),
+        0 0 40px rgba(99, 102, 241, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     border-radius: 1rem;
     padding: 1.5rem;
     padding-bottom: 0.5rem;
@@ -664,22 +679,38 @@ select:focus {
 }
 
 .node-select-dropdown {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: #818cf8;
     border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 0.3rem 0.8rem;
+    padding: 0.4rem 0.7rem;
     border-radius: 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 500;
     outline: none;
     cursor: pointer;
     width: auto;
-    min-width: 180px;
-    max-width: 250px;
+    min-width: 160px;
+    max-width: 220px;
     transition: all 0.2s;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: 0.01em;
+}
+
+.node-select-dropdown option {
+    background: rgba(0, 0, 0, 0.6);
+    color: #e0e7ff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem 0.7rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 .node-select-dropdown::-webkit-scrollbar {
@@ -687,12 +718,12 @@ select:focus {
 }
 
 .node-select-dropdown:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.5);
     border-color: var(--accent);
 }
 
 .node-select-dropdown:focus {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.5);
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
