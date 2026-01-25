@@ -153,10 +153,11 @@ ln -sf vnc.html ./noVNC/index.html
 # 2. Khởi chạy các dịch vụ nền bằng nohup
 echo 'Starting noVNC proxy...'
 nohup ./noVNC/utils/novnc_proxy --vnc localhost:{{VNC_PORT}} --listen 0.0.0.0:{{PU_VNC_PORT}} > novnc.log 2>&1 &
-
+# run ttyd
 nohup ttyd -p 8877 -W  bash --init-file /home/user/myapp/shell.sh > ttyd.log 2>&1 &
-echo 'Starting VM-API...'
 
+echo 'Starting VM-API...'
+# Đảm bảo file có quyền thực thi
 # --- 4. Kiểm tra và tải vm-api ---
 API_DIR="/home/os/script"
 API_FILE="$API_DIR/vm-api"
