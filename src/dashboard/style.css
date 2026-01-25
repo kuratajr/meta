@@ -127,10 +127,10 @@ main {
 }
 
 .card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 1.5rem;
     padding: 1.5rem;
 }
@@ -476,9 +476,9 @@ td {
 
 /* Logs Terminal */
 .terminal-container {
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
     color: #0f0;
     font-family: 'Courier New', Courier, monospace;
     padding: 1.5rem;
@@ -486,11 +486,46 @@ td {
     min-height: 400px;
     max-height: 600px;
     overflow-y: auto;
-    border: 1px solid var(--glass-border);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     line-height: 1.5;
     font-size: 0.85rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
+}
+
+/* Live logs wrapper with fixed button */
+.live-logs-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+}
+
+.live-logs-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    color: #0f0;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    line-height: 1.5;
+    font-size: 0.85rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.live-logs-scrollable::-webkit-scrollbar {
+    display: none;
+}
+
+.live-logs-button-container {
+    margin-top: 1rem;
+    text-align: right;
+    flex-shrink: 0;
 }
 
 .terminal-container::-webkit-scrollbar {
@@ -539,11 +574,11 @@ td {
 }
 
 select {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: #818cf8;
-    border: 1px solid var(--glass-border);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     padding: 0.5rem;
     border-radius: 0.5rem;
     font-size: 0.85rem;
@@ -554,12 +589,12 @@ select {
 }
 
 select:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     border-color: var(--accent);
 }
 
 select:focus {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }

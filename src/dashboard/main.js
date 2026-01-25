@@ -421,14 +421,14 @@ export async function viewNodeLogs(h) {
 
 export function resetLiveLogs() {
     logState.live.hostname = '';
-    const nodeSpan = document.getElementById('current-log-node');
-    if (nodeSpan) nodeSpan.innerText = 'None';
     const container = document.getElementById('live-logs');
     if (container) container.innerHTML = '<div style="opacity: 0.5;">Select a node to view live logs...</div>';
     const resetBtn = document.getElementById('btn-reset-live');
     if (resetBtn) resetBtn.style.display = 'none';
     const dropdown = document.getElementById('node-select-dropdown');
     if (dropdown) dropdown.value = '';
+    const buttonContainer = document.getElementById('live-logs-button-container');
+    if (buttonContainer) buttonContainer.style.display = 'none';
 }
 
 export function handleNodeSelect(nodeHostname) {
@@ -464,9 +464,6 @@ async function fetchLiveNodeLogs(h, append = false) {
     const container = document.getElementById('live-logs');
     if (!container) return;
 
-    const nodeSpan = document.getElementById('current-log-node');
-    if (nodeSpan) nodeSpan.innerText = h;
-
     if (!append) {
         container.innerHTML = '<div style="opacity:0.5">Fetching history for ' + h + '...</div>';
         state.offset = 0;
@@ -483,7 +480,7 @@ async function fetchLiveNodeLogs(h, append = false) {
 
         let html = '';
         if (!append) {
-            html += '<div style="background:rgba(0, 0, 0, 0.2); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\'Courier New\', Courier, monospace; min-height:400px;">';
+            html += '<div style="background:rgba(0, 0, 0, 0.15); backdrop-filter: blur(15px) saturate(150%); -webkit-backdrop-filter: blur(15px) saturate(150%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid rgba(255, 255, 255, 0.15); line-height:1.5; font-size:0.85rem; font-family:\'Courier New\', Courier, monospace; min-height:400px;">';
         }
 
         logs.forEach((l) => {
@@ -498,8 +495,11 @@ async function fetchLiveNodeLogs(h, append = false) {
 
         if (!append) {
             html += (logs.length === 0 ? '<div style="opacity:0.5">No history found for this node.</div>' : '') + '</div>';
-            html += `<div style="margin-top:1rem; text-align:right;"><button class="btn btn-s" onclick="fetchRawShellLogs('${h}')"><i data-lucide="terminal"></i> View Raw Shell Logs</button></div>`;
             container.innerHTML = html;
+            const buttonContainer = document.getElementById('live-logs-button-container');
+            const btnViewRaw = document.getElementById('btn-view-raw-shell');
+            if (buttonContainer) buttonContainer.style.display = 'block';
+            if (btnViewRaw) btnViewRaw.setAttribute('onclick', `fetchRawShellLogs('${h}')`);
         } else {
             const innerContainer = container.querySelector('div[style*="background:rgba(0, 0, 0"]');
             if (innerContainer && logs.length > 0) {
@@ -539,8 +539,10 @@ export async function fetchRawShellLogs(h) {
         const res = await fetch(`/api/node-proxy?token=${TOKEN}&hostname=${h}&endpoint=logs`);
         const data = await res.text();
         let html = `<div style="margin-bottom:1rem;"><button class="btn btn-s" onclick="viewNodeLogs('${h}')"><i data-lucide="arrow-left"></i> Back to History</button></div>`;
-        html += `<div style="background:rgba(0, 0, 0, 0.2); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
+        html += `<div style="background:rgba(0, 0, 0, 0.15); backdrop-filter: blur(15px) saturate(150%); -webkit-backdrop-filter: blur(15px) saturate(150%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid rgba(255, 255, 255, 0.15); line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
         container.innerHTML = html;
+        const buttonContainer = document.getElementById('live-logs-button-container');
+        if (buttonContainer) buttonContainer.style.display = 'none';
         if (window.lucide) lucide.createIcons();
     } catch (e) {
         container.innerHTML = '<div style="color:var(--danger)">Failed to fetch raw shell logs.</div>';
