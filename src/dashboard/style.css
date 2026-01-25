@@ -53,6 +53,7 @@ aside {
     letter-spacing: 0.1em;
     background: linear-gradient(to right, #818cf8, var(--accent));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 1rem;
 }
@@ -126,8 +127,9 @@ main {
 }
 
 .card {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid var(--glass-border);
     border-radius: 1.5rem;
     padding: 1.5rem;
@@ -474,7 +476,9 @@ td {
 
 /* Logs Terminal */
 .terminal-container {
-    background: #000;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     color: #0f0;
     font-family: 'Courier New', Courier, monospace;
     padding: 1.5rem;
@@ -535,7 +539,9 @@ td {
 }
 
 select {
-    background: #0f172a;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     color: #818cf8;
     border: 1px solid var(--glass-border);
     padding: 0.5rem;
@@ -544,6 +550,18 @@ select {
     outline: none;
     cursor: pointer;
     width: 100%;
+    transition: all 0.2s;
+}
+
+select:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+}
+
+select:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 /* Modal */

@@ -53,7 +53,7 @@ export function showSection(id) {
     if (id === 'ip') sectionTitle = 'IP Management';
     else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
     else if (id === 'global') sectionTitle = 'Global & Security';
-    else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; resetSystemLogs(); }
+    else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; resetSystemLogs(); updateNodeDropdown(); }
 
     const titleEl = document.getElementById('section-title');
     if (titleEl) titleEl.innerText = sectionTitle;
@@ -152,6 +152,7 @@ function renderUI(data) {
     renderConfigs(data);
     renderIPs(data);
     renderCloudInit(data);
+    updateNodeDropdown();
 
     const globalArea = document.getElementById('global-config-area');
     if (globalArea) {
@@ -413,6 +414,8 @@ export async function viewNodeLogs(h) {
     logState.live.lastDateStr = '';
     const resetBtn = document.getElementById('btn-reset-live');
     if (resetBtn) resetBtn.style.display = 'block';
+    const dropdown = document.getElementById('node-select-dropdown');
+    if (dropdown) dropdown.value = h;
     fetchLiveNodeLogs(h, false);
 }
 
@@ -424,6 +427,33 @@ export function resetLiveLogs() {
     if (container) container.innerHTML = '<div style="opacity: 0.5;">Select a node to view live logs...</div>';
     const resetBtn = document.getElementById('btn-reset-live');
     if (resetBtn) resetBtn.style.display = 'none';
+    const dropdown = document.getElementById('node-select-dropdown');
+    if (dropdown) dropdown.value = '';
+}
+
+export function handleNodeSelect(nodeHostname) {
+    if (!nodeHostname) {
+        resetLiveLogs();
+        return;
+    }
+    viewNodeLogs(nodeHostname);
+}
+
+export function updateNodeDropdown() {
+    const dropdown = document.getElementById('node-select-dropdown');
+    if (!dropdown || !lastData || !lastData.registry) return;
+    
+    const currentValue = dropdown.value;
+    const nodes = Object.keys(lastData.registry).sort();
+    
+    dropdown.innerHTML = '<option value="">Select a node...</option>';
+    nodes.forEach(node => {
+        const option = document.createElement('option');
+        option.value = node;
+        option.textContent = node;
+        if (node === currentValue) option.selected = true;
+        dropdown.appendChild(option);
+    });
 }
 
 async function fetchLiveNodeLogs(h, append = false) {
@@ -453,7 +483,7 @@ async function fetchLiveNodeLogs(h, append = false) {
 
         let html = '';
         if (!append) {
-            html += '<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\'Courier New\', Courier, monospace; min-height:400px;">';
+            html += '<div style="background:rgba(0, 0, 0, 0.2); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:\'Courier New\', Courier, monospace; min-height:400px;">';
         }
 
         logs.forEach((l) => {
@@ -471,7 +501,7 @@ async function fetchLiveNodeLogs(h, append = false) {
             html += `<div style="margin-top:1rem; text-align:right;"><button class="btn btn-s" onclick="fetchRawShellLogs('${h}')"><i data-lucide="terminal"></i> View Raw Shell Logs</button></div>`;
             container.innerHTML = html;
         } else {
-            const innerContainer = container.querySelector('div[style*="background:#000"]');
+            const innerContainer = container.querySelector('div[style*="background:rgba(0, 0, 0"]');
             if (innerContainer && logs.length > 0) {
                 const temp = document.createElement('div');
                 temp.innerHTML = html;
@@ -509,7 +539,7 @@ export async function fetchRawShellLogs(h) {
         const res = await fetch(`/api/node-proxy?token=${TOKEN}&hostname=${h}&endpoint=logs`);
         const data = await res.text();
         let html = `<div style="margin-bottom:1rem;"><button class="btn btn-s" onclick="viewNodeLogs('${h}')"><i data-lucide="arrow-left"></i> Back to History</button></div>`;
-        html += `<div style="background:#000; color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
+        html += `<div style="background:rgba(0, 0, 0, 0.2); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid var(--glass-border); line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
         container.innerHTML = html;
         if (window.lucide) lucide.createIcons();
     } catch (e) {
@@ -1199,3 +1229,4 @@ window.toggleDropdown = toggleDropdown;
 window.handleStatusFilter = handleStatusFilter;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
+window.handleNodeSelect = handleNodeSelect;

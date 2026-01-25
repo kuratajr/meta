@@ -148,8 +148,14 @@
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3 style="opacity:0.7; margin:0;">Live Node Logs: <span id="current-log-node"
                                 style="color:var(--accent)">None</span></h3>
-                        <button class="btn btn-s" onclick="resetLiveLogs()" id="btn-reset-live" style="display:none;"
-                            title="Clear filter"><i data-lucide="x" style="width:1rem; height:1rem;"></i></button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select id="node-select-dropdown" onchange="handleNodeSelect(this.value)" 
+                                style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #818cf8; border: 1px solid var(--glass-border); padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.85rem; outline: none; cursor: pointer; min-width: 200px;">
+                                <option value="">Select a node...</option>
+                            </select>
+                            <button class="btn btn-s" onclick="resetLiveLogs()" id="btn-reset-live" style="display:none;"
+                                title="Clear filter"><i data-lucide="x" style="width:1rem; height:1rem;"></i></button>
+                        </div>
                     </div>
                     <div id="live-logs" class="terminal-container" style="height: 500px;"
                         onscroll="handleLogScroll(event, 'live')">
