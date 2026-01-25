@@ -82,6 +82,13 @@ export function showSection(id) {
 
     const statusFilterWrapper = document.getElementById('status-filter-wrapper');
     if (statusFilterWrapper) statusFilterWrapper.style.display = (id === 'nodes') ? 'inline-block' : 'none';
+
+    // Toggle body class for logs section to prevent main scroll
+    if (id === 'logs') {
+        document.body.classList.add('logs-active');
+    } else {
+        document.body.classList.remove('logs-active');
+    }
 }
 
 export async function refreshData() {
