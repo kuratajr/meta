@@ -62,8 +62,9 @@ export function showSection(id) {
     if (btn) btn.style.display = (id === 'templates' || id === 'configs' || id === 'global' || id === 'ip' || id === 'cloud') ? 'block' : 'none';
 
     const isTerminal = id === 'terminal';
+    const isLogs = id === 'logs';
     const statsGrid = document.querySelector('.stats-grid');
-    if (statsGrid) statsGrid.style.display = isTerminal ? 'none' : 'grid';
+    if (statsGrid) statsGrid.style.display = (isTerminal || isLogs) ? 'none' : 'grid';
 
     const liveIndicator = document.getElementById('live-indicator');
     if (liveIndicator) liveIndicator.style.display = 'flex';
@@ -479,9 +480,6 @@ async function fetchLiveNodeLogs(h, append = false) {
         if (logs.length < 100) state.hasMore = false;
 
         let html = '';
-        if (!append) {
-            html += '<div style="background:rgba(0, 0, 0, 0.15); backdrop-filter: blur(15px) saturate(150%); -webkit-backdrop-filter: blur(15px) saturate(150%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid rgba(255, 255, 255, 0.15); line-height:1.5; font-size:0.85rem; font-family:\'Courier New\', Courier, monospace; min-height:400px;">';
-        }
 
         logs.forEach((l) => {
             const dateObj = new Date(l.time + " UTC");
@@ -494,18 +492,16 @@ async function fetchLiveNodeLogs(h, append = false) {
         });
 
         if (!append) {
-            html += (logs.length === 0 ? '<div style="opacity:0.5">No history found for this node.</div>' : '') + '</div>';
-            container.innerHTML = html;
+            container.innerHTML = html || '<div style="opacity:0.5">No history found for this node.</div>';
             const buttonContainer = document.getElementById('live-logs-button-container');
             const btnViewRaw = document.getElementById('btn-view-raw-shell');
-            if (buttonContainer) buttonContainer.style.display = 'block';
+            if (buttonContainer && logs.length > 0) buttonContainer.style.display = 'block';
             if (btnViewRaw) btnViewRaw.setAttribute('onclick', `fetchRawShellLogs('${h}')`);
         } else {
-            const innerContainer = container.querySelector('div[style*="background:rgba(0, 0, 0"]');
-            if (innerContainer && logs.length > 0) {
+            if (logs.length > 0) {
                 const temp = document.createElement('div');
                 temp.innerHTML = html;
-                while (temp.firstChild) innerContainer.appendChild(temp.firstChild);
+                while (temp.firstChild) container.appendChild(temp.firstChild);
             }
         }
 
@@ -539,7 +535,7 @@ export async function fetchRawShellLogs(h) {
         const res = await fetch(`/api/node-proxy?token=${TOKEN}&hostname=${h}&endpoint=logs`);
         const data = await res.text();
         let html = `<div style="margin-bottom:1rem;"><button class="btn btn-s" onclick="viewNodeLogs('${h}')"><i data-lucide="arrow-left"></i> Back to History</button></div>`;
-        html += `<div style="background:rgba(0, 0, 0, 0.15); backdrop-filter: blur(15px) saturate(150%); -webkit-backdrop-filter: blur(15px) saturate(150%); color:#0f0; padding:1.5rem; border-radius:1rem; border:1px solid rgba(255, 255, 255, 0.15); line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; min-height:400px; max-height:600px; overflow-y:auto; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
+        html += `<div style="color:#0f0; line-height:1.5; font-size:0.85rem; font-family:'Courier New', Courier, monospace; white-space:pre-wrap;">${data || 'No shell logs returned.'}</div>`;
         container.innerHTML = html;
         const buttonContainer = document.getElementById('live-logs-button-container');
         if (buttonContainer) buttonContainer.style.display = 'none';

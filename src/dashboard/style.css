@@ -483,8 +483,6 @@ td {
     font-family: 'Courier New', Courier, monospace;
     padding: 1.5rem;
     border-radius: 1rem;
-    min-height: 400px;
-    max-height: 600px;
     overflow-y: auto;
     border: 1px solid rgba(255, 255, 255, 0.15);
     line-height: 1.5;
@@ -493,17 +491,11 @@ td {
     -ms-overflow-style: none;
 }
 
-/* Live logs wrapper with fixed button */
-.live-logs-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 500px;
-}
-
-.live-logs-scrollable {
+/* System logs container */
+.system-logs-container {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    min-height: 0;
+    height: 100%;
     background: rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(15px) saturate(150%);
     -webkit-backdrop-filter: blur(15px) saturate(150%);
@@ -514,8 +506,41 @@ td {
     border: 1px solid rgba(255, 255, 255, 0.15);
     line-height: 1.5;
     font-size: 0.85rem;
+    overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+}
+
+.system-logs-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Live logs wrapper with fixed button */
+.live-logs-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.live-logs-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    color: #0f0;
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1.5;
+    font-size: 0.85rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    min-height: 0;
 }
 
 .live-logs-scrollable::-webkit-scrollbar {
@@ -524,8 +549,10 @@ td {
 
 .live-logs-button-container {
     margin-top: 1rem;
+    padding-top: 1rem;
     text-align: right;
     flex-shrink: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .terminal-container::-webkit-scrollbar {
@@ -586,6 +613,12 @@ select {
     cursor: pointer;
     width: 100%;
     transition: all 0.2s;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+select::-webkit-scrollbar {
+    display: none;
 }
 
 select:hover {
@@ -594,6 +627,39 @@ select:hover {
 }
 
 select:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.node-select-dropdown {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #818cf8;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.3rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    min-width: 180px;
+    max-width: 250px;
+    transition: all 0.2s;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.node-select-dropdown::-webkit-scrollbar {
+    display: none;
+}
+
+.node-select-dropdown:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--accent);
+}
+
+.node-select-dropdown:focus {
     background: rgba(255, 255, 255, 0.08);
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
