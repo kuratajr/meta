@@ -173,6 +173,7 @@ body.logs-active main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
+    align-items: stretch;
 }
 
 #section-logs > div > div {
@@ -180,6 +181,7 @@ body.logs-active main {
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    height: 100%;
 }
 
 @keyframes fadeIn {
@@ -679,11 +681,16 @@ select:focus {
 }
 
 .node-select-dropdown {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
     color: #818cf8;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 
+        0 0 15px rgba(255, 255, 255, 0.15),
+        inset 0 0 25px rgba(255, 255, 255, 0.08),
+        0 0 40px rgba(99, 102, 241, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     padding: 0.4rem 0.7rem;
     border-radius: 0.5rem;
     font-size: 0.95rem;
@@ -692,7 +699,7 @@ select:focus {
     cursor: pointer;
     width: auto;
     min-width: 160px;
-    max-width: 220px;
+    max-width: 200px;
     transition: all 0.2s;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -703,7 +710,9 @@ select:focus {
 }
 
 .node-select-dropdown option {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
     color: #e0e7ff;
     font-size: 0.95rem;
     font-weight: 500;
@@ -711,6 +720,12 @@ select:focus {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+}
+
+.node-select-dropdown option:hover,
+.node-select-dropdown option:checked {
+    background: rgba(99, 102, 241, 0.3);
+    color: #fff;
 }
 
 .node-select-dropdown::-webkit-scrollbar {
