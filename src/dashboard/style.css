@@ -128,8 +128,9 @@ body.logs-active main {
 /* Grid & Cards */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0;justify-content: space-between;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    align-items: stretch;
     margin-bottom: 3rem;
 }
 
@@ -1454,14 +1455,18 @@ pre {
 /* File Manager Layout */
 .terminal-layout-container {
     display: flex;
-    gap: 0;justify-content: space-between;
+    gap: 0;
+    justify-content: space-between;
     flex: 1;
     min-height: 0;
     width: 100%;
 }
 
 .file-manager-panel {
-    width: 420px;height: 100%;margin-left: auto;border-right: none;
+    width: 420px;
+    height: 100%;
+    margin-left: auto;
+    border-right: none;
     display: flex;
     flex-direction: column;
     background: linear-gradient(165deg, rgba(30, 30, 45, 0.6) 0%, rgba(15, 15, 25, 0.8) 100%);
@@ -1785,10 +1790,19 @@ pre {
     to { transform: rotate(360deg); }
 }
 
-
 #section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 160px) !important; }
 .terminal-layout-container { padding: 0 !important; gap: 0 !important; width: 100% !important; }
 .file-manager-panel { border-right: none !important; border-radius: 12px 0 0 12px !important; margin-right: 0 !important; }
+
+/* Khi không hiển thị File Manager, đưa terminal vào giữa và giới hạn chiều rộng cho đẹp */
+.terminal-layout-container:not(.show-files) {
+    justify-content: center !important;
+}
+
+.terminal-layout-container:not(.show-files) .terminal-outer-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+}
 
 
 body.terminal-active main {
