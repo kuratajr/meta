@@ -1462,10 +1462,17 @@ pre {
     width: 100%;
 }
 
+.terminal-outer-wrapper {
+    flex: 1 1 auto;
+    /* Giữ chiều rộng terminal giống nhau dù có/không có File Manager */
+    max-width: calc(100% - 360px - 1.25rem - 1.5rem);
+}
+
 .file-manager-panel {
     width: 360px;
     height: 100%;
     margin-left: auto;
+    margin-right: 1.5rem;
     border-right: none;
     display: flex;
     flex-direction: column;
@@ -1790,7 +1797,7 @@ pre {
     to { transform: rotate(360deg); }
 }
 
-#section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 160px) !important; }
+#section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 200px) !important; }
 .terminal-layout-container { padding: 0 !important; width: 100% !important; }
 .file-manager-panel { border-right: none !important; border-radius: 12px 0 0 12px !important; margin-right: 0 !important; }
 
@@ -1802,7 +1809,7 @@ body.terminal-active main {
 }
 
 body.terminal-active #section-terminal {
-    height: calc(100vh - 120px) !important;
+    height: calc(100vh - 200px) !important;
 }
 
 body.terminal-active .file-manager-panel {
