@@ -1455,15 +1455,15 @@ pre {
 /* File Manager Layout */
 .terminal-layout-container {
     display: flex;
-    gap: 0;
-    justify-content: space-between;
+    gap: 1.25rem;
+    justify-content: flex-start;
     flex: 1;
     min-height: 0;
     width: 100%;
 }
 
 .file-manager-panel {
-    width: 420px;
+    width: 360px;
     height: 100%;
     margin-left: auto;
     border-right: none;
@@ -1791,18 +1791,8 @@ pre {
 }
 
 #section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 160px) !important; }
-.terminal-layout-container { padding: 0 !important; gap: 0 !important; width: 100% !important; }
+.terminal-layout-container { padding: 0 !important; width: 100% !important; }
 .file-manager-panel { border-right: none !important; border-radius: 12px 0 0 12px !important; margin-right: 0 !important; }
-
-/* Khi không hiển thị File Manager, đưa terminal vào giữa và giới hạn chiều rộng cho đẹp */
-.terminal-layout-container:not(.show-files) {
-    justify-content: center !important;
-}
-
-.terminal-layout-container:not(.show-files) .terminal-outer-wrapper {
-    max-width: 960px;
-    margin: 0 auto;
-}
 
 
 body.terminal-active main {
