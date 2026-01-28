@@ -1583,9 +1583,13 @@ pre {
     position: fixed;
     inset: 0;
     z-index: 21000;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
+}
+
+.fm-modal:not([hidden]) {
+    display: flex;
 }
 
 .fm-modal-backdrop {
