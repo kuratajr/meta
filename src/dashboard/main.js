@@ -1,3 +1,6 @@
+import { FileBrowserClient } from './api-client.js';
+import { FileExplorer } from './file-explorer.js';
+
 const TOKEN = new URLSearchParams(window.location.search).get('token');
 let currentKey = '';
 let isNew = false;
@@ -6,6 +9,11 @@ let lastData = null;
 let currentSearch = '';
 let previousStatuses = {};
 let currentStatusFilter = 'all';
+
+// File Manager global state
+const explorer = new FileExplorer('file-list');
+let fbClient = null;
+const FM_CREDENTIALS_KEY = 'meta_fm_credentials';
 
 // Log states for pagination
 let logState = {
@@ -450,10 +458,10 @@ export function handleNodeSelect(nodeHostname) {
 export function updateNodeDropdown() {
     const dropdown = document.getElementById('node-select-dropdown');
     if (!dropdown || !lastData || !lastData.registry) return;
-    
+
     const currentValue = dropdown.value;
     const nodes = Object.keys(lastData.registry).sort();
-    
+
     dropdown.innerHTML = '<option value="">Select a node...</option>';
     nodes.forEach(node => {
         const option = document.createElement('option');
@@ -920,11 +928,11 @@ let currentTerminalUrl = '';
 function showSystemMessage(message, type = 'success', autoHide = true) {
     const messageEl = document.getElementById('terminal-system-message');
     if (!messageEl) return;
-    
+
     messageEl.textContent = message;
     messageEl.className = 'terminal-system-message ' + type;
     messageEl.style.display = 'block';
-    
+
     // Chỉ tự ẩn nếu autoHide = true (chỉ cho success/online)
     if (autoHide) {
         setTimeout(() => {
@@ -944,20 +952,20 @@ function updateUIStatus(newStatus) {
     statusBadge.className = 'status-badge ' + newStatus;
 
     switch (newStatus) {
-        case 'connecting': 
-            statusText.innerText = 'Connecting...'; 
+        case 'connecting':
+            statusText.innerText = 'Connecting...';
             break;
-        case 'online': 
+        case 'online':
             statusText.innerText = 'Online';
             // Online: hiển thị 2 giây rồi tự ẩn
             showSystemMessage('[System] Connection successful! Synchronizing...', 'success', true);
             break;
-        case 'offline': 
+        case 'offline':
             statusText.innerText = 'Offline';
             // Offline: hiển thị luôn, không tự ẩn
             showSystemMessage('[System] Connection closed.', 'error', false);
             break;
-        case 'error': 
+        case 'error':
             statusText.innerText = 'Connection Error';
             // Error: hiển thị luôn, không tự ẩn
             showSystemMessage('[Error] Unable to connect to server.', 'error', false);
@@ -1086,6 +1094,9 @@ function connectWs(h) {
             "rows": xterm.rows || 30
         });
         termWs.send(initMsg);
+
+        // Initialize File Manager
+        initFileBrowser(h);
     };
 
     termWs.onmessage = (ev) => {
@@ -1109,6 +1120,8 @@ function connectWs(h) {
     termWs.onclose = () => {
         updateUIStatus('offline');
         // System message now shown in header bar only
+        fbClient = null;
+        explorer.disconnect();
     };
 
     termWs.onerror = (err) => {
@@ -1234,4 +1247,267 @@ window.toggleDropdown = toggleDropdown;
 window.handleStatusFilter = handleStatusFilter;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
+window.handleNodeSelect = handleNodeSelect;
+
+// --- File Manager Functions ---
+
+function getFileManagerCredentials() {
+    try {
+        const raw = localStorage.getItem(FM_CREDENTIALS_KEY);
+        if (raw) {
+            const o = JSON.parse(raw);
+            if (o && o.username && o.password) return o;
+        }
+    } catch (_) { }
+    return { username: 'admin', password: 'admin' };
+}
+
+function setFileManagerCredentials(username, password) {
+    localStorage.setItem(FM_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+}
+
+async function initFileBrowser(hostname) {
+    const { username, password } = getFileManagerCredentials();
+    const proxyBase = `${window.location.origin}/terminal-proxy/${TOKEN}/${hostname}`;
+    fbClient = new FileBrowserClient(proxyBase);
+
+    try {
+        showSystemMessage(`Connecting to File Manager (${username})...`, 'success', true);
+        await fbClient.login(username, password);
+        explorer.setClient(fbClient);
+        await explorer.loadPath('/');
+        showSystemMessage('File Manager connected!', 'success', true);
+    } catch (err) {
+        console.error('File Manager Login Error:', err);
+        showSystemMessage(`File Manager auth failed. Check settings.`, 'error', false);
+    }
+}
+
+// UI Handlers for File Manager
+document.getElementById('toggle-filemanager-btn')?.addEventListener('click', () => {
+    document.getElementById('terminal-wrapper')?.classList.toggle('show-files');
+    if (xtermFit) xtermFit.fit();
+});
+
+document.getElementById('refresh-fm-btn')?.addEventListener('click', () => {
+    explorer.loadPath(explorer.getCurrentPath());
+});
+
+document.getElementById('upload-btn')?.addEventListener('click', () => {
+    document.getElementById('file-upload')?.click();
+});
+
+document.getElementById('file-upload')?.addEventListener('change', async (e) => {
+    if (!fbClient || !e.target.files?.length) return;
+    const files = Array.from(e.target.files);
+    const path = explorer.getCurrentPath();
+    showSystemMessage(`Uploading ${files.length} file(s)...`, 'success', true);
+
+    let ok = 0;
+    for (const file of files) {
+        try {
+            const fullPath = (path === '/' ? '' : path) + '/' + file.name;
+            await fbClient.upload(fullPath, file, { override: true });
+            ok++;
+        } catch (err) {
+            console.error('Upload failed:', file.name, err);
+        }
+    }
+    showSystemMessage(`Uploaded ${ok}/${files.length} files.`, ok === files.length ? 'success' : 'error', true);
+    explorer.loadPath(path);
+    e.target.value = '';
+});
+
+// New Folder
+const nfModal = document.getElementById('new-folder-modal');
+const nfInput = document.getElementById('new-folder-input');
+const nfPath = document.getElementById('new-folder-path');
+let nfParent = '/';
+
+function openNewFolderModal(parent) {
+    nfParent = parent;
+    if (nfPath) nfPath.textContent = parent;
+    if (nfInput) nfInput.value = '';
+    if (nfModal) nfModal.hidden = false;
+    nfInput?.focus();
+}
+
+document.getElementById('new-folder-btn')?.addEventListener('click', () => {
+    if (!fbClient) return;
+    openNewFolderModal(explorer.getCurrentPath());
+});
+
+document.getElementById('new-folder-cancel')?.addEventListener('click', () => nfModal.hidden = true);
+document.getElementById('new-folder-backdrop')?.addEventListener('click', () => nfModal.hidden = true);
+document.getElementById('new-folder-create')?.addEventListener('click', async () => {
+    const name = nfInput?.value?.trim();
+    if (!name || !fbClient) return;
+    const full = (nfParent === '/' ? '' : nfParent) + '/' + name;
+    try {
+        await fbClient.createDir(full);
+        explorer.loadPath(explorer.getCurrentPath());
+        nfModal.hidden = true;
+    } catch (err) {
+        showSystemMessage(`Failed to create folder: ${err.message}`, 'error', false);
+    }
+});
+
+// Context Menu Actions
+let selectedFile = null;
+const actionModal = document.getElementById('file-action-modal');
+
+window.addEventListener('file-selected', (e) => {
+    const { file, clientX, clientY } = e.detail;
+    selectedFile = file;
+    if (actionModal) {
+        actionModal.hidden = false;
+        const content = document.getElementById('file-action-content');
+        if (content) {
+            content.style.left = `${Math.min(clientX, window.innerWidth - 240)}px`;
+            content.style.top = `${Math.min(clientY, window.innerHeight - 200)}px`;
+        }
+        document.getElementById('file-action-title').textContent = file.name;
+        document.getElementById('file-action-download').style.display = file.type === 'directory' ? 'none' : 'flex';
+    }
+});
+
+document.getElementById('file-action-close')?.addEventListener('click', () => actionModal.hidden = true);
+document.getElementById('file-action-backdrop')?.addEventListener('click', () => actionModal.hidden = true);
+
+document.getElementById('file-action-download')?.addEventListener('click', async () => {
+    if (!selectedFile || !fbClient) return;
+    try {
+        const buf = await fbClient.getRawBuffer(selectedFile.path);
+        const blob = new Blob([buf]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = selectedFile.name;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        showSystemMessage('Download failed', 'error', true);
+    }
+    actionModal.hidden = true;
+});
+
+document.getElementById('file-action-copy')?.addEventListener('click', () => {
+    if (selectedFile) {
+        navigator.clipboard.writeText(selectedFile.path);
+        showToast('Path copied!');
+    }
+    actionModal.hidden = true;
+});
+
+document.getElementById('file-action-delete')?.addEventListener('click', () => {
+    if (!selectedFile) return;
+    document.getElementById('confirm-delete-message').textContent = `Delete "${selectedFile.name}"?`;
+    document.getElementById('confirm-delete-modal').hidden = false;
+    actionModal.hidden = true;
+});
+
+document.getElementById('confirm-delete-cancel')?.addEventListener('click', () => document.getElementById('confirm-delete-modal').hidden = true);
+document.getElementById('confirm-delete-ok')?.addEventListener('click', async () => {
+    if (!selectedFile || !fbClient) return;
+    try {
+        await fbClient.delete(selectedFile.path);
+        explorer.loadPath(explorer.getCurrentPath());
+    } catch (err) {
+        showSystemMessage('Delete failed', 'error', true);
+    }
+    document.getElementById('confirm-delete-modal').hidden = true;
+});
+
+// Move / Copy To
+const moveModal = document.getElementById('move-dest-modal');
+const moveList = document.getElementById('move-dest-list');
+let pickerPath = '/';
+let pickerMode = 'move';
+
+async function loadPickerDirs(path) {
+    pickerPath = path;
+    document.getElementById('move-dest-path').textContent = path;
+    moveList.innerHTML = '<div style="padding:10px; opacity:0.5;">Loading...</div>';
+    try {
+        const res = await fbClient.listDir(path);
+        const dirs = (res.items || []).filter(i => i.isDir || i.is_dir || i.IsDir || i.type === 'directory');
+        moveList.innerHTML = '';
+
+        if (path !== '/') {
+            const up = document.createElement('div');
+            up.className = 'move-dest-folder-item';
+            up.textContent = '.. (Back)';
+            up.onclick = () => {
+                const parts = path.split('/').filter(Boolean);
+                parts.pop();
+                loadPickerDirs('/' + parts.join('/'));
+            };
+            moveList.appendChild(up);
+        }
+
+        dirs.forEach(d => {
+            const el = document.createElement('div');
+            el.className = 'move-dest-folder-item';
+            el.textContent = d.name + ' /';
+            el.onclick = () => loadPickerDirs((path === '/' ? '' : path) + '/' + d.name);
+            moveList.appendChild(el);
+        });
+    } catch (e) {
+        moveList.innerHTML = '<div style="color:var(--danger)">Error loading folders</div>';
+    }
+}
+
+document.getElementById('file-action-move')?.addEventListener('click', () => {
+    pickerMode = 'move';
+    document.getElementById('move-dest-title').textContent = 'Move / Rename';
+    document.getElementById('move-dest-action-btn').textContent = 'Move Here';
+    actionModal.hidden = true;
+    moveModal.hidden = false;
+    loadPickerDirs(explorer.getCurrentPath());
+});
+
+document.getElementById('file-action-copy-to')?.addEventListener('click', () => {
+    pickerMode = 'copy';
+    document.getElementById('move-dest-title').textContent = 'Copy To';
+    document.getElementById('move-dest-action-btn').textContent = 'Copy Here';
+    actionModal.hidden = true;
+    moveModal.hidden = false;
+    loadPickerDirs(explorer.getCurrentPath());
+});
+
+document.getElementById('move-dest-cancel')?.addEventListener('click', () => moveModal.hidden = true);
+document.getElementById('move-dest-action-btn')?.addEventListener('click', async () => {
+    if (!selectedFile || !fbClient) return;
+    const dest = (pickerPath === '/' ? '' : pickerPath) + '/' + selectedFile.name;
+    try {
+        if (pickerMode === 'move') {
+            await fbClient.rename(selectedFile.path, dest);
+        } else {
+            await fbClient.copy(selectedFile.path, dest, true);
+        }
+        explorer.loadPath(explorer.getCurrentPath());
+        moveModal.hidden = true;
+    } catch (err) {
+        showSystemMessage(`Action failed: ${err.message}`, 'error', false);
+    }
+});
+
+// Settings Modal
+const settingsFmModal = document.getElementById('fm-settings-modal');
+document.getElementById('settings-fm-btn')?.addEventListener('click', () => {
+    const { username, password } = getFileManagerCredentials();
+    document.getElementById('fm-username').value = username;
+    document.getElementById('fm-password').value = password;
+    settingsFmModal.hidden = false;
+});
+
+document.getElementById('fm-settings-cancel')?.addEventListener('click', () => settingsFmModal.hidden = true);
+document.getElementById('fm-settings-save')?.addEventListener('click', () => {
+    const u = document.getElementById('fm-username').value.trim();
+    const p = document.getElementById('fm-password').value;
+    setFileManagerCredentials(u, p);
+    settingsFmModal.hidden = true;
+    if (currentTerminalNode) initFileBrowser(currentTerminalNode);
+});
+
 window.handleNodeSelect = handleNodeSelect;

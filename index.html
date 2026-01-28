@@ -257,7 +257,9 @@
                             <span class="dot"></span>
                             <span id="status-text">Connecting...</span>
                         </div>
-                        <div style="display: flex; gap: 0.8rem;">
+                            <button class="btn btn-s" id="toggle-filemanager-btn" title="Toggle File Manager">
+                                <i data-lucide="folder"></i>Files
+                            </button>
                             <button class="btn btn-s" onclick="resetTerminal()">
                                 <i data-lucide="refresh-cw"></i>Reconnect
                             </button>
@@ -270,6 +272,22 @@
                 </div>
                 <div class="terminal-body-container">
                     <div id="xterm-container"></div>
+                    <div id="file-manager-panel" class="file-manager-panel">
+                        <div class="fm-sidebar-header">
+                            <div class="fm-title">File Manager</div>
+                            <div class="fm-actions">
+                                <button class="btn btn-icon" id="new-folder-btn" title="New Folder"><i data-lucide="folder-plus"></i></button>
+                                <button class="btn btn-icon" id="upload-btn" title="Upload File"><i data-lucide="upload"></i></button>
+                                <button class="btn btn-icon" id="refresh-fm-btn" title="Refresh"><i data-lucide="rotate-cw"></i></button>
+                                <button class="btn btn-icon" id="settings-fm-btn" title="FM Settings"><i data-lucide="settings"></i></button>
+                            </div>
+                        </div>
+                        <div class="fm-breadcrumb" id="fm-breadcrumb">/</div>
+                        <div class="file-list" id="file-list">
+                            <div class="file-list-placeholder">Connect to terminal to use File Manager.</div>
+                        </div>
+                        <input type="file" id="file-upload" style="display:none" multiple>
+                    </div>
                 </div>
             </div>
         </div>
@@ -314,6 +332,81 @@
             <div id="modal-confirm-btns" style="display: none; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
                 <button class="btn btn-s" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-p" id="modal-confirm-action-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Manager Modals -->
+    <div class="fm-modal" id="new-folder-modal" hidden>
+        <div class="fm-modal-backdrop" id="new-folder-backdrop"></div>
+        <div class="fm-modal-content">
+            <h3>New Folder</h3>
+            <p style="font-size:0.8rem; opacity:0.6; margin-bottom:1rem;">In: <span id="new-folder-path">/</span></p>
+            <input type="text" id="new-folder-input" placeholder="Folder name..." class="btn-s" style="width:100%; margin-bottom:1.5rem; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 0.5rem;">
+            <div style="display:flex; justify-content:flex-end; gap:0.8rem;">
+                <button class="btn btn-s" id="new-folder-cancel">Cancel</button>
+                <button class="btn btn-p" id="new-folder-create">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fm-modal" id="file-action-modal" hidden>
+        <div class="fm-modal-backdrop" id="file-action-backdrop"></div>
+        <div class="file-action-content" id="file-action-content">
+            <div class="action-header">
+                <div id="file-action-title">File Actions</div>
+                <button id="file-action-close" style="background:none; border:none; color:white; cursor:pointer;">&times;</button>
+            </div>
+            <div class="action-body">
+                <button class="action-item" id="file-action-download"><i data-lucide="download"></i> Download</button>
+                <button class="action-item" id="file-action-copy"><i data-lucide="copy"></i> Copy Path</button>
+                <button class="action-item" id="file-action-move"><i data-lucide="move"></i> Move / Rename</button>
+                <button class="action-item" id="file-action-copy-to"><i data-lucide="files"></i> Copy To...</button>
+                <button class="action-item danger" id="file-action-delete"><i data-lucide="trash-2"></i> Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fm-modal" id="move-dest-modal" hidden>
+        <div class="fm-modal-backdrop" id="move-dest-backdrop"></div>
+        <div class="fm-modal-content" style="max-width: 450px;">
+            <h3 id="move-dest-title">Move File</h3>
+            <div class="fm-path-bar">Destination: <span id="move-dest-path">/</span></div>
+            <div id="move-dest-list" class="folder-picker-list"></div>
+            <div style="display:flex; justify-content:flex-end; gap:0.8rem; margin-top:1.5rem;">
+                <button class="btn btn-s" id="move-dest-cancel">Cancel</button>
+                <button class="btn btn-p" id="move-dest-action-btn">Move Here</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fm-modal" id="confirm-delete-modal" hidden>
+        <div class="fm-modal-backdrop" id="confirm-delete-backdrop"></div>
+        <div class="fm-modal-content">
+            <h3 style="color:var(--danger);">Confirm Delete</h3>
+            <p id="confirm-delete-message" style="margin-bottom:1.5rem;">Are you sure you want to delete this?</p>
+            <div style="display:flex; justify-content:flex-end; gap:0.8rem;">
+                <button class="btn btn-s" id="confirm-delete-cancel">Cancel</button>
+                <button class="btn btn-danger" id="confirm-delete-ok">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fm-modal" id="fm-settings-modal" hidden>
+        <div class="fm-modal-backdrop" id="fm-settings-backdrop"></div>
+        <div class="fm-modal-content">
+            <h3>File Manager Auth</h3>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.8rem; opacity:0.6; margin-bottom:0.4rem;">Username</label>
+                <input type="text" id="fm-username" class="btn-s" style="width:100%; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 0.5rem;" value="admin">
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block; font-size:0.8rem; opacity:0.6; margin-bottom:0.4rem;">Password</label>
+                <input type="password" id="fm-password" class="btn-s" style="width:100%; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 0.5rem;" value="admin">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.8rem;">
+                <button class="btn btn-s" id="fm-settings-cancel">Cancel</button>
+                <button class="btn btn-p" id="fm-settings-save">Save & Reconnect</button>
             </div>
         </div>
     </div>
