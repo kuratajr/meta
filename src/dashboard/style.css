@@ -1461,21 +1461,23 @@ pre {
 }
 
 .file-manager-panel {
-    width: 350px;
+    width: 400px;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, rgba(30, 30, 40, 0.45) 0%, rgba(20, 20, 30, 0.5) 100%);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
+    background: linear-gradient(165deg, rgba(30, 30, 45, 0.6) 0%, rgba(15, 15, 25, 0.8) 100%);
+    backdrop-filter: blur(50px) saturate(210%);
+    -webkit-backdrop-filter: blur(50px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
     box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
-        inset 0 -1px 0 0 rgba(255, 255, 255, 0.15);
+        0 30px 60px -15px rgba(0, 0, 0, 0.7),
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 40px rgba(0, 0, 0, 0.2);
     z-index: 10;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
+    margin-left: auto;
+    /* Pushes to the right */
 }
 
 .terminal-layout-container:not(.show-files) .file-manager-panel {
@@ -1483,19 +1485,23 @@ pre {
 }
 
 .fm-sidebar-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--glass-border);
+    padding: 1.25rem 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .fm-title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #c084fc, #6366f1);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
 }
 
 .fm-actions {
@@ -1527,14 +1533,18 @@ pre {
 }
 
 .fm-breadcrumb {
-    padding: 0.6rem 1rem;
+    padding: 0.8rem 1.5rem;
     font-size: 0.75rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     color: var(--text-dim);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border-bottom: 1px solid var(--glass-border);
-    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .file-list {
@@ -1554,15 +1564,19 @@ pre {
 .file-item {
     display: flex;
     align-items: center;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.6rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
-    gap: 0.8rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 1rem;
+    border: 1px solid transparent;
 }
 
 .file-item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .file-item .icon-wrapper {
@@ -1572,11 +1586,12 @@ pre {
 }
 
 .folder-icon {
-    color: var(--accent);
+    color: #c084fc;
+    filter: drop-shadow(0 2px 8px rgba(192, 132, 252, 0.3));
 }
 
 .file-icon {
-    color: var(--text-dim);
+    color: #94a3b8;
 }
 
 .file-name {
@@ -1757,3 +1772,16 @@ pre {
     color: var(--accent);
     border: 1px solid rgba(192, 132, 252, 0.2);
 }
+.loader-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(192, 132, 252, 0.2);
+    border-top-color: #c084fc;
+    border-radius: 50%;
+    animation: fm-spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes fm-spin {
+    to { transform: rotate(360deg); }
+}
+

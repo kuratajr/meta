@@ -58,11 +58,22 @@ export class FileExplorer {
     }
 
     clear() {
-        this.container.innerHTML = '<div style="padding:10px; color:#666; font-style:italic;">Loading...</div>';
+        this.container.innerHTML = `
+            <div style="padding: 2rem; color: #666; display: flex; flex-direction: column; align-items: center; gap: 0.8rem;">
+                <div class="loader-spinner"></div>
+                <div style="font-size: 0.85rem; font-style: italic;">Loading files...</div>
+            </div>
+        `;
     }
 
     setError(msg) {
-        this.container.innerHTML = `<div style="padding:10px; color:#ff7b72;">${msg}</div>`;
+        this.container.innerHTML = `
+            <div style="padding: 2rem; color: #ff7b72; display: flex; flex-direction: column; align-items: center; gap: 1rem; text-align: center;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div style="font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${msg}</div>
+                <button class="btn btn-s" onclick="document.getElementById('refresh-fm-btn').click()" style="margin-top: 0.5rem;">Retry</button>
+            </div>
+        `;
     }
 
     disconnect() {

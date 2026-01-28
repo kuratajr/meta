@@ -30,10 +30,16 @@ export class FileBrowserClient {
     }
 
     async request(method, path, options = {}) {
-        // Fix: Properly construct the URL to include the proxy prefix
         const base = trimSlash(this.baseUrl);
         const relative = path.startsWith('/') ? path : `/${path}`;
-        const url = new URL(window.location.origin + base + relative);
+
+        // Fix: If base is already absolute (starts with http), don't prepend origin
+        let url;
+        if (base.startsWith('http')) {
+            url = new URL(base + relative);
+        } else {
+            url = new URL(window.location.origin + base + relative);
+        }
 
         if (options.searchParams) {
             Object.entries(options.searchParams).forEach(([k, v]) => url.searchParams.set(k, v));
