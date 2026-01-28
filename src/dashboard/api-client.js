@@ -30,7 +30,10 @@ export class FileBrowserClient {
     }
 
     async request(method, path, options = {}) {
-        const url = new URL(path.startsWith('/') ? path : `/${path}`, this.baseUrl + '/');
+        // Fix: Properly construct the URL to include the proxy prefix
+        const base = trimSlash(this.baseUrl);
+        const relative = path.startsWith('/') ? path : `/${path}`;
+        const url = new URL(window.location.origin + base + relative);
 
         if (options.searchParams) {
             Object.entries(options.searchParams).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -69,7 +72,8 @@ export class FileBrowserClient {
     }
 
     async login(username, password) {
-        const res = await fetch(`${this.baseUrl}/api/login`, {
+        const base = trimSlash(this.baseUrl);
+        const res = await fetch(`${base}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
@@ -79,8 +83,18 @@ export class FileBrowserClient {
         if (!res.ok) {
             throw new Error(`Login failed: ${res.status} ${res.statusText}`);
         }
-        this.token = text;
-        return text;
+
+        // Support both plain text tokens and JSON responses like {"token": "..."}
+        try {
+            const json = JSON.parse(text);
+            if (json.token) {
+                this.token = json.token;
+                return json.token;
+            }
+        } catch (e) { }
+
+        this.token = text.trim();
+        return this.token;
     }
 
     async getResource(path, opts = {}) {
