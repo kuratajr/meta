@@ -69,8 +69,9 @@ export default {
             return new Response(css, { headers: { "Content-Type": "text/css" } });
         }
 
-        if (url.pathname === '/src/dashboard/main.js') {
-            const js = await fetchGithubFile('src/dashboard/main.js', env, false);
+        if (url.pathname.startsWith('/src/dashboard/') && url.pathname.endsWith('.js')) {
+            const fileName = url.pathname.split('/').pop();
+            const js = await fetchGithubFile(`src/dashboard/${fileName}`, env, false);
             return new Response(js, { headers: { "Content-Type": "application/javascript" } });
         }
 
