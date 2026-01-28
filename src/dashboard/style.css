@@ -37,7 +37,7 @@ aside {
     width: 280px;
     background: rgba(15, 23, 42, 0.95);
     border-right: 1px solid var(--glass-border);
-    padding: 2rem;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -129,7 +129,7 @@ body.logs-active main {
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
+    gap: 0;justify-content: space-between;
     margin-bottom: 3rem;
 }
 
@@ -925,7 +925,7 @@ pre {
 
     main {
         margin-left: 240px;
-        padding: 2rem;
+        padding: 0;
     }
 }
 
@@ -1382,7 +1382,7 @@ pre {
     font-weight: 600;
     padding: 4px 12px;
     background: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
+    border-radius: 20px 0 0 20px;
     border: 1px solid var(--glass-border);
     transition: all 0.3s ease;
 }
@@ -1454,21 +1454,21 @@ pre {
 /* File Manager Layout */
 .terminal-layout-container {
     display: flex;
-    gap: 1.5rem;
+    gap: 0;justify-content: space-between;
     flex: 1;
     min-height: 0;
     width: 100%;
 }
 
 .file-manager-panel {
-    width: 400px;
+    width: 420px;height: 100%;margin-left: auto;border-right: none;
     display: flex;
     flex-direction: column;
     background: linear-gradient(165deg, rgba(30, 30, 45, 0.6) 0%, rgba(15, 15, 25, 0.8) 100%);
     backdrop-filter: blur(50px) saturate(210%);
     -webkit-backdrop-filter: blur(50px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
+    border-radius: 20px 0 0 20px;
     box-shadow:
         0 30px 60px -15px rgba(0, 0, 0, 0.7),
         inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
@@ -1634,9 +1634,9 @@ pre {
     background: #1e293b;
     border: 1px solid var(--glass-border);
     border-radius: 1.2rem;
-    padding: 2rem;
+    padding: 0;
     width: 90%;
-    max-width: 400px;
+    max-width: 420px;height: 100%;margin-left: auto;border-right: none;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1784,4 +1784,9 @@ pre {
 @keyframes fm-spin {
     to { transform: rotate(360deg); }
 }
+
+
+#section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 160px) !important; }
+.terminal-layout-container { padding: 0 !important; gap: 0 !important; width: 100% !important; }
+.file-manager-panel { border-right: none !important; border-radius: 12px 0 0 12px !important; margin-right: 0 !important; }
 
