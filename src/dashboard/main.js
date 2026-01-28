@@ -91,11 +91,17 @@ export function showSection(id) {
     const statusFilterWrapper = document.getElementById('status-filter-wrapper');
     if (statusFilterWrapper) statusFilterWrapper.style.display = (id === 'nodes') ? 'inline-block' : 'none';
 
-    // Toggle body class for logs section to prevent main scroll
+    // Toggle body class for logs/terminal section to prevent main scroll or allow flush right layout
     if (id === 'logs') {
         document.body.classList.add('logs-active');
     } else {
         document.body.classList.remove('logs-active');
+    }
+
+    if (id === 'terminal') {
+        document.body.classList.add('terminal-active');
+    } else {
+        document.body.classList.remove('terminal-active');
     }
 }
 

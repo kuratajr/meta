@@ -1790,3 +1790,20 @@ pre {
 .terminal-layout-container { padding: 0 !important; gap: 0 !important; width: 100% !important; }
 .file-manager-panel { border-right: none !important; border-radius: 12px 0 0 12px !important; margin-right: 0 !important; }
 
+
+body.terminal-active main {
+    max-width: none !important;
+    padding: 2rem 0 2rem 2rem !important;
+    margin-right: 0 !important;
+}
+
+body.terminal-active #section-terminal {
+    height: calc(100vh - 120px) !important;
+}
+
+body.terminal-active .file-manager-panel {
+    border-radius: 12px 0 0 12px !important;
+    margin-right: 0 !important;
+    border-right: none !important;
+}
+
