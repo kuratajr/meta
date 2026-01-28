@@ -1328,7 +1328,7 @@ function openNewFolderModal(parent) {
     nfParent = parent;
     if (nfPath) nfPath.textContent = parent;
     if (nfInput) nfInput.value = '';
-    if (nfModal) nfModal.hidden = false;
+    if (nfModal) nfModal.classList.add('active');
     nfInput?.focus();
 }
 
@@ -1337,8 +1337,8 @@ document.getElementById('new-folder-btn')?.addEventListener('click', () => {
     openNewFolderModal(explorer.getCurrentPath());
 });
 
-document.getElementById('new-folder-cancel')?.addEventListener('click', () => nfModal.hidden = true);
-document.getElementById('new-folder-backdrop')?.addEventListener('click', () => nfModal.hidden = true);
+document.getElementById('new-folder-cancel')?.addEventListener('click', () => nfModal.classList.remove('active'));
+document.getElementById('new-folder-backdrop')?.addEventListener('click', () => nfModal.classList.remove('active'));
 document.getElementById('new-folder-create')?.addEventListener('click', async () => {
     const name = nfInput?.value?.trim();
     if (!name || !fbClient) return;
@@ -1346,7 +1346,7 @@ document.getElementById('new-folder-create')?.addEventListener('click', async ()
     try {
         await fbClient.createDir(full);
         explorer.loadPath(explorer.getCurrentPath());
-        nfModal.hidden = true;
+        nfModal.classList.remove('active');
     } catch (err) {
         showSystemMessage(`Failed to create folder: ${err.message}`, 'error', false);
     }
@@ -1360,7 +1360,7 @@ window.addEventListener('file-selected', (e) => {
     const { file, clientX, clientY } = e.detail;
     selectedFile = file;
     if (actionModal) {
-        actionModal.hidden = false;
+        actionModal.classList.add('active');
         const content = document.getElementById('file-action-content');
         if (content) {
             content.style.left = `${Math.min(clientX, window.innerWidth - 240)}px`;
@@ -1371,8 +1371,8 @@ window.addEventListener('file-selected', (e) => {
     }
 });
 
-document.getElementById('file-action-close')?.addEventListener('click', () => actionModal.hidden = true);
-document.getElementById('file-action-backdrop')?.addEventListener('click', () => actionModal.hidden = true);
+document.getElementById('file-action-close')?.addEventListener('click', () => actionModal.classList.remove('active'));
+document.getElementById('file-action-backdrop')?.addEventListener('click', () => actionModal.classList.remove('active'));
 
 document.getElementById('file-action-download')?.addEventListener('click', async () => {
     if (!selectedFile || !fbClient) return;
@@ -1388,7 +1388,7 @@ document.getElementById('file-action-download')?.addEventListener('click', async
     } catch (err) {
         showSystemMessage('Download failed', 'error', true);
     }
-    actionModal.hidden = true;
+    actionModal.classList.remove('active');
 });
 
 document.getElementById('file-action-copy')?.addEventListener('click', () => {
@@ -1396,17 +1396,17 @@ document.getElementById('file-action-copy')?.addEventListener('click', () => {
         navigator.clipboard.writeText(selectedFile.path);
         showToast('Path copied!');
     }
-    actionModal.hidden = true;
+    actionModal.classList.remove('active');
 });
 
 document.getElementById('file-action-delete')?.addEventListener('click', () => {
     if (!selectedFile) return;
     document.getElementById('confirm-delete-message').textContent = `Delete "${selectedFile.name}"?`;
-    document.getElementById('confirm-delete-modal').hidden = false;
-    actionModal.hidden = true;
+    document.getElementById('confirm-delete-modal').classList.add('active');
+    actionModal.classList.remove('active');
 });
 
-document.getElementById('confirm-delete-cancel')?.addEventListener('click', () => document.getElementById('confirm-delete-modal').hidden = true);
+document.getElementById('confirm-delete-cancel')?.addEventListener('click', () => document.getElementById('confirm-delete-modal').classList.remove('active'));
 document.getElementById('confirm-delete-ok')?.addEventListener('click', async () => {
     if (!selectedFile || !fbClient) return;
     try {
@@ -1415,7 +1415,7 @@ document.getElementById('confirm-delete-ok')?.addEventListener('click', async ()
     } catch (err) {
         showSystemMessage('Delete failed', 'error', true);
     }
-    document.getElementById('confirm-delete-modal').hidden = true;
+    document.getElementById('confirm-delete-modal').classList.remove('active');
 });
 
 // Move / Copy To
@@ -1461,8 +1461,8 @@ document.getElementById('file-action-move')?.addEventListener('click', () => {
     pickerMode = 'move';
     document.getElementById('move-dest-title').textContent = 'Move / Rename';
     document.getElementById('move-dest-action-btn').textContent = 'Move Here';
-    actionModal.hidden = true;
-    moveModal.hidden = false;
+    actionModal.classList.remove('active');
+    moveModal.classList.add('active');
     loadPickerDirs(explorer.getCurrentPath());
 });
 
@@ -1470,12 +1470,12 @@ document.getElementById('file-action-copy-to')?.addEventListener('click', () => 
     pickerMode = 'copy';
     document.getElementById('move-dest-title').textContent = 'Copy To';
     document.getElementById('move-dest-action-btn').textContent = 'Copy Here';
-    actionModal.hidden = true;
-    moveModal.hidden = false;
+    actionModal.classList.remove('active');
+    moveModal.classList.add('active');
     loadPickerDirs(explorer.getCurrentPath());
 });
 
-document.getElementById('move-dest-cancel')?.addEventListener('click', () => moveModal.hidden = true);
+document.getElementById('move-dest-cancel')?.addEventListener('click', () => moveModal.classList.remove('active'));
 document.getElementById('move-dest-action-btn')?.addEventListener('click', async () => {
     if (!selectedFile || !fbClient) return;
     const dest = (pickerPath === '/' ? '' : pickerPath) + '/' + selectedFile.name;
@@ -1486,7 +1486,7 @@ document.getElementById('move-dest-action-btn')?.addEventListener('click', async
             await fbClient.copy(selectedFile.path, dest, true);
         }
         explorer.loadPath(explorer.getCurrentPath());
-        moveModal.hidden = true;
+        moveModal.classList.remove('active');
     } catch (err) {
         showSystemMessage(`Action failed: ${err.message}`, 'error', false);
     }
@@ -1498,15 +1498,15 @@ document.getElementById('settings-fm-btn')?.addEventListener('click', () => {
     const { username, password } = getFileManagerCredentials();
     document.getElementById('fm-username').value = username;
     document.getElementById('fm-password').value = password;
-    settingsFmModal.hidden = false;
+    settingsFmModal.classList.add('active');
 });
 
-document.getElementById('fm-settings-cancel')?.addEventListener('click', () => settingsFmModal.hidden = true);
+document.getElementById('fm-settings-cancel')?.addEventListener('click', () => settingsFmModal.classList.remove('active'));
 document.getElementById('fm-settings-save')?.addEventListener('click', () => {
     const u = document.getElementById('fm-username').value.trim();
     const p = document.getElementById('fm-password').value;
     setFileManagerCredentials(u, p);
-    settingsFmModal.hidden = true;
+    settingsFmModal.classList.remove('active');
     if (currentTerminalNode) initFileBrowser(currentTerminalNode);
 });
 

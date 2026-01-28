@@ -1588,7 +1588,7 @@ pre {
     justify-content: center;
 }
 
-.fm-modal:not([hidden]) {
+.fm-modal.active {
     display: flex;
 }
 
