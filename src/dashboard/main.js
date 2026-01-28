@@ -1285,7 +1285,7 @@ async function initFileBrowser(hostname) {
 
 // UI Handlers for File Manager
 document.getElementById('toggle-filemanager-btn')?.addEventListener('click', () => {
-    document.getElementById('terminal-wrapper')?.classList.toggle('show-files');
+    document.getElementById('terminal-layout')?.classList.toggle('show-files');
     if (xtermFit) xtermFit.fit();
 });
 

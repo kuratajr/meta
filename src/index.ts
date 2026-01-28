@@ -217,22 +217,34 @@ export default {
             const parts = url.pathname.split('/');
             const requestToken = parts[2];
             const nodeHostname = parts[3];
-            const remainingPath = parts.slice(4).join('/') + url.search;
+            const remainingPath = parts.slice(4).join('/');
+            const fullUrl = remainingPath + url.search;
+
             if (env.ADMIN_TOKEN && requestToken !== env.ADMIN_TOKEN) return new Response("Unauthorized", { status: 401 });
+
             const registryData = await env.CONFIG_KV.get('registry');
             const registry = registryData ? JSON.parse(registryData) : {};
             const host = registry[nodeHostname];
             if (!host) return new Response("Node not found", { status: 404 });
-            const targetUrl = `https://8877-${host}/${remainingPath}`;
+
+            // Switch port based on path: Terminal usually 8877, FileBrowser uses /api/ or /static/ on 2234
+            let port = "8877";
+            if (remainingPath.startsWith('api/') || remainingPath.startsWith('static/')) {
+                port = "2234";
+            }
+
+            const targetUrl = `https://${port}-${host}/${fullUrl}`;
+
             if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
                 const proxyHeaders = new Headers(request.headers);
-                proxyHeaders.set('Host', `8877-${host}`);
-                proxyHeaders.set('Origin', `https://8877-${host}`);
+                proxyHeaders.set('Host', `${port}-${host}`);
+                proxyHeaders.set('Origin', `https://${port}-${host}`);
                 return fetch(targetUrl, { headers: proxyHeaders });
             }
+
             const headers = new Headers(request.headers);
-            headers.set('Host', `8877-${host}`);
-            headers.set('Origin', `https://8877-${host}`);
+            headers.set('Host', `${port}-${host}`);
+            headers.set('Origin', `https://${port}-${host}`);
             const response = await fetch(targetUrl, { headers });
             const newHeaders = new Headers(response.headers);
             newHeaders.delete('Content-Security-Policy');

@@ -1451,19 +1451,34 @@ pre {
     }
 }
 
-/* File Manager Panel */
-.file-manager-panel {
-    width: 320px;
-    border-left: 1px solid var(--glass-border);
+/* File Manager Layout */
+.terminal-layout-container {
     display: flex;
-    flex-direction: column;
-    background: rgba(15, 23, 42, 0.3);
-    backdrop-filter: blur(20px);
-    z-index: 10;
-    transition: transform 0.3s ease, width 0.3s ease;
+    gap: 1.5rem;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
 }
 
-.terminal-outer-wrapper:not(.show-files) .file-manager-panel {
+.file-manager-panel {
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, rgba(30, 30, 40, 0.45) 0%, rgba(20, 20, 30, 0.5) 100%);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 0 rgba(255, 255, 255, 0.15);
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.terminal-layout-container:not(.show-files) .file-manager-panel {
     display: none;
 }
 
@@ -1719,10 +1734,12 @@ pre {
         right: 0;
         top: 0;
         bottom: 0;
+        height: 100%;
         transform: translateX(100%);
+        z-index: 100;
     }
 
-    .terminal-outer-wrapper.show-files .file-manager-panel {
+    .terminal-layout-container.show-files .file-manager-panel {
         transform: translateX(0);
         box-shadow: -10px 0 20px rgba(0, 0, 0, 0.3);
     }
