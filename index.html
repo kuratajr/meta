@@ -132,9 +132,24 @@
                     <div class="logs-panel-header">
                         <h3 class="logs-panel-title">System Activity</h3>
                         <div class="logs-panel-controls">
-                            <input type="date" id="system-log-date" class="btn-s"
-                                style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 0.5rem; font-size: 0.8rem;"
-                                onchange="handleSystemDateChange(this.value)">
+                            <div class="custom-datepicker" id="system-datepicker">
+                                <div class="custom-datepicker-trigger" onclick="toggleDatePicker(event)">
+                                    <span class="custom-datepicker-value" id="system-date-value">Select date...</span>
+                                    <i data-lucide="calendar"></i>
+                                </div>
+                                <div class="custom-datepicker-popup" id="system-datepicker-popup">
+                                    <div class="datepicker-header">
+                                        <button class="datepicker-nav" onclick="navigateMonth(-1)">&lt;</button>
+                                        <span class="datepicker-month-year" id="datepicker-month-year"></span>
+                                        <button class="datepicker-nav" onclick="navigateMonth(1)">&gt;</button>
+                                    </div>
+                                    <div class="datepicker-weekdays">
+                                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                                    </div>
+                                    <div class="datepicker-days" id="datepicker-days"></div>
+                                    <button class="datepicker-clear" onclick="clearDatePicker()">Clear</button>
+                                </div>
+                            </div>
                             <button class="btn btn-s" onclick="resetSystemLogs()" title="Reset Filter"><i
                                     data-lucide="rotate-ccw" style="width:1rem; height:1rem;"></i></button>
                         </div>

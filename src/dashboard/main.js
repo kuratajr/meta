@@ -426,8 +426,11 @@ export function handleSystemDateChange(val) {
 export function resetSystemLogs() {
     const today = new Date().toLocaleDateString('en-CA');
     logState.system.date = today;
-    const input = document.getElementById('system-log-date');
-    if (input) input.value = today;
+    const valueSpan = document.getElementById('system-date-value');
+    if (valueSpan) {
+        const date = new Date(today);
+        valueSpan.textContent = date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    }
     fetchSystemLogs(false);
 }
 
@@ -559,6 +562,113 @@ window.resetSystemLogs = resetSystemLogs;
 window.handleLogScroll = handleLogScroll;
 window.viewNodeLogs = viewNodeLogs;
 window.resetLiveLogs = resetLiveLogs;
+
+// Custom Date Picker
+let datepickerYear = new Date().getFullYear();
+let datepickerMonth = new Date().getMonth();
+let selectedDate = null;
+
+export function toggleDatePicker(event) {
+    event.stopPropagation();
+    const popup = document.getElementById('system-datepicker-popup');
+    if (!popup) return;
+
+    const isShow = popup.classList.contains('show');
+    // Close all other popups
+    document.querySelectorAll('.custom-datepicker-popup').forEach(p => p.classList.remove('show'));
+    document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+
+    if (!isShow) {
+        renderDatePickerDays();
+        popup.classList.add('show');
+    }
+}
+
+export function navigateMonth(direction) {
+    datepickerMonth += direction;
+    if (datepickerMonth > 11) {
+        datepickerMonth = 0;
+        datepickerYear++;
+    } else if (datepickerMonth < 0) {
+        datepickerMonth = 11;
+        datepickerYear--;
+    }
+    renderDatePickerDays();
+}
+
+export function renderDatePickerDays() {
+    const daysContainer = document.getElementById('datepicker-days');
+    const monthYearLabel = document.getElementById('datepicker-month-year');
+    if (!daysContainer || !monthYearLabel) return;
+
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+    monthYearLabel.textContent = `${months[datepickerMonth]} ${datepickerYear}`;
+
+    const firstDay = new Date(datepickerYear, datepickerMonth, 1).getDay();
+    const daysInMonth = new Date(datepickerYear, datepickerMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(datepickerYear, datepickerMonth, 0).getDate();
+
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('en-CA');
+
+    let html = '';
+
+    // Previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        html += `<button class="datepicker-day other-month" disabled>${day}</button>`;
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${datepickerYear}-${String(datepickerMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const isSelected = dateStr === selectedDate;
+        let classes = 'datepicker-day';
+        if (isToday) classes += ' today';
+        if (isSelected) classes += ' selected';
+        html += `<button class="${classes}" onclick="selectDatePickerDay('${dateStr}')">${day}</button>`;
+    }
+
+    // Next month days
+    const totalCells = firstDay + daysInMonth;
+    const remaining = totalCells > 35 ? 42 - totalCells : 35 - totalCells;
+    for (let i = 1; i <= remaining; i++) {
+        html += `<button class="datepicker-day other-month" disabled>${i}</button>`;
+    }
+
+    daysContainer.innerHTML = html;
+}
+
+export function selectDatePickerDay(dateStr) {
+    selectedDate = dateStr;
+    const valueSpan = document.getElementById('system-date-value');
+    if (valueSpan) {
+        const date = new Date(dateStr);
+        valueSpan.textContent = date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    }
+    const popup = document.getElementById('system-datepicker-popup');
+    if (popup) popup.classList.remove('show');
+
+    handleSystemDateChange(dateStr);
+}
+
+export function clearDatePicker() {
+    selectedDate = null;
+    const valueSpan = document.getElementById('system-date-value');
+    if (valueSpan) valueSpan.textContent = 'Select date...';
+    const popup = document.getElementById('system-datepicker-popup');
+    if (popup) popup.classList.remove('show');
+
+    resetSystemLogs();
+}
+
+window.toggleDatePicker = toggleDatePicker;
+window.navigateMonth = navigateMonth;
+window.selectDatePickerDay = selectDatePickerDay;
+window.clearDatePicker = clearDatePicker;
 
 
 export async function fetchRawShellLogs(h) {
@@ -697,9 +807,10 @@ window.toggleNodeDropdown = toggleNodeDropdown;
 window.selectLiveNode = selectLiveNode;
 
 window.onclick = function (event) {
-    if (!event.target.matches('.dropdown-trigger') && !event.target.closest('.custom-dropdown-trigger')) {
+    if (!event.target.matches('.dropdown-trigger') && !event.target.closest('.custom-dropdown-trigger') && !event.target.closest('.custom-datepicker-trigger') && !event.target.closest('.custom-datepicker-popup')) {
         document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
         document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.custom-datepicker-popup').forEach(p => p.classList.remove('show'));
     }
 }
 

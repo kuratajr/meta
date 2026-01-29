@@ -894,42 +894,171 @@ select:focus {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
-/* Date Input with Glassmorphism */
-input[type="date"] {
+/* Custom Date Picker with Glassmorphism */
+.custom-datepicker {
+    position: relative;
+    display: inline-block;
+}
+
+.custom-datepicker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: white;
     background: rgba(15, 23, 42, 0.3);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 0.5rem 0.8rem;
     border-radius: 0.8rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    outline: none;
     cursor: pointer;
-    transition: all 0.2s;
-    color-scheme: dark;
+    transition: all 0.2s ease;
+    min-width: 140px;
 }
 
-input[type="date"]:hover {
+.custom-datepicker-trigger:hover {
     background: rgba(15, 23, 42, 0.4);
     border-color: rgba(99, 102, 241, 0.5);
 }
 
-input[type="date"]:focus {
-    background: rgba(15, 23, 42, 0.4);
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1);
+.custom-datepicker-trigger i,
+.custom-datepicker-trigger svg {
+    width: 0.9rem;
+    height: 0.9rem;
     opacity: 0.7;
-    cursor: pointer;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+.custom-datepicker-popup {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 280px;
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    padding: 1rem;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.custom-datepicker-popup.show {
     opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.datepicker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.datepicker-nav {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.datepicker-nav:hover {
+    background: rgba(99, 102, 241, 0.3);
+}
+
+.datepicker-month-year {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+}
+
+.datepicker-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.datepicker-weekdays span {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.3rem 0;
+}
+
+.datepicker-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.datepicker-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: transparent;
+    border: none;
+}
+
+.datepicker-day:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.datepicker-day.other-month {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.datepicker-day.today {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+
+.datepicker-day.selected {
+    background: var(--accent);
+    color: white;
+}
+
+.datepicker-clear {
+    width: 100%;
+    margin-top: 0.8rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.datepicker-clear:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
 }
 
 .node-select-dropdown {
