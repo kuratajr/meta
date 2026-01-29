@@ -201,8 +201,8 @@ function renderNodes(data) {
         const currentGroup = getGroupOf(h);
         if (currentSearch && !h.toLowerCase().includes(currentSearch) && !regVal.toLowerCase().includes(currentSearch) && !currentGroup.toLowerCase().includes(currentSearch)) continue;
 
-        let groupOptions = '<option value="">None</option>';
-        groupsData.forEach(g => { groupOptions += `<option value="${g.config}" ${g.config === currentGroup ? 'selected' : ''}>${g.config}</option>`; });
+        let groupItems = `<div class="custom-dropdown-item" data-value="" data-node="${h}" onclick="selectCustomDropdownItem(event)">None</div>`;
+        groupsData.forEach(g => { groupItems += `<div class="custom-dropdown-item${g.config === currentGroup ? ' selected' : ''}" data-value="${g.config}" data-node="${h}" onclick="selectCustomDropdownItem(event)">${g.config}</div>`; });
 
         html += `<tr data-status="${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
             <td class="cell-hostname">
@@ -211,7 +211,17 @@ function renderNodes(data) {
             <td class="cell-cloudhost copyable" onclick="copyToClipboard('${regVal}')" title="${regVal}">
                 ${regVal}
             </td>
-            <td style="text-align: center;"><select class="group-select" onchange="updateNodeGroup('${h}', this.value)">${groupOptions}</select></td>
+            <td style="text-align: center;">
+                <div class="custom-dropdown" data-node="${h}">
+                    <div class="custom-dropdown-trigger" onclick="toggleCustomDropdown(event)">
+                        <span class="custom-dropdown-value">${currentGroup || 'None'}</span>
+                        <i data-lucide="chevron-down"></i>
+                    </div>
+                    <div class="custom-dropdown-menu">
+                        ${groupItems}
+                    </div>
+                </div>
+            </td>
             <td style="text-align: center;">
                 <div class="action-flex" style="justify-content: center;">
                     <button class="btn btn-s" onclick="editKV('node:${h}')"><i data-lucide="settings"></i>Config</button>
@@ -601,9 +611,56 @@ export function toggleDropdown(event) {
     }
 }
 
+// Custom dropdown for group selection
+export function toggleCustomDropdown(event) {
+    event.stopPropagation();
+    const trigger = event.currentTarget;
+    const dropdown = trigger.closest('.custom-dropdown');
+    if (!dropdown) return;
+    const menu = dropdown.querySelector('.custom-dropdown-menu');
+    if (!menu) return;
+
+    const isShow = menu.classList.contains('show');
+    // Close all other dropdowns
+    document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+
+    if (!isShow) {
+        menu.classList.add('show');
+    }
+}
+
+export function selectCustomDropdownItem(event) {
+    const item = event.target.closest('.custom-dropdown-item');
+    if (!item) return;
+
+    const dropdown = item.closest('.custom-dropdown');
+    const value = item.getAttribute('data-value');
+    const node = item.getAttribute('data-node');
+    const valueSpan = dropdown.querySelector('.custom-dropdown-value');
+    const menu = dropdown.querySelector('.custom-dropdown-menu');
+
+    // Update display
+    valueSpan.textContent = value || 'None';
+
+    // Mark selected
+    dropdown.querySelectorAll('.custom-dropdown-item').forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+
+    // Close menu
+    menu.classList.remove('show');
+
+    // Update node group
+    updateNodeGroup(node, value);
+}
+
+window.toggleCustomDropdown = toggleCustomDropdown;
+window.selectCustomDropdownItem = selectCustomDropdownItem;
+
 window.onclick = function (event) {
-    if (!event.target.matches('.dropdown-trigger')) {
+    if (!event.target.matches('.dropdown-trigger') && !event.target.closest('.custom-dropdown-trigger')) {
         document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+        document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('show'));
     }
 }
 
