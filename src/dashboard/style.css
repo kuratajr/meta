@@ -1785,6 +1785,11 @@ pre {
     backdrop-filter: blur(4px);
 }
 
+#file-action-backdrop {
+    background: transparent !important;
+    backdrop-filter: none !important;
+}
+
 .fm-modal-content {
     position: relative;
     background: #1e293b;
@@ -1811,13 +1816,27 @@ pre {
 
 .file-action-content {
     position: fixed;
-    background: #1e293b;
-    border: 1px solid var(--glass-border);
-    border-radius: 0.8rem;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.85rem;
     width: 220px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
     z-index: 22000;
     overflow: hidden;
+    animation: menuFadeIn 0.2s ease-out;
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .action-header {
