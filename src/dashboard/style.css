@@ -1179,8 +1179,8 @@ select:focus {
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
     display: none;
     align-items: center;
     justify-content: center;
@@ -1188,15 +1188,41 @@ select:focus {
 }
 
 .modal-content {
-    background: #1e293b;
+    position: relative;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     width: 95%;
-    max-width: 650px;
+    max-width: 850px;
     padding: 2.5rem;
     border-radius: 2rem;
-    border: 1px solid var(--glass-border);
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 2rem;
+    padding: 2px;
+    background: linear-gradient(90deg,
+            rgba(99, 102, 241, 1),
+            rgba(168, 85, 247, 1),
+            rgba(236, 72, 153, 1),
+            rgba(99, 102, 241, 1));
+    background-size: 300% 100%;
+    animation: neonFlow 3s linear infinite;
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
 }
 
 .modal-title {
@@ -2198,8 +2224,8 @@ pre {
 .fm-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
 }
 
 #file-action-backdrop {
@@ -2209,14 +2235,39 @@ pre {
 
 .fm-modal-content {
     position: relative;
-    background: #1e293b;
-    border: 1px solid var(--glass-border);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-radius: 1.2rem;
     padding: 2.5rem;
     width: 90%;
-    max-width: 420px;
+    max-width: 450px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fm-modal-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 1.2rem;
+    padding: 2px;
+    background: linear-gradient(90deg,
+            rgba(99, 102, 241, 1),
+            rgba(168, 85, 247, 1),
+            rgba(236, 72, 153, 1),
+            rgba(99, 102, 241, 1));
+    background-size: 300% 100%;
+    animation: neonFlow 3s linear infinite;
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
 }
 
 @keyframes modalSlideUp {
