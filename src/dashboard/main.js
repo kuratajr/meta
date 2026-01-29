@@ -1378,8 +1378,8 @@ window.addEventListener('file-selected', (e) => {
         actionModal.classList.add('active');
         const content = document.getElementById('file-action-content');
         if (content) {
-            content.style.left = `${Math.min(clientX, window.innerWidth - 240)}px`;
-            content.style.top = `${Math.min(clientY, window.innerHeight - 200)}px`;
+            content.style.left = `${Math.min(clientX, window.innerWidth - 200)}px`;
+            content.style.top = `${Math.min(clientY, window.innerHeight - 280)}px`;
         }
         document.getElementById('file-action-title').textContent = file.name;
         document.getElementById('file-action-download').style.display = file.type === 'directory' ? 'none' : 'flex';
