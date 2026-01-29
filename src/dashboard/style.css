@@ -1462,8 +1462,8 @@ pre {
 }
 
 .terminal-outer-wrapper {
-    flex: 0 0 1080px;
-    max-width: 1080px;
+    flex: 0 0 1180px;
+    max-width: 1180px;
 }
 
 .file-manager-panel {
