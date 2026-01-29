@@ -444,9 +444,13 @@ td {
     white-space: nowrap;
 }
 
-.btn i {
-    width: 0.85rem;
-    height: 0.85rem;
+.btn i,
+.btn svg {
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    flex-shrink: 0;
 }
 
 .btn-p {
