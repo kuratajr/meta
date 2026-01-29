@@ -1462,8 +1462,8 @@ pre {
 }
 
 .terminal-outer-wrapper {
-    flex: 0 0 1180px;
-    max-width: 1180px;
+    flex: 0 0 1280px;
+    max-width: 1280px;
 }
 
 .file-manager-panel {
@@ -1477,7 +1477,8 @@ pre {
     backdrop-filter: blur(50px) saturate(210%);
     -webkit-backdrop-filter: blur(50px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px 0 0 20px;
+    /* Bo góc đầy đủ để cạnh phải cũng đẹp */
+    border-radius: 14px;
     box-shadow:
         0 30px 60px -15px rgba(0, 0, 0, 0.7),
         inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
@@ -1792,9 +1793,9 @@ pre {
     to { transform: rotate(360deg); }
 }
 
-#section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 210px) !important; }
+#section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 195px) !important; }
 .terminal-layout-container { padding: 0 !important; width: 100% !important; }
-.file-manager-panel { border-right: none !important; border-radius: 12px 0 0 12px !important; }
+.file-manager-panel { border-right: none !important; border-radius: 14px !important; }
 
 
 body.terminal-active main {
@@ -1805,11 +1806,11 @@ body.terminal-active main {
 }
 
 body.terminal-active #section-terminal {
-    height: calc(100vh - 210px) !important;
+    height: calc(100vh - 195px) !important;
 }
 
 body.terminal-active .file-manager-panel {
-    border-radius: 12px 0 0 12px !important;
+    border-radius: 14px !important;
     border-right: none !important;
 }
 
