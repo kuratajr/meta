@@ -205,13 +205,13 @@ function renderNodes(data) {
         groupsData.forEach(g => { groupOptions += `<option value="${g.config}" ${g.config === currentGroup ? 'selected' : ''}>${g.config}</option>`; });
 
         html += `<tr data-status="${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
-            <td style="font-weight:600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                <span class="status-dot" data-node="${h}"></span>${h}
+            <td class="cell-hostname">
+                <span class="status-dot" data-node="${h}"></span><span class="hostname-text">${h}</span>
             </td>
-            <td class="copyable" onclick="copyToClipboard('${regVal}')">
-                <div style="font-size: 0.75rem; opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${regVal}">${regVal}</div>
+            <td class="cell-cloudhost copyable" onclick="copyToClipboard('${regVal}')" title="${regVal}">
+                ${regVal}
             </td>
-            <td style="text-align: center;"><select onchange="updateNodeGroup('${h}', this.value)" style="padding: 0.3rem; font-size: 0.75rem;">${groupOptions}</select></td>
+            <td style="text-align: center;"><select class="group-select" onchange="updateNodeGroup('${h}', this.value)">${groupOptions}</select></td>
             <td style="text-align: center;">
                 <div class="action-flex" style="justify-content: center;">
                     <button class="btn btn-s" onclick="editKV('node:${h}')"><i data-lucide="settings"></i>Config</button>
