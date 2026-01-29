@@ -129,8 +129,8 @@ body.logs-active main {
     transition: margin-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Align with terminal when file manager is open */
-body.terminal-active.fm-active .header-right-group {
+/* Fix alignment with terminal edge (above the FM boundary) */
+body.terminal-active .header-right-group {
     margin-right: calc(260px + 0.75rem);
 }
 
