@@ -1095,15 +1095,21 @@ pre {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.8rem 1.5rem;
+    padding: 0.6rem 1.2rem;
     background: rgba(255, 255, 255, 0.02);
     border-bottom: 1px solid var(--glass-border);
     position: relative;
 }
 
+.terminal-header-bar .btn i,
+.terminal-header-bar .btn svg {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
 .terminal-system-message {
     position: absolute;
-    left: 50%;
+    left: 45%;
     transform: translateX(-50%);
     padding: 0.5rem 1.2rem;
     background: rgba(15, 23, 42, 0.8);
