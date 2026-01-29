@@ -586,7 +586,7 @@ export function toggleDropdown(event) {
         const rect = trigger.getBoundingClientRect();
         const windowHeight = window.innerHeight;
         const spaceBelow = windowHeight - rect.bottom;
-        const dropdownHeight = 250;
+        const dropdownHeight = 200; // Adjusted for better behavior
 
         if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
             content.classList.add('drop-up');
