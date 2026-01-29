@@ -1613,16 +1613,86 @@ pre {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.file-item .icon-wrapper i,
+.file-item .icon-wrapper svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2px;
 }
 
 .folder-icon {
-    color: #c084fc;
-    filter: drop-shadow(0 2px 8px rgba(192, 132, 252, 0.3));
+    color: #fcd34d;
+    /* Yellow for folders */
+    filter: drop-shadow(0 0 5px rgba(252, 211, 77, 0.3));
 }
 
 .file-icon {
     color: #94a3b8;
 }
+
+/* File type colors */
+.icon-js,
+.icon-ts {
+    color: #facc15;
+}
+
+/* JavaScript Yellow */
+.icon-html {
+    color: #fb923c;
+}
+
+/* HTML Orange */
+.icon-css {
+    color: #38bdf8;
+}
+
+/* CSS Blue */
+.icon-json {
+    color: #a78bfa;
+}
+
+/* JSON Purple */
+.icon-md,
+.icon-txt {
+    color: #cbd5e1;
+}
+
+/* Text Grey */
+.icon-log {
+    color: #94a3b8;
+    opacity: 0.8;
+}
+
+/* Log Grey */
+.icon-db,
+.icon-sqlite {
+    color: #34d399;
+}
+
+/* DB Green */
+.icon-sh {
+    color: #60a5fa;
+}
+
+/* Shell Blue */
+.icon-py {
+    color: #fbbf24;
+}
+
+/* Python Yellow/Blue blend (Yellowish here) */
+.icon-png,
+.icon-jpg,
+.icon-jpeg,
+.icon-svg {
+    color: #ec4899;
+}
+
+/* Image Pink */
 
 .file-name {
     flex: 1;
@@ -1802,6 +1872,7 @@ pre {
     color: var(--accent);
     border: 1px solid rgba(192, 132, 252, 0.2);
 }
+
 .loader-spinner {
     width: 24px;
     height: 24px;
@@ -1812,12 +1883,27 @@ pre {
 }
 
 @keyframes fm-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-#section-terminal { padding: 0 !important; margin: 0 !important; max-width: 100% !important; height: calc(100vh - 195px) !important; }
-.terminal-layout-container { padding: 0 !important; width: 100% !important; }
-.file-manager-panel { border-right: none !important; border-radius: 14px !important; }
+#section-terminal {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    height: calc(100vh - 195px) !important;
+}
+
+.terminal-layout-container {
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+.file-manager-panel {
+    border-right: none !important;
+    border-radius: 14px !important;
+}
 
 
 body.terminal-active main {
@@ -1835,4 +1921,3 @@ body.terminal-active .file-manager-panel {
     border-radius: 14px !important;
     border-right: none !important;
 }
-

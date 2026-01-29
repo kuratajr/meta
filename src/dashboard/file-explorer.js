@@ -119,7 +119,7 @@ export class FileExplorer {
             el.className = `file-item ${file.type === 'directory' ? 'folder' : ''}`;
             const sizeStr = file.type === 'file' ? `<span class="file-size">${this.formatSize(file.size || 0)}</span>` : '';
             el.innerHTML = `
-                ${this.getIcon(file.type)}
+                ${this.getIcon(file.type, file.name)}
                 <span class="file-name">${file.name}</span>
                 ${sizeStr}
             `;
@@ -149,12 +149,44 @@ export class FileExplorer {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    getIcon(type) {
-        const svgClass = type === 'directory' ? 'folder-icon' : 'file-icon';
-        const path = type === 'directory'
-            ? `<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />`
-            : `<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />`;
-        return `<div class="icon-wrapper"><svg class="${svgClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg></div>`;
+    getIcon(type, name = '') {
+        if (type === 'directory') {
+            return `<div class="icon-wrapper folder-icon"><i data-lucide="folder"></i></div>`;
+        }
+
+        const ext = name.split('.').pop().toLowerCase();
+        let icon = 'file';
+        let colorClass = '';
+
+        const iconMap = {
+            'js': 'file-code',
+            'ts': 'file-code',
+            'html': 'file-code',
+            'css': 'file-type',
+            'json': 'braces',
+            'md': 'file-text',
+            'txt': 'file-text',
+            'log': 'file-search',
+            'db': 'database',
+            'sqlite': 'database',
+            'sh': 'terminal',
+            'py': 'file-code',
+            'jpg': 'file-image',
+            'jpeg': 'file-image',
+            'png': 'file-image',
+            'svg': 'file-image',
+            'pdf': 'file-digit',
+            'zip': 'file-archive',
+            'tar': 'file-archive',
+            'gz': 'file-archive'
+        };
+
+        if (iconMap[ext]) {
+            icon = iconMap[ext];
+            colorClass = `icon-${ext}`;
+        }
+
+        return `<div class="icon-wrapper file-icon ${colorClass}"><i data-lucide="${icon}"></i></div>`;
     }
 
     formatSize(n) {
