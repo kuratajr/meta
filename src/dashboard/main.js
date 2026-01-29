@@ -1290,7 +1290,17 @@ function initXterm(h) {
     xterm.loadAddon(xtermFit);
     xterm.open(container);
 
-    // Force apply font to all xterm elements with better Vietnamese support
+    // Dynamic resize handling
+    const resizeObserver = new ResizeObserver(() => {
+        try {
+            if (xtermFit) xtermFit.fit();
+        } catch (e) {
+            console.warn("Fit failed during resize:", e);
+        }
+    });
+    resizeObserver.observe(container);
+
+    // Force apply font and initial fit
     setTimeout(() => {
         const applyFont = () => {
             const fontStack = '"Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", monospace';
@@ -1299,22 +1309,20 @@ function initXterm(h) {
                 if (el.style) {
                     el.style.setProperty('font-family', fontStack, 'important');
                     el.style.setProperty('font-weight', '400', 'important');
-                    el.style.setProperty('letter-spacing', '0', 'important');
+                    el.style.setProperty('letter-spacing', 'normal', 'important');
                     el.style.setProperty('-webkit-font-smoothing', 'antialiased', 'important');
                     el.style.setProperty('-moz-osx-font-smoothing', 'grayscale', 'important');
                     el.style.setProperty('text-rendering', 'geometricPrecision', 'important');
                 }
             });
-            // Also apply to container itself
             if (container.style) {
                 container.style.setProperty('font-family', fontStack, 'important');
             }
+            try { xtermFit.fit(); } catch (e) { }
         };
         applyFont();
-        // Re-apply multiple times to catch dynamically created elements
         setTimeout(applyFont, 100);
         setTimeout(applyFont, 300);
-        setTimeout(applyFont, 500);
     }, 50);
 
     setTimeout(() => {
@@ -1322,10 +1330,10 @@ function initXterm(h) {
             xtermFit.fit();
             connectWs(h);
         } catch (e) {
-            console.error("Fit error:", e);
+            console.error("Initial fit error:", e);
             connectWs(h);
         }
-    }, 150);
+    }, 200);
 }
 
 function connectWs(h) {
