@@ -1528,7 +1528,35 @@ function setFileManagerCredentials(username, password, overwrite) {
 }
 
 async function initFileBrowser(hostname) {
-    const { username, password } = getFileManagerCredentials();
+    let username = 'admin';
+    let password = 'admin';
+    let configOverwrite = false;
+
+    // 1. Try to fetch node-specific config from KV
+    try {
+        const res = await fetch(`/api/get-kv?token=${TOKEN}&key=node:${hostname}`);
+        if (res.ok) {
+            const configText = await res.text();
+            try {
+                const config = JSON.parse(configText);
+                if (config.FILEU) username = config.FILEU;
+                if (config.FILEP) password = config.FILEP;
+                // If node config has specific credentials, we use them.
+                // Otherwise, we'll fall back to user-stored or defaults below if keys were missing.
+            } catch (jsonErr) {
+                console.warn(`Node config for ${hostname} is not valid JSON, using defaults.`);
+            }
+        }
+    } catch (fetchErr) {
+        console.warn(`Failed to fetch node config for ${hostname}, using defaults.`);
+    }
+
+    // 2. If node-specific credentials aren't found, use stored credentials or defaults
+    const stored = getFileManagerCredentials();
+    if (username === 'admin' && stored.username !== 'admin') username = stored.username;
+    if (password === 'admin' && stored.password !== 'admin') password = stored.password;
+    configOverwrite = stored.overwrite;
+
     const proxyBase = `${window.location.origin}/terminal-proxy/${TOKEN}/${hostname}`;
     fbClient = new FileBrowserClient(proxyBase);
 
