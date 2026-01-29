@@ -1347,10 +1347,6 @@ pre {
 .xterm-cursor-layer *,
 .xterm-cursor-layer *::before,
 .xterm-cursor-layer *::after,
-.xterm-selection-layer,
-.xterm-selection-layer *,
-.xterm-selection-layer *::before,
-.xterm-selection-layer *::after,
 [class*="xterm"] {
     font-family: "Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", "Courier New", monospace !important;
     font-weight: 400 !important;
@@ -1406,7 +1402,8 @@ pre {
 .xterm,
 .xterm-screen,
 .xterm-viewport,
-.xterm-rows {
+.xterm-rows,
+.xterm-selection-layer {
     background-color: transparent !important;
 }
 
