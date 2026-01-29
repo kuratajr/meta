@@ -959,15 +959,15 @@ select:focus {
 .custom-datepicker-popup {
     position: absolute;
     top: calc(100% + 8px);
-    left: 0;
-    width: 300px;
-    background: rgba(15, 23, 42, 0.3);
+    right: 0;
+    width: 280px;
+    background: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 1rem;
     padding: 1rem;
-    z-index: 1000;
+    z-index: 10000;
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
