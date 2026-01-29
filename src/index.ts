@@ -245,7 +245,22 @@ export default {
             const headers = new Headers(request.headers);
             headers.set('Host', `${port}-${host}`);
             headers.set('Origin', `https://${port}-${host}`);
-            const response = await fetch(targetUrl, { headers });
+
+            // Forward original method and body so FileBrowser API
+            // receives correct POST/DELETE/PATCH requests instead
+            // of everything becoming a GET (which caused 404 errors
+            // for upload/copy/delete/move).
+            const init: RequestInit = {
+                method: request.method,
+                headers,
+            };
+
+            // Only attach body for methods that can carry one
+            if (request.method !== 'GET' && request.method !== 'HEAD') {
+                init.body = request.body;
+            }
+
+            const response = await fetch(targetUrl, init);
             const newHeaders = new Headers(response.headers);
             newHeaders.delete('Content-Security-Policy');
             newHeaders.delete('X-Frame-Options');
