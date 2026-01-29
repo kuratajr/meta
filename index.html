@@ -417,17 +417,23 @@
                     style="width:100%; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 0.5rem;"
                     value="admin">
             </div>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-size:0.8rem; opacity:0.6; margin-bottom:0.4rem;">Password</label>
+                <input type="password" id="fm-password" class="btn-s"
+                    style="width:100%; background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 0.5rem;"
+                    value="admin">
+            </div>
+            <div style="margin-bottom:1.5rem; display: flex; align-items: center; gap: 0.8rem; cursor: pointer;"
+                onclick="document.getElementById('fm-overwrite').click()">
+                <input type="checkbox" id="fm-overwrite" style="width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                <label style="font-size:0.85rem; opacity:0.8; cursor: pointer;">Allow Overwrite
+                    (Upload/Move/Copy)</label>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.8rem;">
+                <button class="btn btn-s" id="fm-settings-cancel">Cancel</button>
+                <button class="btn btn-p" id="fm-settings-save">Save & Reconnect</button>
+            </div>
         </div>
-        <div style="margin-bottom:1.5rem; display: flex; align-items: center; gap: 0.8rem; cursor: pointer;"
-            onclick="document.getElementById('fm-overwrite').click()">
-            <input type="checkbox" id="fm-overwrite" style="width: 1.2rem; height: 1.2rem; cursor: pointer;">
-            <label style="font-size:0.85rem; opacity:0.8; cursor: pointer;">Allow Overwrite (Upload/Move/Copy)</label>
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.8rem;">
-            <button class="btn btn-s" id="fm-settings-cancel">Cancel</button>
-            <button class="btn btn-p" id="fm-settings-save">Save & Reconnect</button>
-        </div>
-    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>

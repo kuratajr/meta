@@ -1269,11 +1269,11 @@ function getFileManagerCredentials() {
             if (o && o.username && o.password) return o;
         }
     } catch (_) { }
-    return { username: 'admin', password: 'admin' };
+    return { username: 'admin', password: 'admin', overwrite: false };
 }
 
-function setFileManagerCredentials(username, password) {
-    localStorage.setItem(FM_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+function setFileManagerCredentials(username, password, overwrite) {
+    localStorage.setItem(FM_CREDENTIALS_KEY, JSON.stringify({ username, password, overwrite }));
 }
 
 async function initFileBrowser(hostname) {
@@ -1322,7 +1322,8 @@ document.getElementById('file-upload')?.addEventListener('change', async (e) => 
     for (const file of files) {
         try {
             const fullPath = (path === '/' ? '' : path) + '/' + file.name;
-            await fbClient.upload(fullPath, file, { override: true });
+            const { overwrite } = getFileManagerCredentials();
+            await fbClient.upload(fullPath, file, { override: overwrite });
             ok++;
         } catch (err) {
             console.error('Upload failed:', file.name, err);
