@@ -100,8 +100,12 @@ export function showSection(id) {
 
     if (id === 'terminal') {
         document.body.classList.add('terminal-active');
+        const layout = document.getElementById('terminal-layout');
+        if (layout && layout.classList.contains('show-files')) {
+            document.body.classList.add('fm-active');
+        }
     } else {
-        document.body.classList.remove('terminal-active');
+        document.body.classList.remove('terminal-active', 'fm-active');
     }
 }
 
@@ -1291,7 +1295,12 @@ async function initFileBrowser(hostname) {
 
 // UI Handlers for File Manager
 document.getElementById('toggle-filemanager-btn')?.addEventListener('click', () => {
-    document.getElementById('terminal-layout')?.classList.toggle('show-files');
+    const layout = document.getElementById('terminal-layout');
+    if (layout) {
+        layout.classList.toggle('show-files');
+        const isShown = layout.classList.contains('show-files');
+        document.body.classList.toggle('fm-active', isShown);
+    }
     if (xtermFit) xtermFit.fit();
 });
 

@@ -118,11 +118,24 @@ body.logs-active main {
 
 .header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 3rem;
-    flex-wrap: wrap;
-    gap: 1rem;
+    flex-wrap: nowrap;
+    gap: 2rem;
+}
+
+.header-right-group {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    margin-left: auto;
+    transition: margin-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Align with terminal when file manager is open */
+body.terminal-active.fm-active .header-right-group {
+    margin-right: calc(260px + 0.75rem);
 }
 
 /* Grid & Cards */
