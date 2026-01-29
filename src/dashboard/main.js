@@ -1020,7 +1020,7 @@ function initXterm(h) {
             background: '#0a0a0f',
             foreground: '#a0a0a0',
             cursor: '#888888',
-            selection: 'rgba(255, 255, 255, 0.15)',
+            selection: 'rgba(56, 139, 253, 0.4)',
             black: '#1a1a1a',
             red: '#cc6666',
             green: '#88aa88',

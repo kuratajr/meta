@@ -1364,17 +1364,16 @@ pre {
     text-size-adjust: 100% !important;
     unicode-bidi: normal !important;
     direction: ltr !important;
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.8), 0 1px 3px rgba(0, 0, 0, 0.6) !important;
-    filter: blur(0.3px) !important;
-    -webkit-filter: blur(0.3px) !important;
+    text-shadow: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
 }
 
-/* Additional fix for Vietnamese diacritics */
+/* Additional fix for Vietnamese diacritics - removed shadows */
 .xterm-char {
     font-family: "Cascadia Code", "Source Code Pro", "Consolas", "JetBrains Mono", "Fira Code", "Monaco", "Courier New", monospace !important;
     font-kerning: none !important;
     font-variant-ligatures: none !important;
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.7) !important;
 }
 
 /* Adjust cursor - make it smaller or hide */
