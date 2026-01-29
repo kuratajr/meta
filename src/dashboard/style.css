@@ -1244,7 +1244,7 @@ select:focus {
 #editor-container textarea {
     width: 100%;
     height: 400px;
-    background: #0f172a;
+    background: transparent;
     color: #10b981;
     border: 1px solid var(--glass-border);
     border-radius: 1rem;
@@ -1263,7 +1263,7 @@ select:focus {
 }
 
 #info-container pre {
-    background: #0f172a;
+    background: transparent;
     color: #10b981;
     padding: 1.5rem;
     border-radius: 1rem;
@@ -1283,7 +1283,7 @@ select:focus {
 
 #modal-key-input input {
     width: 100%;
-    background: #0f172a;
+    background: transparent;
     border: 1px solid var(--glass-border);
     color: white;
     padding: 1rem;
@@ -1322,7 +1322,7 @@ select:focus {
 }
 
 pre {
-    background: #0f172a;
+    background: transparent;
     color: #10b981;
     padding: 1.5rem;
     border-radius: 1rem;
