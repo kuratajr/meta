@@ -1306,6 +1306,33 @@ pre {
     }
 }
 
+.terminal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.6rem;
+    transition: background 0.2s;
+    position: relative;
+    user-select: none;
+}
+
+.terminal-title-group:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.terminal-title-group .dropdown-content {
+    min-width: 200px;
+    max-height: 300px;
+    top: calc(100% + 5px);
+    left: 0;
+}
+
 .terminal-title-box {
     display: flex;
     align-items: center;

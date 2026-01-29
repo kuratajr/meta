@@ -572,19 +572,14 @@ export async function fetchRawShellLogs(h) {
 
 export function toggleDropdown(event) {
     event.stopPropagation();
-    const btn = event.currentTarget;
-    const content = btn.nextElementSibling;
-    if (!content) return;
-    const isShow = content.classList.contains('show');
+    const trigger = event.currentTarget || event.target.closest('.dropdown-trigger') || event.target.closest('.terminal-title-group');
+    const dropdown = trigger.classList.contains('dropdown') ? trigger : trigger.closest('.dropdown');
+    const content = dropdown.querySelector('.dropdown-content');
 
+    const isShow = content.classList.contains('show');
     document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
 
     if (!isShow) {
-        const rect = btn.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
-        const spaceBelow = windowHeight - rect.bottom;
-        const dropdownHeight = 200;
-
         if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
             content.classList.add('drop-up');
         } else {
@@ -988,6 +983,9 @@ export function openTerminal(h, hostUrl) {
     currentTerminalUrl = hostUrl;
     showSection('terminal');
 
+    // Close any open dropdowns (including node switcher)
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+
     const terminalTitle = document.getElementById('terminal-section-title');
     if (terminalTitle) terminalTitle.innerText = h;
 
@@ -997,7 +995,33 @@ export function openTerminal(h, hostUrl) {
 
     updateUIStatus('connecting');
     initXterm(h);
+    renderNodeSwitcher();
 }
+
+function renderNodeSwitcher() {
+    const list = document.querySelector('#terminal-node-list .dropdown-scroll-area');
+    if (!list || !lastData || !lastData.registry) return;
+
+    let html = '';
+    for (const h in lastData.registry) {
+        const url = lastData.registry[h];
+        const isActive = h === currentTerminalNode;
+        html += `
+            <div class="dropdown-item ${isActive ? 'active' : ''}" onclick="openTerminal('${h}', '${url}')">
+                <i data-lucide="server" style="width: 14px; height: 14px; opacity: 0.6;"></i>
+                <span>${h}</span>
+                ${isActive ? '<i data-lucide="check" style="width: 14px; height: 14px; margin-left: auto; color: var(--success);"></i>' : ''}
+            </div>
+        `;
+    }
+    list.innerHTML = html;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// Ensure first render
+document.addEventListener('DOMContentLoaded', () => {
+    // Already existing logic can stay
+});
 
 function initXterm(h) {
     if (termWs) { try { termWs.close(); } catch (e) { } }
