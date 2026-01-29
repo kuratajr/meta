@@ -1494,11 +1494,12 @@ document.getElementById('move-dest-cancel')?.addEventListener('click', () => mov
 document.getElementById('move-dest-action-btn')?.addEventListener('click', async () => {
     if (!selectedFile || !fbClient) return;
     const dest = (pickerPath === '/' ? '' : pickerPath) + '/' + selectedFile.name;
+    const { overwrite } = getFileManagerCredentials();
     try {
         if (pickerMode === 'move') {
-            await fbClient.rename(selectedFile.path, dest);
+            await fbClient.rename(selectedFile.path, dest, { override: overwrite });
         } else {
-            await fbClient.copy(selectedFile.path, dest, true);
+            await fbClient.copy(selectedFile.path, dest, overwrite);
         }
         explorer.loadPath(explorer.getCurrentPath());
         moveModal.classList.remove('active');
@@ -1510,9 +1511,10 @@ document.getElementById('move-dest-action-btn')?.addEventListener('click', async
 // Settings Modal
 const settingsFmModal = document.getElementById('fm-settings-modal');
 document.getElementById('settings-fm-btn')?.addEventListener('click', () => {
-    const { username, password } = getFileManagerCredentials();
+    const { username, password, overwrite } = getFileManagerCredentials();
     document.getElementById('fm-username').value = username;
     document.getElementById('fm-password').value = password;
+    document.getElementById('fm-overwrite').checked = !!overwrite;
     settingsFmModal.classList.add('active');
 });
 
@@ -1520,7 +1522,8 @@ document.getElementById('fm-settings-cancel')?.addEventListener('click', () => s
 document.getElementById('fm-settings-save')?.addEventListener('click', () => {
     const u = document.getElementById('fm-username').value.trim();
     const p = document.getElementById('fm-password').value;
-    setFileManagerCredentials(u, p);
+    const o = document.getElementById('fm-overwrite').checked;
+    setFileManagerCredentials(u, p, o);
     settingsFmModal.classList.remove('active');
     if (currentTerminalNode) initFileBrowser(currentTerminalNode);
 });
