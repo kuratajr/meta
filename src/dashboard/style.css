@@ -834,13 +834,13 @@ td {
 }
 
 select {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     color: #818cf8;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 0.5rem;
-    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.8rem;
     font-size: 0.85rem;
     outline: none;
     cursor: pointer;
@@ -855,30 +855,64 @@ select::-webkit-scrollbar {
 }
 
 select:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: var(--accent);
+    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(99, 102, 241, 0.5);
 }
 
 select:focus {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.4);
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Date Input with Glassmorphism */
+input[type="date"] {
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    color-scheme: dark;
+}
+
+input[type="date"]:hover {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+input[type="date"]:focus {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
 }
 
 .node-select-dropdown {
-    background: rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(15px) saturate(150%);
-    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     color: #818cf8;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    box-shadow:
-        0 0 15px rgba(255, 255, 255, 0.15),
-        inset 0 0 25px rgba(255, 255, 255, 0.08),
-        0 0 40px rgba(99, 102, 241, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    padding: 0.4rem 0.7rem;
-    border-radius: 0.5rem;
-    font-size: 0.95rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 500;
     outline: none;
     cursor: pointer;
@@ -895,13 +929,11 @@ select:focus {
 }
 
 .node-select-dropdown option {
-    background: rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(15px) saturate(150%);
-    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    background: #1e293b;
     color: #e0e7ff;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
-    padding: 0.5rem 0.7rem;
+    padding: 0.5rem 0.8rem;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -918,14 +950,14 @@ select:focus {
 }
 
 .node-select-dropdown:hover {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: var(--accent);
+    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(99, 102, 241, 0.5);
 }
 
 .node-select-dropdown:focus {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(15, 23, 42, 0.4);
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 /* Modal */
