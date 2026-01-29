@@ -976,28 +976,25 @@ select:focus {
 .custom-datepicker-popup::before {
     content: '';
     position: absolute;
-    inset: -2px;
-    border-radius: 1.1rem;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 2px;
     background: linear-gradient(90deg,
-            rgba(99, 102, 241, 0.8),
-            rgba(168, 85, 247, 0.8),
-            rgba(236, 72, 153, 0.8),
-            rgba(99, 102, 241, 0.8));
+            rgba(99, 102, 241, 1),
+            rgba(168, 85, 247, 1),
+            rgba(236, 72, 153, 1),
+            rgba(99, 102, 241, 1));
     background-size: 300% 100%;
     animation: neonFlow 3s linear infinite;
-    z-index: -1;
-    opacity: 0.8;
-}
-
-.custom-datepicker-popup::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.15);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-radius: 1rem;
-    z-index: -1;
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
 }
 
 @keyframes neonFlow {
