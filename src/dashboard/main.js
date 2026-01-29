@@ -13,6 +13,7 @@ let currentStatusFilter = 'all';
 // File Manager global state
 const explorer = new FileExplorer('file-list');
 let fbClient = null;
+let activeFmCredentials = { username: 'admin', password: 'admin' };
 const FM_CREDENTIALS_KEY = 'meta_fm_credentials';
 
 // Log states for pagination
@@ -1528,34 +1529,40 @@ function setFileManagerCredentials(username, password, overwrite) {
 }
 
 async function initFileBrowser(hostname) {
-    let username = 'admin';
-    let password = 'admin';
-    let configOverwrite = false;
+    console.log(`[FM] Initializing for node: ${hostname}`);
+    let username = null;
+    let password = null;
 
-    // 1. Try to fetch node-specific config from KV
+    // 1. Try node-specific config first
     try {
         const res = await fetch(`/api/get-kv?token=${TOKEN}&key=node:${hostname}`);
         if (res.ok) {
             const configText = await res.text();
             try {
                 const config = JSON.parse(configText);
-                if (config.FILEU) username = config.FILEU;
-                if (config.FILEP) password = config.FILEP;
-                // If node config has specific credentials, we use them.
-                // Otherwise, we'll fall back to user-stored or defaults below if keys were missing.
+                if (config.FILEU) {
+                    username = config.FILEU;
+                    console.log(`[FM] Found custom username in node config: ${username}`);
+                }
+                if (config.FILEP) {
+                    password = config.FILEP;
+                    console.log(`[FM] Found custom password in node config`);
+                }
             } catch (jsonErr) {
-                console.warn(`Node config for ${hostname} is not valid JSON, using defaults.`);
+                console.warn(`[FM] Node config for ${hostname} is not valid JSON.`);
             }
         }
-    } catch (fetchErr) {
-        console.warn(`Failed to fetch node config for ${hostname}, using defaults.`);
+    } catch (err) {
+        console.error(`[FM] Error fetching node config:`, err);
     }
 
-    // 2. If node-specific credentials aren't found, use stored credentials or defaults
+    // 2. Fallback to localStorage or defaults
     const stored = getFileManagerCredentials();
-    if (username === 'admin' && stored.username !== 'admin') username = stored.username;
-    if (password === 'admin' && stored.password !== 'admin') password = stored.password;
-    configOverwrite = stored.overwrite;
+    if (!username) username = stored.username || 'admin';
+    if (!password) password = stored.password || 'admin';
+
+    console.log(`[FM] Attempting login for ${hostname} with user: ${username}`);
+    activeFmCredentials = { username, password };
 
     const proxyBase = `${window.location.origin}/terminal-proxy/${TOKEN}/${hostname}`;
     fbClient = new FileBrowserClient(proxyBase);
@@ -1565,10 +1572,10 @@ async function initFileBrowser(hostname) {
         await fbClient.login(username, password);
         explorer.setClient(fbClient);
         await explorer.loadPath('/');
-        showSystemMessage('File Manager connected!', 'success', true);
+        showSystemMessage(`File Manager connected as ${username}`, 'success', true);
     } catch (err) {
-        console.error('File Manager Login Error:', err);
-        showSystemMessage(`File Manager auth failed. Check settings.`, 'error', false);
+        console.error('[FM] Login Error:', err);
+        showSystemMessage(`File Manager auth failed using ${username}.`, 'error', false);
     }
 }
 
@@ -1791,9 +1798,11 @@ document.getElementById('move-dest-action-btn')?.addEventListener('click', async
 // Settings Modal
 const settingsFmModal = document.getElementById('fm-settings-modal');
 document.getElementById('settings-fm-btn')?.addEventListener('click', () => {
-    const { username, password, overwrite } = getFileManagerCredentials();
-    document.getElementById('fm-username').value = username;
-    document.getElementById('fm-password').value = password;
+    // Show active credentials (could be from node config)
+    document.getElementById('fm-username').value = activeFmCredentials.username;
+    document.getElementById('fm-password').value = activeFmCredentials.password;
+
+    const { overwrite } = getFileManagerCredentials();
     document.getElementById('fm-overwrite').checked = !!overwrite;
     settingsFmModal.classList.add('active');
 });
