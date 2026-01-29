@@ -293,9 +293,22 @@ th {
 }
 
 td {
-    padding: 1rem 0.5rem;
+    padding: 0.8rem 0.5rem;
     border-bottom: 1px solid var(--glass-border);
     vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hostname-cell {
+    font-weight: 600;
+    font-family: inherit;
+}
+
+.cloud-host-cell {
+    font-size: 0.75rem;
+    opacity: 0.6;
 }
 
 .copyable {
@@ -428,24 +441,24 @@ td {
 
 /* Controls */
 .btn {
-    padding: 0.4rem 0.7rem;
+    padding: 0.5rem 0.8rem;
     border-radius: 0.8rem;
     border: none;
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     transition: all 0.2s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    min-width: 65px;
+    gap: 0.5rem;
+    min-width: 75px;
     white-space: nowrap;
 }
 
 .btn i {
-    width: 0.85rem;
-    height: 0.85rem;
+    width: 1.1rem;
+    height: 1.1rem;
 }
 
 .btn-p {

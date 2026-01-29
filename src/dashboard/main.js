@@ -205,11 +205,11 @@ function renderNodes(data) {
         groupsData.forEach(g => { groupOptions += `<option value="${g.config}" ${g.config === currentGroup ? 'selected' : ''}>${g.config}</option>`; });
 
         html += `<tr data-status="${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
-            <td style="font-weight:600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+            <td class="hostname-cell">
                 <span class="status-dot" data-node="${h}"></span>${h}
             </td>
             <td class="copyable" onclick="copyToClipboard('${regVal}')">
-                <div style="font-size: 0.75rem; opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${regVal}">${regVal}</div>
+                <div class="cloud-host-cell" title="${regVal}">${regVal}</div>
             </td>
             <td style="text-align: center;"><select onchange="updateNodeGroup('${h}', this.value)" style="padding: 0.3rem; font-size: 0.75rem;">${groupOptions}</select></td>
             <td style="text-align: center;">
