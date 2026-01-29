@@ -1664,9 +1664,9 @@ pre {
     background: #1e293b;
     border: 1px solid var(--glass-border);
     border-radius: 1.2rem;
-    padding: 0;
+    padding: 2.5rem;
     width: 90%;
-    max-width: 420px;height: 100%;margin-left: auto;border-right: none;
+    max-width: 420px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
