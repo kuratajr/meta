@@ -573,19 +573,31 @@ export async function fetchRawShellLogs(h) {
 export function toggleDropdown(event) {
     event.stopPropagation();
     const trigger = event.currentTarget || event.target.closest('.dropdown-trigger') || event.target.closest('.terminal-title-group');
+    if (!trigger) return;
     const dropdown = trigger.classList.contains('dropdown') ? trigger : trigger.closest('.dropdown');
+    if (!dropdown) return;
     const content = dropdown.querySelector('.dropdown-content');
+    if (!content) return;
 
     const isShow = content.classList.contains('show');
     document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
 
     if (!isShow) {
+        const rect = trigger.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const spaceBelow = windowHeight - rect.bottom;
+        const dropdownHeight = 250;
+
         if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
             content.classList.add('drop-up');
         } else {
             content.classList.remove('drop-up');
         }
+
         content.classList.add('show');
+        if (dropdown.id === 'terminal-node-switcher' && typeof renderNodeSwitcher === 'function') {
+            renderNodeSwitcher();
+        }
     }
 }
 
