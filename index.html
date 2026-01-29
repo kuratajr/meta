@@ -148,10 +148,15 @@
                     <div class="logs-panel-header">
                         <h3 class="logs-panel-title">Live Node Logs</h3>
                         <div class="logs-panel-controls">
-                            <select id="node-select-dropdown" onchange="handleNodeSelect(this.value)"
-                                class="node-select-dropdown">
-                                <option value="">Select a node...</option>
-                            </select>
+                            <div class="custom-dropdown node-dropdown" id="live-node-dropdown">
+                                <div class="custom-dropdown-trigger" onclick="toggleNodeDropdown(event)">
+                                    <span class="custom-dropdown-value" id="live-node-value">Select a node...</span>
+                                    <i data-lucide="chevron-down"></i>
+                                </div>
+                                <div class="custom-dropdown-menu node-dropdown-menu" id="live-node-menu">
+                                    <!-- Nodes will be injected here -->
+                                </div>
+                            </div>
                             <button class="btn btn-s" onclick="resetLiveLogs()" id="btn-reset-live"
                                 style="display:none;" title="Clear filter"><i data-lucide="x"
                                     style="width:1rem; height:1rem;"></i></button>

@@ -450,8 +450,8 @@ export async function viewNodeLogs(h) {
     logState.live.lastDateStr = '';
     const resetBtn = document.getElementById('btn-reset-live');
     if (resetBtn) resetBtn.style.display = 'block';
-    const dropdown = document.getElementById('node-select-dropdown');
-    if (dropdown) dropdown.value = h;
+    const valueSpan = document.getElementById('live-node-value');
+    if (valueSpan) valueSpan.textContent = h;
     fetchLiveNodeLogs(h, false);
 }
 
@@ -461,8 +461,8 @@ export function resetLiveLogs() {
     if (container) container.innerHTML = '<div style="opacity: 0.5;">Select a node to view live logs...</div>';
     const resetBtn = document.getElementById('btn-reset-live');
     if (resetBtn) resetBtn.style.display = 'none';
-    const dropdown = document.getElementById('node-select-dropdown');
-    if (dropdown) dropdown.value = '';
+    const valueSpan = document.getElementById('live-node-value');
+    if (valueSpan) valueSpan.textContent = 'Select a node...';
     const buttonContainer = document.getElementById('live-logs-button-container');
     if (buttonContainer) buttonContainer.style.display = 'none';
 }
@@ -476,20 +476,19 @@ export function handleNodeSelect(nodeHostname) {
 }
 
 export function updateNodeDropdown() {
-    const dropdown = document.getElementById('node-select-dropdown');
-    if (!dropdown || !lastData || !lastData.registry) return;
+    const menu = document.getElementById('live-node-menu');
+    const valueSpan = document.getElementById('live-node-value');
+    if (!menu || !lastData || !lastData.registry) return;
 
-    const currentValue = dropdown.value;
+    const currentValue = logState.live.hostname || '';
     const nodes = Object.keys(lastData.registry).sort();
 
-    dropdown.innerHTML = '<option value="">Select a node...</option>';
+    let html = '';
     nodes.forEach(node => {
-        const option = document.createElement('option');
-        option.value = node;
-        option.textContent = node;
-        if (node === currentValue) option.selected = true;
-        dropdown.appendChild(option);
+        const selected = node === currentValue ? ' selected' : '';
+        html += `<div class="custom-dropdown-item${selected}" data-value="${node}" onclick="selectLiveNode('${node}')">${node}</div>`;
     });
+    menu.innerHTML = html;
 }
 
 async function fetchLiveNodeLogs(h, append = false) {
@@ -656,6 +655,46 @@ export function selectCustomDropdownItem(event) {
 
 window.toggleCustomDropdown = toggleCustomDropdown;
 window.selectCustomDropdownItem = selectCustomDropdownItem;
+
+// Custom dropdown for Live Node selection
+export function toggleNodeDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('live-node-dropdown');
+    if (!dropdown) return;
+    const menu = dropdown.querySelector('.custom-dropdown-menu');
+    if (!menu) return;
+
+    const isShow = menu.classList.contains('show');
+    // Close all other dropdowns
+    document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+
+    if (!isShow) {
+        menu.classList.add('show');
+    }
+}
+
+export function selectLiveNode(nodeHostname) {
+    const valueSpan = document.getElementById('live-node-value');
+    const menu = document.getElementById('live-node-menu');
+
+    // Update display
+    if (valueSpan) valueSpan.textContent = nodeHostname || 'Select a node...';
+
+    // Mark selected
+    if (menu) {
+        menu.querySelectorAll('.custom-dropdown-item').forEach(i => i.classList.remove('selected'));
+        const item = menu.querySelector(`[data-value="${nodeHostname}"]`);
+        if (item) item.classList.add('selected');
+        menu.classList.remove('show');
+    }
+
+    // Handle node selection
+    handleNodeSelect(nodeHostname);
+}
+
+window.toggleNodeDropdown = toggleNodeDropdown;
+window.selectLiveNode = selectLiveNode;
 
 window.onclick = function (event) {
     if (!event.target.matches('.dropdown-trigger') && !event.target.closest('.custom-dropdown-trigger')) {
