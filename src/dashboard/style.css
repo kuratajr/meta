@@ -361,9 +361,10 @@ td {
 }
 
 .group-select option {
-    background: rgba(15, 23, 42, 0.95);
+    background: #1e293b;
     color: white;
     padding: 0.5rem;
+    border: none;
 }
 
 
