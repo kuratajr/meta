@@ -57,6 +57,15 @@
         <div class="header" style="align-items: center;">
             <h1 id="section-title" style="margin-bottom: 0;">Inventory & Registry</h1>
 
+            <div style="display: flex; gap: 0.8rem; align-items: center;">
+                <div class="live-indicator" id="live-indicator">
+                    <div class="live-dot" id="live-dot"></div>
+                    <span id="live-text">Live: Off</span>
+                </div>
+                <button class="btn btn-s" onclick="toggleAutoRefresh()" id="btn-live">Enable Auto-Live</button>
+                <button class="btn btn-s" onclick="refreshData()">Sync Data</button>
+            </div>
+
             <div class="header-right-group"
                 style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; margin-left: auto;">
                 <div class="dropdown" id="status-filter-wrapper" style="display: none;">
@@ -75,12 +84,6 @@
                     <input type="text" id="table-search" placeholder="Search entries..."
                         oninput="handleSearch(this.value)">
                 </div>
-                <div class="live-indicator" id="live-indicator">
-                    <div class="live-dot" id="live-dot"></div>
-                    <span id="live-text">Live: Off</span>
-                </div>
-                <button class="btn btn-s" onclick="toggleAutoRefresh()" id="btn-live">Enable Auto-Live</button>
-                <button class="btn btn-s" onclick="refreshData()">Sync Data</button>
                 <button class="btn btn-p" id="btn-create" style="display: none;" onclick="openCreateModal()">+ Create
                     New</button>
             </div>
