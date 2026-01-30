@@ -1167,6 +1167,8 @@ function showSystemMessage(message, type = 'success', autoHide = true) {
     // Nếu autoHide = false (error/offline), hiển thị luôn, không tự ẩn
 }
 
+window.showSystemMessage = showSystemMessage;
+
 function updateUIStatus(newStatus) {
     const wrapper = document.getElementById('terminal-wrapper');
     const statusBadge = document.getElementById('status-badge');
@@ -1578,6 +1580,12 @@ async function initFileBrowser(hostname) {
         showSystemMessage(`File Manager auth failed using ${username}.`, 'error', false);
     }
 }
+
+function getOverwriteSetting() {
+    return getFileManagerCredentials().overwrite || false;
+}
+
+window.getOverwriteSetting = getOverwriteSetting;
 
 // UI Handlers for File Manager
 document.getElementById('toggle-filemanager-btn')?.addEventListener('click', () => {

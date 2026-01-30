@@ -179,14 +179,19 @@ export class FileExplorer {
                     const parts = file.path.split('/');
                     parts.pop();
                     const dest = (parts.join('/') || '') + '/' + newName;
-                    await this.client.rename(file.path, dest);
+                    const overwrite = (typeof window.getOverwriteSetting === 'function') ? window.getOverwriteSetting() : false;
+                    await this.client.rename(file.path, dest, { override: overwrite });
                     this.loadPath(this.currentPath);
                 } catch (err) {
-                    alert(`Rename failed: ${err.message}`);
-                    this.render(); // Revert
+                    if (typeof window.showSystemMessage === 'function') {
+                        window.showSystemMessage(`Rename failed: ${err.message}`, 'error', false);
+                    } else {
+                        console.error(`Rename failed: ${err.message}`);
+                    }
+                    this.render(); // Revert UI
                 }
             } else {
-                this.render(); // Revert
+                this.render(); // Revert if same name or empty
             }
         };
 
