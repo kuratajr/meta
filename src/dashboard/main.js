@@ -1598,9 +1598,8 @@ document.getElementById('upload-btn')?.addEventListener('click', () => {
     document.getElementById('file-upload')?.click();
 });
 
-document.getElementById('file-upload')?.addEventListener('change', async (e) => {
-    if (!fbClient || !e.target.files?.length) return;
-    const files = Array.from(e.target.files);
+async function handleFileUpload(files) {
+    if (!fbClient || !files || !files.length) return;
     const path = explorer.getCurrentPath();
     showSystemMessage(`Uploading ${files.length} file(s)...`, 'success', true);
 
@@ -1617,8 +1616,45 @@ document.getElementById('file-upload')?.addEventListener('change', async (e) => 
     }
     showSystemMessage(`Uploaded ${ok}/${files.length} files.`, ok === files.length ? 'success' : 'error', true);
     explorer.loadPath(path);
+}
+
+document.getElementById('file-upload')?.addEventListener('change', async (e) => {
+    if (!e.target.files?.length) return;
+    await handleFileUpload(Array.from(e.target.files));
     e.target.value = '';
 });
+
+// Drag and Drop support
+const fileListContainer = document.getElementById('file-list');
+if (fileListContainer) {
+    fileListContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileListContainer.classList.add('drag-over');
+    });
+
+    fileListContainer.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileListContainer.classList.add('drag-over');
+    });
+
+    fileListContainer.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileListContainer.classList.remove('drag-over');
+    });
+
+    fileListContainer.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileListContainer.classList.remove('drag-over');
+
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+            await handleFileUpload(Array.from(e.dataTransfer.files));
+        }
+    });
+}
 
 // New Folder
 const nfModal = document.getElementById('new-folder-modal');

@@ -2092,6 +2092,14 @@ pre {
     min-height: 0;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.file-list.drag-over {
+    background: rgba(63, 185, 80, 0.05);
+    border: 2px dashed rgba(63, 185, 80, 0.4);
+    border-radius: 8px;
 }
 
 .file-list::-webkit-scrollbar {
