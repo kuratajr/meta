@@ -149,6 +149,70 @@ export class FileExplorer {
         if (window.lucide) window.lucide.createIcons();
     }
 
+    startRename(file) {
+        // Find the element for this file
+        const items = this.container.querySelectorAll('.file-item');
+        let fileEl = null;
+        for (const item of items) {
+            const nameEl = item.querySelector('.file-name');
+            if (nameEl && nameEl.textContent === file.name) {
+                fileEl = item;
+                break;
+            }
+        }
+
+        if (!fileEl) return;
+
+        const nameSpan = fileEl.querySelector('.file-name');
+        if (!nameSpan) return;
+
+        const originalName = nameSpan.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'file-name-input';
+        input.value = originalName;
+
+        const save = async () => {
+            const newName = input.value.trim();
+            if (newName && newName !== originalName) {
+                try {
+                    const parts = file.path.split('/');
+                    parts.pop();
+                    const dest = (parts.join('/') || '') + '/' + newName;
+                    await this.client.rename(file.path, dest);
+                    this.loadPath(this.currentPath);
+                } catch (err) {
+                    alert(`Rename failed: ${err.message}`);
+                    this.render(); // Revert
+                }
+            } else {
+                this.render(); // Revert
+            }
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                save();
+            } else if (e.key === 'Escape') {
+                this.render();
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            save();
+        });
+
+        nameSpan.replaceWith(input);
+        input.focus();
+        // Select filename without extension if possible
+        const dotIdx = originalName.lastIndexOf('.');
+        if (dotIdx > 0) {
+            input.setSelectionRange(0, dotIdx);
+        } else {
+            input.select();
+        }
+    }
+
     getIcon(type, name = '') {
         if (type === 'directory') {
             return `<div class="icon-wrapper folder-icon"><i data-lucide="folder"></i></div>`;

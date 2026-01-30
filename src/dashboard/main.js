@@ -1769,6 +1769,13 @@ document.getElementById('file-action-copy')?.addEventListener('click', () => {
     actionModal.classList.remove('active');
 });
 
+document.getElementById('file-action-rename')?.addEventListener('click', () => {
+    if (selectedFile) {
+        explorer.startRename(selectedFile);
+    }
+    actionModal.classList.remove('active');
+});
+
 document.getElementById('file-action-delete')?.addEventListener('click', () => {
     if (!selectedFile) return;
     document.getElementById('confirm-delete-message').textContent = `Delete "${selectedFile.name}"?`;
@@ -1829,7 +1836,7 @@ async function loadPickerDirs(path) {
 
 document.getElementById('file-action-move')?.addEventListener('click', () => {
     pickerMode = 'move';
-    document.getElementById('move-dest-title').textContent = 'Move / Rename';
+    document.getElementById('move-dest-title').textContent = 'Move To';
     document.getElementById('move-dest-action-btn').textContent = 'Move Here';
     actionModal.classList.remove('active');
     moveModal.classList.add('active');
