@@ -1624,7 +1624,7 @@ document.getElementById('file-upload')?.addEventListener('change', async (e) => 
     e.target.value = '';
 });
 
-// Drag and Drop support
+// Drag and Drop support for File List
 const fileListContainer = document.getElementById('file-list');
 if (fileListContainer) {
     fileListContainer.addEventListener('dragover', (e) => {
@@ -1649,6 +1649,38 @@ if (fileListContainer) {
         e.preventDefault();
         e.stopPropagation();
         fileListContainer.classList.remove('drag-over');
+
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+            await handleFileUpload(Array.from(e.dataTransfer.files));
+        }
+    });
+}
+
+// Drag and Drop support for Terminal Body
+const terminalBody = document.querySelector('.terminal-body-container');
+if (terminalBody) {
+    terminalBody.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        terminalBody.classList.add('drag-over');
+    });
+
+    terminalBody.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        terminalBody.classList.add('drag-over');
+    });
+
+    terminalBody.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        terminalBody.classList.remove('drag-over');
+    });
+
+    terminalBody.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        terminalBody.classList.remove('drag-over');
 
         if (e.dataTransfer && e.dataTransfer.files.length > 0) {
             await handleFileUpload(Array.from(e.dataTransfer.files));

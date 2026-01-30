@@ -1646,6 +1646,14 @@ pre {
     overflow: hidden;
     position: relative;
     padding: 0;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.terminal-body-container.drag-over {
+    background: rgba(63, 185, 80, 0.05);
+    border: 2px dashed rgba(63, 185, 80, 0.4);
+    z-index: 1000;
 }
 
 /* Ánh sáng mềm ở giữa */
