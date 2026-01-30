@@ -1712,23 +1712,10 @@ function openNewFolderModal(parent) {
 
 document.getElementById('new-folder-btn')?.addEventListener('click', () => {
     if (!fbClient) return;
-    openNewFolderModal(explorer.getCurrentPath());
+    explorer.createNewFolder();
 });
 
-document.getElementById('new-folder-cancel')?.addEventListener('click', () => nfModal.classList.remove('active'));
-document.getElementById('new-folder-backdrop')?.addEventListener('click', () => nfModal.classList.remove('active'));
-document.getElementById('new-folder-create')?.addEventListener('click', async () => {
-    const name = nfInput?.value?.trim();
-    if (!name || !fbClient) return;
-    const full = (nfParent === '/' ? '' : nfParent) + '/' + name;
-    try {
-        await fbClient.createDir(full);
-        explorer.loadPath(explorer.getCurrentPath());
-        nfModal.classList.remove('active');
-    } catch (err) {
-        showSystemMessage(`Failed to create folder: ${err.message}`, 'error', false);
-    }
-});
+// (Old Modal handlers removed as they are no longer used for inline creation)
 
 // Context Menu Actions
 let selectedFile = null;

@@ -218,6 +218,55 @@ export class FileExplorer {
         }
     }
 
+    createNewFolder() {
+        const row = document.createElement('div');
+        row.className = 'file-item folder';
+        row.innerHTML = `
+            ${this.getIcon('directory')}
+            <input type="text" class="file-name-input" placeholder="New Folder">
+        `;
+
+        // Prepend to list (after ".." if exists)
+        const first = this.container.firstChild;
+        if (first && first.textContent.includes('..')) {
+            first.after(row);
+        } else {
+            this.container.prepend(row);
+        }
+
+        const input = row.querySelector('input');
+        input.focus();
+
+        const save = async () => {
+            const name = input.value.trim();
+            if (!name) {
+                this.render(); // Cancel if empty
+                return;
+            }
+
+            try {
+                const fullPath = (this.currentPath === '/' ? '' : this.currentPath) + '/' + name;
+                await this.client.createDir(fullPath);
+                this.loadPath(this.currentPath);
+            } catch (err) {
+                if (typeof window.showSystemMessage === 'function') {
+                    window.showSystemMessage(`Failed to create folder: ${err.message}`, 'error', false);
+                }
+                this.render();
+            }
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') save();
+            if (e.key === 'Escape') this.render();
+        });
+
+        input.addEventListener('blur', () => {
+            if (input.value.trim()) save();
+            else this.render();
+        });
+    }
+
     getIcon(type, name = '') {
         if (type === 'directory') {
             return `<div class="icon-wrapper folder-icon"><i data-lucide="folder"></i></div>`;
