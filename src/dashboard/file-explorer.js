@@ -234,6 +234,9 @@ export class FileExplorer {
             this.container.prepend(row);
         }
 
+        // Initialize Lucide icons for the new row
+        if (window.lucide) window.lucide.createIcons();
+
         const input = row.querySelector('input');
         input.focus();
 
