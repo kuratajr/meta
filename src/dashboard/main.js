@@ -251,7 +251,7 @@ function renderNodes(data) {
             <td class="cell-hostname">
                 ${statusInfo && statusInfo.cpu !== null ? `
                     <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 10px; font-weight: 500;">
-                        <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"><i data-lucide="cpu" style="width:11px;height:11px"></i> ${statusInfo.cpu}%</span>
+                        <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"><i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(statusInfo.cpu).toFixed(2)}%</span>
                         <span title="RAM Usage" style="color: #c084fc; display: flex; align-items: center; gap: 3px;"><i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(statusInfo.ram)}%</span>
                     </div>
                 ` : ''}
