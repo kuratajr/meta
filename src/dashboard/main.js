@@ -173,6 +173,7 @@ export function handleSearch(val) {
 }
 
 function renderUI(data) {
+    offlineThresholdMinutes = data.offline_threshold || 10;
     groupsData = data.groups || [];
     nodeMetadata = data.node_metadata || {};
     nodeStatuses = {};
@@ -203,7 +204,6 @@ function renderUI(data) {
         globalArea.innerHTML = data.hasGlobal ? `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>` : 'None.';
     }
 
-    offlineThresholdMinutes = data.offline_threshold || 10;
     renderSystemSettings(data);
 
     if (window.lucide) lucide.createIcons();
