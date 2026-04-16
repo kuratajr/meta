@@ -111,8 +111,6 @@ async function ensureWorkstationToken(env: any, hostname: string) {
         meta[hostname] = nodeMeta;
         await env.CONFIG_KV.put('node_metadata', JSON.stringify(meta));
 
-        // Update legacy cache for compatibility
-        await env.CONFIG_KV.put(`ws_token:${hostname}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
 
         return result.token;
     }
@@ -646,7 +644,6 @@ export default {
                             meta[h] = nodeMeta;
                             changed = true;
                             results.success++;
-                            await env.CONFIG_KV.put(`ws_token:${h}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
                         } else {
                             results.failed++;
                             results.errors.push(`${h}: All SAs failed or no SAs configured.`);
