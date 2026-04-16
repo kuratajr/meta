@@ -249,20 +249,20 @@ function renderNodes(data) {
 
         html += `<tr data-status="${isOnline ? 'online' : 'offline'}">
             <td class="cell-hostname">
+                ${statusInfo && statusInfo.cpu !== null ? `
+                    <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 10px; font-weight: 500;">
+                        <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"><i data-lucide="cpu" style="width:11px;height:11px"></i> ${statusInfo.cpu}%</span>
+                        <span title="RAM Usage" style="color: #c084fc; display: flex; align-items: center; gap: 3px;"><i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(statusInfo.ram)}%</span>
+                    </div>
+                ` : ''}
                 <div class="hostname-wrapper">
                     <span class="status-dot ${isOnline ? 'online' : 'offline'}" data-node="${h}"></span>
                     <span class="hostname-text">${h}</span>
                 </div>
-                ${statusInfo && statusInfo.cpu !== null ? `
-                    <div class="node-stats" style="font-size: 0.7rem; opacity: 0.6; margin-top: 2px;">
-                        <span title="CPU Usage"><i data-lucide="cpu" style="width:10px;height:10px"></i> ${statusInfo.cpu}%</span>
-                        <span title="RAM Usage" style="margin-left:8px;"><i data-lucide="database" style="width:10px;height:10px"></i> ${Math.round(statusInfo.ram)}%</span>
-                    </div>
-                ` : ''}
                 ${nodeMetadata[h]?.token_expires ? `
-                    <div class="token-expiry" style="color: ${(nodeMetadata[h].token_expires * 1000 - Date.now()) < 7200000 ? 'var(--danger)' : 'var(--success)'};">
-                        <i data-lucide="key"></i>
-                        Token expires: ${new Date(nodeMetadata[h].token_expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div class="token-expiry" style="color: ${(nodeMetadata[h].token_expires * 1000 - Date.now()) < 7200000 ? 'var(--danger)' : 'var(--success)'}; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 2px;">
+                        <i data-lucide="key" style="width:11px; height:11px; opacity: 0.7;"></i>
+                        <span style="font-size: 0.65rem; opacity: 0.8;">Expires: ${new Date(nodeMetadata[h].token_expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                 ` : ''}
             </td>

@@ -332,14 +332,19 @@ td {
 
 .token-expiry {
     font-size: 0.65rem;
-    opacity: 0.8;
     margin-top: 4px;
-    margin-left: 16px; /* Align with text after status dot */
+    margin-left: 16px; 
     white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 4px;
+    opacity: 0.9;
 }
+
+.node-stats i, .node-stats svg {
+    margin: 0 !important;
+}
+
 
 
 .cell-cloudhost {
