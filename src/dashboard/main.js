@@ -108,6 +108,12 @@ export function showSection(id) {
     } else {
         document.body.classList.remove('terminal-active', 'fm-active');
     }
+
+    if (id === 'configs') {
+        document.body.classList.add('configs-active');
+    } else {
+        document.body.classList.remove('configs-active');
+    }
 }
 
 export async function refreshData() {

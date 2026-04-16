@@ -41,10 +41,10 @@ aside {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    position: fixed;
     height: 100vh;
     z-index: 10000;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
 }
 
 aside nav {
@@ -113,17 +113,18 @@ aside nav {
 
 /* Main Content */
 main {
-    margin-left: 280px;
     flex: 1;
     padding: 3rem;
     max-width: 1400px;
     transition: margin-left 0.3s ease;
     overflow-y: auto;
     height: 100vh;
+    min-width: 0; /* Prevents flex children from overflowing */
 }
 
-/* When logs section is active, prevent main scroll */
-body.logs-active main {
+/* When logs or configs section is active, prevent main scroll */
+body.logs-active main,
+body.configs-active main {
     overflow: hidden;
 }
 
@@ -2511,9 +2512,7 @@ pre {
 
 body.terminal-active main {
     max-width: none !important;
-    /* Gần sidebar hơn, chỉ chừa khoảng nhỏ */
     padding: 1.25rem 1.5rem 1.5rem 2rem !important;
-    margin-right: 0 !important;
 }
 
 body.terminal-active #section-terminal {
@@ -2523,4 +2522,43 @@ body.terminal-active #section-terminal {
 body.terminal-active .file-manager-panel {
     border-radius: 14px !important;
     border-right: none !important;
+}
+/* Configs Section Optimized Layout */
+.configs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    height: calc(100vh - 350px);
+    min-height: 0;
+}
+
+.configs-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.configs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.configs-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.configs-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.configs-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.configs-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
