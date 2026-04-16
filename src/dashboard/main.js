@@ -1309,7 +1309,17 @@ export async function initAllTokens() {
         const res = await fetch(`/api/init-all-tokens?token=${TOKEN}`, { method: 'POST' });
         const data = await res.json();
         if (data.success_total !== undefined) {
-            showToast(`Done! Success: ${data.success_total}, Failed: ${data.failed}, Skipped: ${data.skipped}`);
+            let msg = `Done! Success: ${data.success_total}, Failed: ${data.failed}, Skipped: ${data.skipped}`;
+            if (data.failed > 0 && data.errors && data.errors.length > 0) {
+                showModal({
+                    title: 'Initialization Results',
+                    message: msg,
+                    content: data.errors.join('\n'),
+                    mode: 'info'
+                });
+            } else {
+                showToast(msg, 5000);
+            }
             refreshData();
         } else {
             showToast("Initialization failed: " + (data.error || "Unknown error"), 5000);

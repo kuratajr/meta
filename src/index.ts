@@ -547,7 +547,7 @@ export default {
                 const metaDataStr = await env.CONFIG_KV.get('node_metadata');
                 let meta = metaDataStr ? JSON.parse(metaDataStr) : {};
                 
-                const results: any = { success: 0, failed: 0, skipped: 0 };
+                const results: any = { success: 0, failed: 0, skipped: 0, errors: [] };
                 const now = Math.floor(Date.now() / 1000);
                 let changed = false;
 
@@ -563,18 +563,24 @@ export default {
                         continue;
                     }
                     
-                    const result = await getWorkstationToken(env, nodeMeta.name);
-                    if (result) {
-                        nodeMeta.token = result.token;
-                        nodeMeta.token_expires = result.expires;
-                        nodeMeta.preferred_sa = result.projectId;
-                        nodeMeta.updated_at = new Date().toISOString();
-                        meta[h] = nodeMeta;
-                        changed = true;
-                        results.success++;
-                        await env.CONFIG_KV.put(`ws_token:${h}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
-                    } else {
+                    try {
+                        const result = await getWorkstationToken(env, nodeMeta.name);
+                        if (result) {
+                            nodeMeta.token = result.token;
+                            nodeMeta.token_expires = result.expires;
+                            nodeMeta.preferred_sa = result.projectId;
+                            nodeMeta.updated_at = new Date().toISOString();
+                            meta[h] = nodeMeta;
+                            changed = true;
+                            results.success++;
+                            await env.CONFIG_KV.put(`ws_token:${h}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
+                        } else {
+                            results.failed++;
+                            results.errors.push(`${h}: All SAs failed or no SAs configured.`);
+                        }
+                    } catch (err) {
                         results.failed++;
+                        results.errors.push(`${h}: ${String(err)}`);
                     }
                 }
                 
