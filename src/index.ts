@@ -40,7 +40,7 @@ async function getGoogleAuthToken(saJson: any, scope: string) {
     const unsignedJwt = `${header}.${claims}`;
     const pem = saJson.private_key.replace(/-----BEGIN PRIVATE KEY-----|\n|-----END PRIVATE KEY-----/g, '');
     const binaryDer = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
-    
+
     const key = await crypto.subtle.importKey(
         "pkcs8",
         binaryDer,
@@ -70,47 +70,72 @@ async function getGoogleAuthToken(saJson: any, scope: string) {
     return data.access_token;
 }
 
-async function getWorkstationToken(env: any, hostname: string, resourceName: string) {
-    // 1. Check cache
-    const cacheKey = `ws_token:${hostname}`;
-    const cached: any = await env.CONFIG_KV.get(cacheKey, { type: 'json' });
-    if (cached && cached.token && cached.expires > (Date.now() / 1000) + 7200) { // 2 hour buffer
-        return cached.token;
-    }
-
-    // 2. Parse Project ID
-    const match = resourceName.match(/projects\/([^/]+)/);
-    if (!match) return null;
-    const projectId = match[1];
-
-    // 3. Get SA for this project
+async function getWorkstationToken(env: any, resourceName: string) {
     const gcpConfigsData = await env.CONFIG_KV.get('gcp_configs');
     const gcpConfigs = gcpConfigsData ? JSON.parse(gcpConfigsData) : {};
-    const saJson = gcpConfigs[projectId];
-    if (!saJson) return null;
+    const projectIds = Object.keys(gcpConfigs);
 
-    // 4. Exchange for GCP Token
-    const gcpToken = await getGoogleAuthToken(saJson, "https://www.googleapis.com/auth/cloud-platform");
-    
-    // 5. Generate Workstation Token
-    const wsUrl = `https://workstations.googleapis.com/v1beta/${resourceName}:generateAccessToken`;
-    const wsRes = await fetch(wsUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${gcpToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({})
-    });
+    if (projectIds.length === 0) return null;
 
-    const wsData: any = await wsRes.json();
-    if (!wsData.accessToken) return null;
+    for (const pid of projectIds) {
+        try {
+            const saJson = gcpConfigs[pid];
+            const gcpToken = await getGoogleAuthToken(saJson, "https://www.googleapis.com/auth/cloud-platform");
+            
+            const wsUrl = `https://workstations.googleapis.com/v1beta/${resourceName}:generateAccessToken`;
+            const wsRes = await fetch(wsUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${gcpToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
 
-    // 6. Save to cache
-    const expires = Math.floor(new Date(wsData.expireTime).getTime() / 1000);
-    await env.CONFIG_KV.put(cacheKey, JSON.stringify({ token: wsData.accessToken, expires }), { expiration: expires });
+            const wsData: any = await wsRes.json();
+            if (wsData.accessToken) {
+                return {
+                    token: wsData.accessToken,
+                    expires: Math.floor(new Date(wsData.expireTime).getTime() / 1000),
+                    projectId: pid
+                };
+            }
+        } catch (e) {
+            console.error(`Failed to get workstation token with SA ${pid}:`, e);
+        }
+    }
+    return null;
+}
 
-    return wsData.accessToken;
+async function ensureWorkstationToken(env: any, hostname: string) {
+    const metaDataStr = await env.CONFIG_KV.get('node_metadata');
+    let meta = metaDataStr ? JSON.parse(metaDataStr) : {};
+    const nodeMeta = meta[hostname];
+
+    if (!nodeMeta || !nodeMeta.name) return null;
+
+    const now = Math.floor(Date.now() / 1000);
+    // Check if token exists and still valid for > 2 hours
+    if (nodeMeta.token && nodeMeta.token_expires && nodeMeta.token_expires > now + 7200) {
+        return nodeMeta.token;
+    }
+
+    const result = await getWorkstationToken(env, nodeMeta.name);
+    if (result) {
+        nodeMeta.token = result.token;
+        nodeMeta.token_expires = result.expires;
+        nodeMeta.preferred_sa = result.projectId;
+        nodeMeta.updated_at = new Date().toISOString();
+        
+        meta[hostname] = nodeMeta;
+        await env.CONFIG_KV.put('node_metadata', JSON.stringify(meta));
+        
+        // Update legacy cache for compatibility
+        await env.CONFIG_KV.put(`ws_token:${hostname}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
+        
+        return result.token;
+    }
+    return null;
 }
 
 async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
@@ -482,7 +507,7 @@ export default {
 
             if (resourceName) {
                 try {
-                    const wsToken = await getWorkstationToken(env, hostname, resourceName);
+                    const wsToken = await ensureWorkstationToken(env, hostname);
                     if (wsToken) {
                         authHeader["Authorization"] = `Bearer ${wsToken}`;
                         authHeader["Cookie"] = `WorkstationJwtPartitioned=${wsToken}`;
@@ -510,6 +535,56 @@ export default {
                 return new Response(resp.body, { status: resp.status, headers: resp.headers });
             } catch (e) {
                 return new Response("Proxy error: " + e, { status: 502 });
+            }
+        }
+
+        if (url.pathname === '/api/init-all-tokens' && request.method === 'POST') {
+            try {
+                const registryData = await env.CONFIG_KV.get('registry');
+                const registry = registryData ? JSON.parse(registryData) : {};
+                const hostnames = Object.keys(registry);
+                
+                const metaDataStr = await env.CONFIG_KV.get('node_metadata');
+                let meta = metaDataStr ? JSON.parse(metaDataStr) : {};
+                
+                const results: any = { success: 0, failed: 0, skipped: 0 };
+                const now = Math.floor(Date.now() / 1000);
+                let changed = false;
+
+                for (const h of hostnames) {
+                    const nodeMeta = meta[h];
+                    if (!nodeMeta || !nodeMeta.name) {
+                        results.skipped++;
+                        continue;
+                    }
+                    
+                    if (nodeMeta.token && nodeMeta.token_expires && nodeMeta.token_expires > now + 7200) {
+                        results.skipped++;
+                        continue;
+                    }
+                    
+                    const result = await getWorkstationToken(env, nodeMeta.name);
+                    if (result) {
+                        nodeMeta.token = result.token;
+                        nodeMeta.token_expires = result.expires;
+                        nodeMeta.preferred_sa = result.projectId;
+                        nodeMeta.updated_at = new Date().toISOString();
+                        meta[h] = nodeMeta;
+                        changed = true;
+                        results.success++;
+                        await env.CONFIG_KV.put(`ws_token:${h}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
+                    } else {
+                        results.failed++;
+                    }
+                }
+                
+                if (changed) {
+                    await env.CONFIG_KV.put('node_metadata', JSON.stringify(meta));
+                }
+                
+                return new Response(JSON.stringify({ ...results, success_total: results.success }), { headers: { "Content-Type": "application/json" } });
+            } catch (e) {
+                return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
             }
         }
 

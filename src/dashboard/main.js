@@ -236,7 +236,16 @@ function renderNodes(data) {
 
         html += `<tr data-status="${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
             <td class="cell-hostname">
-                <span class="status-dot" data-node="${h}"></span><span class="hostname-text">${h}</span>
+                <span class="status-dot" data-node="${h}"></span>
+                <div style="display: flex; flex-direction: column;">
+                    <span class="hostname-text">${h}</span>
+                    ${nodeMetadata[h]?.token_expires ? `
+                        <div style="font-size: 0.65rem; color: ${(nodeMetadata[h].token_expires * 1000 - Date.now()) < 7200000 ? 'var(--danger)' : 'var(--success)'}; opacity: 0.8; margin-top: 2px; white-space: nowrap;">
+                            <i data-lucide="key" style="width: 10px; height: 10px; display: inline-block; vertical-align: middle;"></i>
+                            Token expires: ${new Date(nodeMetadata[h].token_expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                    ` : ''}
+                </div>
             </td>
             <td class="cell-cloudhost copyable" onclick="copyToClipboard('${regVal}')" title="${regVal}">
                 ${regVal}
@@ -953,7 +962,7 @@ export async function deleteFromRegistry(h) {
                 const data = await res.json();
                 const registry = data.registry;
                 delete registry[h];
-                
+
                 const meta = data.node_metadata || {};
                 delete meta[h];
 
@@ -1292,6 +1301,28 @@ export async function deleteGCPConfig(projectId) {
     });
 }
 
+export async function initAllTokens() {
+    showToast("Initializing all node tokens...", 5000);
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'block';
+    try {
+        const res = await fetch(`/api/init-all-tokens?token=${TOKEN}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success_total !== undefined) {
+            showToast(`Done! Success: ${data.success_total}, Failed: ${data.failed}, Skipped: ${data.skipped}`);
+            refreshData();
+        } else {
+            showToast("Initialization failed: " + (data.error || "Unknown error"), 5000);
+        }
+    } catch (e) {
+        showToast("Error: " + e.message, 5000);
+    } finally {
+        if (loader) loader.style.display = 'none';
+    }
+}
+
+window.openGCPConfigModal = openGCPConfigModal;
+window.initAllTokens = initAllTokens;
 window.openCreateModal = openCreateModal;
 window.editIP = editIP;
 window.saveData = saveData;
