@@ -7,6 +7,7 @@ let isNew = false;
 let groupsData = [];
 let lastData = null;
 let currentSearch = '';
+let nodeMetadata = {};
 let previousStatuses = {};
 let currentStatusFilter = 'all';
 
@@ -170,6 +171,7 @@ export function handleSearch(val) {
 
 function renderUI(data) {
     groupsData = data.groups || [];
+    nodeMetadata = data.node_metadata || {};
     const statNodes = document.getElementById('stat-nodes');
     if (statNodes) statNodes.innerText = Object.keys(data.registry).length.toString();
 
@@ -259,6 +261,7 @@ function renderNodes(data) {
                             <div class="dropdown-scroll-area">
                                 <div class="dropdown-item" onclick="openTerminal('${h}', '${regVal}')"><i data-lucide="terminal"></i>Terminal</div>
                                 <div class="dropdown-item" onclick="fetchNodeInfo('${h}')"><i data-lucide="info"></i>Info</div>
+                                ${nodeMetadata[h]?.name ? `<div class="dropdown-item" onclick="copyToClipboard('${nodeMetadata[h].name}')"><i data-lucide="clipboard"></i>Copy Name</div>` : ''}
                                 <div class="dropdown-item" onclick="viewNodeLogs('${h}')"><i data-lucide="align-left"></i>Logs</div>
                                 <div class="dropdown-item" onclick="runNodeAction('${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
                                 <div class="dropdown-item" onclick="runNodeAction('${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
@@ -870,7 +873,18 @@ export async function fetchNodeInfo(h) {
         const raw = await res.text();
         let display = raw;
         try { display = JSON.stringify(JSON.parse(raw), null, 4); } catch (e) { }
-        showModal({ title: `Node Info: ${h}`, content: display, mode: 'info' });
+
+        // Mở rộng thông tin với Metadata nếu có
+        const meta = nodeMetadata[h];
+        let content = display;
+        if (meta && meta.name) {
+            content = `Resource Name: ${meta.name}\n` +
+                `Last Registered: ${meta.updated_at || 'Unknown'}\n\n` +
+                `--- Node Details ---\n` +
+                display;
+        }
+
+        showModal({ title: `Node Info: ${h}`, content: content, mode: 'info' });
     } catch (e) { showModal({ title: 'Error', message: 'Failed to fetch node info.', mode: 'alert' }); }
     if (loader) loader.style.display = 'none';
 }
@@ -937,11 +951,22 @@ export async function deleteFromRegistry(h) {
                 const data = await res.json();
                 const registry = data.registry;
                 delete registry[h];
-                await fetch(`/api/save?token=${TOKEN}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: 'registry', value: JSON.stringify(registry, null, 4) })
-                });
+                
+                const meta = data.node_metadata || {};
+                delete meta[h];
+
+                await Promise.all([
+                    fetch(`/api/save?token=${TOKEN}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: 'registry', value: JSON.stringify(registry, null, 4) })
+                    }),
+                    fetch(`/api/save?token=${TOKEN}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: 'node_metadata', value: JSON.stringify(meta, null, 4) })
+                    })
+                ]);
                 const updatedGroups = (data.groups || []).map((item) => {
                     let nodes = (item.listnode || "").split(',').map((s) => s.trim()).filter((s) => s && s !== h);
                     return { ...item, listnode: nodes.join(',') };

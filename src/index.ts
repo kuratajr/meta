@@ -196,12 +196,23 @@ export default {
         if (url.pathname === '/register' && request.method === 'POST') {
             try {
                 const body: any = await request.json();
-                const { hostname: regHostname, host: regHost } = body;
+                const { hostname: regHostname, host: regHost, name: regName } = body;
                 if (!regHostname || !regHost) return new Response(JSON.stringify({ error: "Missing hostname or host" }), { status: 400 });
+
+                // Update Registry (Standard structure)
                 const registryData = await env.CONFIG_KV.get('registry');
                 const registryJson = registryData ? JSON.parse(registryData) : {};
                 registryJson[regHostname] = regHost;
                 await env.CONFIG_KV.put('registry', JSON.stringify(registryJson));
+
+                // Update Metadata (Optional additional info)
+                if (regName) {
+                    const metaData = await env.CONFIG_KV.get('node_metadata');
+                    const metaJson = metaData ? JSON.parse(metaData) : {};
+                    metaJson[regHostname] = { name: regName, updated_at: new Date().toISOString() };
+                    await env.CONFIG_KV.put('node_metadata', JSON.stringify(metaJson));
+                }
+
                 await recordLog(env, `New node registered: ${regHostname}`, regHostname);
                 return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
             } catch (error: any) {
@@ -271,7 +282,12 @@ export default {
         if (url.pathname.startsWith('/api/') && !isAuthorized) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
         if (url.pathname === '/api/data' && request.method === 'GET') {
-            const [registryData, groupsMappingData, allKeys] = await Promise.all([env.CONFIG_KV.get('registry'), env.CONFIG_KV.get('groups'), env.CONFIG_KV.list()]);
+            const [registryData, groupsMappingData, metaData, allKeys] = await Promise.all([
+                env.CONFIG_KV.get('registry'),
+                env.CONFIG_KV.get('groups'),
+                env.CONFIG_KV.get('node_metadata'),
+                env.CONFIG_KV.list()
+            ]);
             const keys = allKeys.keys.map((k: { name: string }) => k.name);
             const templates = keys.filter((k: string) => k.startsWith('template:'));
             const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
@@ -281,6 +297,7 @@ export default {
             const ipsData = await env.CONFIG_KV.get('ips');
             return new Response(JSON.stringify({
                 registry: registryData ? JSON.parse(registryData) : {},
+                node_metadata: metaData ? JSON.parse(metaData) : {},
                 groups: groupsMappingData ? JSON.parse(groupsMappingData) : [],
                 templates, groupConfigs, nodeConfigs, certConfigs, cloudConfigs,
                 ips: ipsData ? JSON.parse(ipsData) : {},
