@@ -11,6 +11,7 @@ let nodeMetadata = {};
 let previousStatuses = {};
 let nodeStatuses = {}; 
 let currentStatusFilter = 'all';
+let offlineThresholdMinutes = 10;
 
 // File Manager global state
 const explorer = new FileExplorer('file-list');
@@ -201,8 +202,69 @@ function renderUI(data) {
     if (globalArea) {
         globalArea.innerHTML = data.hasGlobal ? `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>` : 'None.';
     }
+
+    offlineThresholdMinutes = data.offline_threshold || 10;
+    renderSystemSettings(data);
+
     if (window.lucide) lucide.createIcons();
 }
+
+function renderSystemSettings(data) {
+    const area = document.getElementById('system-settings-area');
+    if (!area) return;
+    area.innerHTML = `
+        <div class="card" style="margin-top: 2rem;">
+            <h3 style="margin-bottom:1.5rem; opacity:0.8; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="settings" style="width:1.2rem; height:1.2rem; color:var(--accent);"></i> System Settings</h3>
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <div style="font-weight:600; font-size:0.95rem;">Offline Threshold</div>
+                        <div style="font-size:0.8rem; opacity:0.6;">Minutes before a node is marked as offline.</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.8rem;">
+                        <input type="number" id="input-offline-threshold" class="btn-s" style="width:80px; text-align:center; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); color:white; padding:0.5rem; border-radius:0.5rem;" value="${offlineThresholdMinutes}">
+                        <button class="btn btn-p" onclick="updateOfflineThreshold()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+}
+
+export async function updateOfflineThreshold() {
+    const input = document.getElementById('input-offline-threshold');
+    if (!input) return;
+    const val = parseInt(input.value);
+    if (isNaN(val) || val < 1) {
+        alert("Please enter a valid number of minutes (minimum 1).");
+        return;
+    }
+
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'block';
+
+    try {
+        const res = await fetch(`/api/save?token=${TOKEN}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'offline_threshold', value: val.toString() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            offlineThresholdMinutes = val;
+            alert("Threshold updated successfully!");
+            refreshData();
+        } else {
+            alert("Failed to update threshold: " + (data.error || "Unknown error"));
+        }
+    } catch (e) {
+        alert("Error: " + e.message);
+    } finally {
+        if (loader) loader.style.display = 'none';
+    }
+}
+window.updateOfflineThreshold = updateOfflineThreshold;
 
 function updateNodeTotals() {
     if (!lastData || !lastData.registry) return;
@@ -212,7 +274,7 @@ function updateNodeTotals() {
 
     hostnames.forEach(h => {
         const s = nodeStatuses[h];
-        const isOnline = s && (new Date() - new Date(s.last_seen.replace(' ', 'T') + 'Z') < 600000); // 10 minutes threshold
+        const isOnline = s && (new Date() - new Date(s.last_seen.replace(' ', 'T') + 'Z') < offlineThresholdMinutes * 60 * 1000);
         if (isOnline) online++;
         else offline++;
         previousStatuses[h] = isOnline;
@@ -245,14 +307,15 @@ function renderNodes(data) {
         const statusInfo = nodeStatuses[h];
         // D1 DATETIME is usually "YYYY-MM-DD HH:MM:SS" (UTC). Convert to JS Date.
         const lastSeenDate = statusInfo ? new Date(statusInfo.last_seen.replace(' ', 'T') + 'Z') : null;
-        const isOnline = lastSeenDate && (new Date() - lastSeenDate < 600000); // 10 mins threshold
+        const isOnline = lastSeenDate && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000);
 
         html += `<tr data-status="${isOnline ? 'online' : 'offline'}">
             <td class="cell-hostname">
                 ${statusInfo && statusInfo.cpu !== null ? `
-                    <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 10px; font-weight: 500;">
+                    <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; font-weight: 500;">
                         <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"><i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(statusInfo.cpu).toFixed(2)}%</span>
                         <span title="RAM Usage" style="color: #c084fc; display: flex; align-items: center; gap: 3px;"><i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(statusInfo.ram)}%</span>
+                        ${statusInfo.uptime ? `<span title="Uptime" style="color: #10b981; display: flex; align-items: center; gap: 3px;"><i data-lucide="clock" style="width:11px;height:11px"></i> ${statusInfo.uptime}</span>` : ''}
                     </div>
                 ` : ''}
                 <div class="hostname-wrapper">
