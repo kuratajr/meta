@@ -68,7 +68,7 @@ async function getWorkstationToken(env: any, resourceName: string) {
                     'Authorization': `Bearer ${googleToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({ ttl: "86400s" })
             });
 
             const wsData: any = await wsRes.json();
