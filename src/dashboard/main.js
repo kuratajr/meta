@@ -1198,100 +1198,121 @@ window.runNodeAction = runNodeAction;
 window.updateNodeGroup = updateNodeGroup;
 window.deleteFromRegistry = deleteFromRegistry;
 window.editKV = editKV;
-export function openGCPConfigModal() {
+export async function openMasterSettings() {
+    const res = await fetch(`/api/get-master-creds?token=${TOKEN}`);
+    const creds = res.ok ? await res.json() : {};
+    
     showModal({
-        title: 'Add Google Service Account',
-        message: 'Paste your Service Account JSON key here. It must have Workstation permissions.',
+        title: 'Master OAuth2 Settings',
+        message: 'Configure your Google Cloud Project Client ID and Client Secret. These are used to authorize accounts.',
         mode: 'editor'
     });
-    const keyInput = document.getElementById('modal-key-input');
-    if (keyInput) keyInput.style.display = 'none';
-
+    
     const editor = document.getElementById('editor');
     if (editor) {
-        editor.value = '';
-        editor.placeholder = '{ "type": "service_account", ... }';
+        editor.value = JSON.stringify(creds, null, 2);
+        editor.placeholder = '{ "client_id": "...", "client_secret": "..." }';
     }
 
     const saveBtn = document.getElementById('modal-save-btn');
     if (saveBtn) {
-        saveBtn.innerText = 'Add Account';
-        saveBtn.onclick = saveGCPConfig;
+        saveBtn.innerText = 'Save Master Settings';
+        saveBtn.onclick = async () => {
+            try {
+                const updated = JSON.parse(editor.value);
+                if (!updated.client_id || !updated.client_secret) throw new Error("Missing Client ID or Secret");
+                
+                const resp = await fetch(`/api/save-master-creds?token=${TOKEN}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updated)
+                });
+                if (resp.ok) {
+                    showToast("Master settings saved!");
+                    closeModal();
+                } else {
+                    alert("Failed to save master settings.");
+                }
+            } catch (e) {
+                alert("Invalid JSON: " + e.message);
+            }
+        };
     }
 }
 
-export async function saveGCPConfig() {
-    const editor = document.getElementById('editor');
-    const val = editor ? editor.value : '';
-    if (!val) return;
-
+export async function loginWithGoogle() {
     try {
-        const saJson = JSON.parse(val);
-        if (!saJson.project_id) throw new Error("Missing project_id");
-
-        const loader = document.getElementById('loader');
-        if (loader) loader.style.display = 'block';
-
-        const res = await fetch(`/api/gcp-config?token=${TOKEN}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ saJson })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            closeModal();
-            refreshData();
-            showToast("GCP Account added!");
-        } else {
-            alert("Error: " + data.error);
+        const res = await fetch(`/api/google-auth-url?token=${TOKEN}`);
+        if (!res.ok) {
+            const txt = await res.text();
+            if (txt.includes("Master Settings Missing")) {
+                showToast("Please configure Master Settings first!", 5000);
+                openMasterSettings();
+            } else {
+                throw new Error(txt);
+            }
+            return;
         }
+        const { url } = await res.json();
+        const width = 500, height = 600;
+        const left = (window.innerWidth / 2) - (width / 2);
+        const top = (window.innerHeight / 2) - (height / 2);
+        window.open(url, 'google-login', `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`);
     } catch (e) {
-        alert("Invalid JSON or missing project_id: " + e.message);
-    } finally {
-        const loader = document.getElementById('loader');
-        if (loader) loader.style.display = 'none';
+        alert("Error starting login flow: " + e.message);
     }
 }
 
-function renderGCPConfigs(configs) {
+function renderGCPConfigs(accounts) {
     const tbody = document.querySelector('#table-gcp tbody');
     if (!tbody) return;
 
     let html = '';
-    for (const projectId in configs) {
-        const sa = configs[projectId];
+    // accounts is now an array
+    const accList = Array.isArray(accounts) ? accounts : [];
+
+    accList.forEach(acc => {
+        const dateStr = acc.added_at ? new Date(acc.added_at).toLocaleString() : 'N/A';
         html += `
             <tr>
-                <td><code style="color:var(--accent);">${projectId}</code></td>
-                <td><span style="opacity:0.8; font-size:0.9rem;">${sa.client_email}</span></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <i data-lucide="user" style="width: 16px; height: 16px; opacity: 0.6;"></i>
+                        <span style="font-weight: 500;">${acc.email}</span>
+                    </div>
+                </td>
+                <td><span style="opacity:0.6; font-size:0.85rem;">${dateStr}</span></td>
                 <td style="text-align: center;">
-                    <button class="btn btn-danger btn-s" onclick="deleteGCPConfig('${projectId}')">
+                    <button class="btn btn-danger btn-s" onclick="deleteOAuthAccount('${acc.email}')">
                         <i data-lucide="trash-2"></i> Delete
                     </button>
                 </td>
             </tr>
         `;
-    }
-    if (Object.keys(configs).length === 0) {
-        html = '<tr><td colspan="3" style="text-align:center; opacity:0.5; padding: 2rem;">No OAuth2 accounts configured.</td></tr>';
+    });
+
+    if (accList.length === 0) {
+        html = '<tr><td colspan="3" style="text-align:center; opacity:0.5; padding: 2rem;">No authorized Google accounts.</td></tr>';
     }
     tbody.innerHTML = html;
     if (window.lucide) lucide.createIcons();
 }
 
-export async function deleteGCPConfig(projectId) {
+export async function deleteOAuthAccount(email) {
     showModal({
-        title: 'Remove GCP Account',
-        message: `Are you sure you want to remove access for project "${projectId}"?`,
+        title: 'Remove Account',
+        message: `Are you sure you want to remove access for "${email}"?`,
         mode: 'confirm',
         onConfirm: async () => {
             const loader = document.getElementById('loader');
             if (loader) loader.style.display = 'block';
             try {
-                const res = await fetch(`/api/gcp-config?token=${TOKEN}&projectId=${projectId}`, { method: 'DELETE' });
-                const data = await res.json();
-                if (data.success) {
+                const res = await fetch(`/api/delete-oauth-account?token=${TOKEN}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (res.ok) {
                     showToast("Account removed!");
                     refreshData();
                 }
@@ -1331,7 +1352,9 @@ export async function initAllTokens() {
     }
 }
 
-window.openGCPConfigModal = openGCPConfigModal;
+window.openMasterSettings = openMasterSettings;
+window.loginWithGoogle = loginWithGoogle;
+window.deleteOAuthAccount = deleteOAuthAccount;
 window.initAllTokens = initAllTokens;
 window.openCreateModal = openCreateModal;
 window.editIP = editIP;

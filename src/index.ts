@@ -25,68 +25,47 @@ async function recordLog(env: Env, msg: string, node?: string) {
 }
 
 // --- Google Auth Helpers ---
-async function getGoogleAuthToken(saJson: any, scope: string) {
-    const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-    const iat = Math.floor(Date.now() / 1000);
-    const exp = iat + 3600;
-    const claims = btoa(JSON.stringify({
-        iss: saJson.client_email,
-        scope: scope,
-        aud: "https://oauth2.googleapis.com/token",
-        iat: iat,
-        exp: exp
-    })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-
-    const unsignedJwt = `${header}.${claims}`;
-    const pem = saJson.private_key.replace(/-----BEGIN PRIVATE KEY-----|\n|-----END PRIVATE KEY-----/g, '');
-    const binaryDer = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
-
-    const key = await crypto.subtle.importKey(
-        "pkcs8",
-        binaryDer,
-        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-        false,
-        ["sign"]
-    );
-
-    const signature = await crypto.subtle.sign(
-        "RSASSA-PKCS1-v1_5",
-        key,
-        new TextEncoder().encode(unsignedJwt)
-    );
-
-    const signedJwt = `${unsignedJwt}.${btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_")}`;
-
+async function getGoogleOAuthToken(clientId: string, clientSecret: string, refreshToken: string) {
     const res = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-            grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-            assertion: signedJwt
+            grant_type: "refresh_token",
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken
         })
     });
 
     const data: any = await res.json();
+    if (!data.access_token) {
+        throw new Error(`OAuth2 Refresh failed: ${data.error_description || JSON.stringify(data)}`);
+    }
     return data.access_token;
 }
 
 async function getWorkstationToken(env: any, resourceName: string) {
-    const gcpConfigsData = await env.CONFIG_KV.get('gcp_configs');
-    const gcpConfigs = gcpConfigsData ? JSON.parse(gcpConfigsData) : {};
-    const projectIds = Object.keys(gcpConfigs);
+    const masterStr = await env.CONFIG_KV.get('google_oauth_creds');
+    if (!masterStr) throw new Error("Google OAuth2 Master Settings (Client ID/Secret) missing.");
+    const master = JSON.parse(masterStr);
 
-    if (projectIds.length === 0) return null;
+    const accountsStr = await env.CONFIG_KV.get('gcp_configs');
+    const accounts: any[] = accountsStr ? JSON.parse(accountsStr) : [];
 
-    for (const pid of projectIds) {
+    if (accounts.length === 0) {
+        throw new Error("No Google Accounts authorized. Go to 'OAuth2 Accounts' and Login.");
+    }
+
+    let lastError = "";
+    for (const acc of accounts) {
         try {
-            const saJson = gcpConfigs[pid];
-            const gcpToken = await getGoogleAuthToken(saJson, "https://www.googleapis.com/auth/cloud-platform");
+            const googleToken = await getGoogleOAuthToken(master.client_id, master.client_secret, acc.refresh_token);
             
             const wsUrl = `https://workstations.googleapis.com/v1beta/${resourceName}:generateAccessToken`;
             const wsRes = await fetch(wsUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${gcpToken}`,
+                    'Authorization': `Bearer ${googleToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({})
@@ -97,14 +76,16 @@ async function getWorkstationToken(env: any, resourceName: string) {
                 return {
                     token: wsData.accessToken,
                     expires: Math.floor(new Date(wsData.expireTime).getTime() / 1000),
-                    projectId: pid
+                    projectId: acc.project_id || 'oauth2'
                 };
+            } else if (wsData.error) {
+                lastError = `${acc.email}: ${wsData.error.message}`;
             }
-        } catch (e) {
-            console.error(`Failed to get workstation token with SA ${pid}:`, e);
+        } catch (e: any) {
+            lastError = `${acc.email}: ${e.message}`;
         }
     }
-    return null;
+    throw new Error(lastError || "All authorized accounts failed to generate token.");
 }
 
 async function ensureWorkstationToken(env: any, hostname: string) {
@@ -126,13 +107,13 @@ async function ensureWorkstationToken(env: any, hostname: string) {
         nodeMeta.token_expires = result.expires;
         nodeMeta.preferred_sa = result.projectId;
         nodeMeta.updated_at = new Date().toISOString();
-        
+
         meta[hostname] = nodeMeta;
         await env.CONFIG_KV.put('node_metadata', JSON.stringify(meta));
-        
+
         // Update legacy cache for compatibility
         await env.CONFIG_KV.put(`ws_token:${hostname}`, JSON.stringify({ token: result.token, expires: result.expires }), { expiration: result.expires });
-        
+
         return result.token;
     }
     return null;
@@ -464,6 +445,98 @@ export default {
             } catch (e) { return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } }); }
         }
 
+        if (url.pathname === '/api/get-master-creds' && request.method === 'GET') {
+            const creds = await env.CONFIG_KV.get('google_oauth_creds');
+            return new Response(creds || "{}");
+        }
+
+        if (url.pathname === '/api/save-master-creds' && request.method === 'POST') {
+            const { client_id, client_secret } = await request.json() as any;
+            if (!client_id || !client_secret) return new Response("Missing parameters", { status: 400 });
+            await env.CONFIG_KV.put('google_oauth_creds', JSON.stringify({ client_id, client_secret }));
+            return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+        }
+
+        if (url.pathname === '/api/google-auth-url' && request.method === 'GET') {
+            const masterStr = await env.CONFIG_KV.get('google_oauth_creds');
+            if (!masterStr) return new Response("Master Settings Missing", { status: 400 });
+            const { client_id } = JSON.parse(masterStr);
+
+            const redirectUri = `${url.origin}/api/oauth-callback`;
+            const scope = "openid email https://www.googleapis.com/auth/cloud-platform";
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+            
+            return new Response(JSON.stringify({ url: authUrl }), { headers: { "Content-Type": "application/json" } });
+        }
+
+        if (url.pathname === '/api/oauth-callback' && request.method === 'GET') {
+            const code = url.searchParams.get('code');
+            if (!code) return new Response("No code provided", { status: 400 });
+
+            const masterStr = await env.CONFIG_KV.get('google_oauth_creds');
+            const { client_id, client_secret } = JSON.parse(masterStr!);
+            const redirectUri = `${url.origin}/api/oauth-callback`;
+
+            // Exchange code for token
+            const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    code: code,
+                    client_id: client_id,
+                    client_secret: client_secret,
+                    redirect_uri: redirectUri,
+                    grant_type: "authorization_code"
+                })
+            });
+
+            const tokenData: any = await tokenRes.json();
+            if (!tokenData.refresh_token) {
+                return new Response("Failed to get refresh token. Please ensure 'access_type=offline' and 'prompt=consent'.", { status: 500 });
+            }
+
+            // Get user info (email)
+            const idToken = tokenData.id_token;
+            const payload = JSON.parse(atob(idToken.split('.')[1]));
+            const email = payload.email;
+
+            // Save to accounts list
+            const accountsStr = await env.CONFIG_KV.get('gcp_configs');
+            let accounts: any[] = accountsStr ? JSON.parse(accountsStr) : [];
+            
+            // Remove existing if same email
+            accounts = accounts.filter(a => a.email !== email);
+            accounts.push({
+                email,
+                refresh_token: tokenData.refresh_token,
+                added_at: new Date().toISOString()
+            });
+
+            await env.CONFIG_KV.put('gcp_configs', JSON.stringify(accounts));
+
+            return new Response(`
+                <html>
+                <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0a0a0f; color: white;">
+                    <div style="text-align: center; border: 1px solid #333; padding: 2rem; border-radius: 1rem; background: rgba(255,255,255,0.05);">
+                        <h2 style="color: #4CAF50;">Success!</h2>
+                        <p>Authorized as <b>${email}</b></p>
+                        <p style="opacity: 0.7;">You can close this window and refresh the dashboard.</p>
+                        <button onclick="window.close()" style="background: #4CAF50; border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 0.5rem; cursor: pointer; margin-top: 1rem;">Close Window</button>
+                    </div>
+                </body>
+                </html>
+            `, { headers: { "Content-Type": "text/html" } });
+        }
+
+        if (url.pathname === '/api/delete-oauth-account' && request.method === 'POST') {
+            const { email } = await request.json() as any;
+            const accountsStr = await env.CONFIG_KV.get('gcp_configs');
+            let accounts: any[] = accountsStr ? JSON.parse(accountsStr) : [];
+            accounts = accounts.filter(a => a.email !== email);
+            await env.CONFIG_KV.put('gcp_configs', JSON.stringify(accounts));
+            return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+        }
+
         if (url.pathname === '/api/record-log' && request.method === 'POST') {
             const { msg, node } = await request.json() as any;
             if (msg) await recordLog(env, msg, node);
@@ -543,10 +616,10 @@ export default {
                 const registryData = await env.CONFIG_KV.get('registry');
                 const registry = registryData ? JSON.parse(registryData) : {};
                 const hostnames = Object.keys(registry);
-                
+
                 const metaDataStr = await env.CONFIG_KV.get('node_metadata');
                 let meta = metaDataStr ? JSON.parse(metaDataStr) : {};
-                
+
                 const results: any = { success: 0, failed: 0, skipped: 0, errors: [] };
                 const now = Math.floor(Date.now() / 1000);
                 let changed = false;
@@ -557,12 +630,12 @@ export default {
                         results.skipped++;
                         continue;
                     }
-                    
+
                     if (nodeMeta.token && nodeMeta.token_expires && nodeMeta.token_expires > now + 7200) {
                         results.skipped++;
                         continue;
                     }
-                    
+
                     try {
                         const result = await getWorkstationToken(env, nodeMeta.name);
                         if (result) {
@@ -583,11 +656,11 @@ export default {
                         results.errors.push(`${h}: ${String(err)}`);
                     }
                 }
-                
+
                 if (changed) {
                     await env.CONFIG_KV.put('node_metadata', JSON.stringify(meta));
                 }
-                
+
                 return new Response(JSON.stringify({ ...results, success_total: results.success }), { headers: { "Content-Type": "application/json" } });
             } catch (e) {
                 return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
