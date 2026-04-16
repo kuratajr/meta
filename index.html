@@ -92,7 +92,19 @@
                     <div>Total Nodes</div>
                     <i data-lucide="cpu" style="color: var(--accent); opacity: 0.6;"></i>
                 </div>
-                <div class="stat-val" id="stat-nodes">0</div>
+                <div style="display: flex; align-items: baseline; gap: 1.5rem; flex-wrap: wrap;">
+                    <div class="stat-val" id="stat-nodes">0</div>
+                    <div style="display: flex; gap: 0.8rem; font-size: 0.85rem; font-weight: 500; padding-bottom: 0.2rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--success);">
+                            <span class="status-dot online" style="width: 8px; height: 8px; margin: 0; box-shadow: none;"></span>
+                            <span id="stat-online">0</span> Online
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--danger);">
+                            <span class="status-dot offline" style="width: 8px; height: 8px; margin: 0; box-shadow: none;"></span>
+                            <span id="stat-offline">0</span> Offline
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">

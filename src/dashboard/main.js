@@ -186,12 +186,31 @@ function renderUI(data) {
     renderIPs(data);
     renderCloudInit(data);
     updateNodeDropdown();
+    updateNodeTotals();
 
     const globalArea = document.getElementById('global-config-area');
     if (globalArea) {
         globalArea.innerHTML = data.hasGlobal ? `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span>global.json</span><div class="action-flex"><button class="btn btn-s" onclick="editKV('global')"><i data-lucide="edit-3"></i>Edit</button><button class="btn btn-danger" onclick="deleteKV('global')"><i data-lucide="trash"></i>Delete</button></div></div>` : 'None.';
     }
     if (window.lucide) lucide.createIcons();
+}
+
+function updateNodeTotals() {
+    if (!lastData || !lastData.registry) return;
+    const hostnames = Object.keys(lastData.registry);
+    let online = 0;
+    let offline = 0;
+
+    hostnames.forEach(h => {
+        if (previousStatuses[h] === true) online++;
+        else if (previousStatuses[h] === false) offline++;
+    });
+
+    const onlineEl = document.getElementById('stat-online');
+    const offlineEl = document.getElementById('stat-offline');
+
+    if (onlineEl) onlineEl.innerText = online.toString();
+    if (offlineEl) offlineEl.innerText = offline.toString();
 }
 
 const getGroupOf = (node) => {
@@ -363,6 +382,7 @@ async function refreshStatusDots() {
                 if (row) row.setAttribute('data-status', 'offline');
             }
         });
+        updateNodeTotals();
     } catch (e) { }
 }
 
