@@ -1363,9 +1363,6 @@ window.deleteIP = deleteIP;
 window.deleteKV = deleteKV;
 window.closeModal = closeModal;
 
-window.openGCPConfigModal = openGCPConfigModal;
-window.saveGCPConfig = saveGCPConfig;
-window.deleteGCPConfig = deleteGCPConfig;
 
 // Terminal and logic
 let xterm = null;
