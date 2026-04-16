@@ -41,6 +41,7 @@
             <div class="nav-item" onclick="showSection('ip')"><i data-lucide="globe"></i>IP Management</div>
             <div class="nav-item" onclick="showSection('cloud')"><i data-lucide="cloud"></i>Cloud-init Meta</div>
             <div class="nav-item" onclick="showSection('logs')"><i data-lucide="terminal"></i>Logs & Activity</div>
+            <div class="nav-item" onclick="showSection('gcp')"><i data-lucide="key"></i>GCP Accounts</div>
             <div class="nav-item" onclick="showSection('global')"><i data-lucide="shield"></i>Global & Security</div>
         </nav>
         <div style="margin-top: auto; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 1rem;">
@@ -343,6 +344,27 @@
                         <div class="file-list-placeholder">Connect to terminal to use File Manager.</div>
                     </div>
                     <input type="file" id="file-upload" style="display:none" multiple>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-gcp" class="section">
+            <div class="card" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin:0; opacity:0.8;">Google Service Accounts</h3>
+                    <button class="btn btn-p" onclick="openGCPConfigModal()">+ Add Service Account</button>
+                </div>
+                <div class="table-container">
+                    <table id="table-gcp">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Project ID</th>
+                                <th style="width: 40%;">Client Email</th>
+                                <th style="width: 30%; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
         </div>

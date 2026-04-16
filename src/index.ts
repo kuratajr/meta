@@ -24,6 +24,95 @@ async function recordLog(env: Env, msg: string, node?: string) {
     }
 }
 
+// --- Google Auth Helpers ---
+async function getGoogleAuthToken(saJson: any, scope: string) {
+    const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const iat = Math.floor(Date.now() / 1000);
+    const exp = iat + 3600;
+    const claims = btoa(JSON.stringify({
+        iss: saJson.client_email,
+        scope: scope,
+        aud: "https://oauth2.googleapis.com/token",
+        iat: iat,
+        exp: exp
+    })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+    const unsignedJwt = `${header}.${claims}`;
+    const pem = saJson.private_key.replace(/-----BEGIN PRIVATE KEY-----|\n|-----END PRIVATE KEY-----/g, '');
+    const binaryDer = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
+    
+    const key = await crypto.subtle.importKey(
+        "pkcs8",
+        binaryDer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+
+    const signature = await crypto.subtle.sign(
+        "RSASSA-PKCS1-v1_5",
+        key,
+        new TextEncoder().encode(unsignedJwt)
+    );
+
+    const signedJwt = `${unsignedJwt}.${btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_")}`;
+
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            assertion: signedJwt
+        })
+    });
+
+    const data: any = await res.json();
+    return data.access_token;
+}
+
+async function getWorkstationToken(env: any, hostname: string, resourceName: string) {
+    // 1. Check cache
+    const cacheKey = `ws_token:${hostname}`;
+    const cached: any = await env.CONFIG_KV.get(cacheKey, { type: 'json' });
+    if (cached && cached.token && cached.expires > (Date.now() / 1000) + 7200) { // 2 hour buffer
+        return cached.token;
+    }
+
+    // 2. Parse Project ID
+    const match = resourceName.match(/projects\/([^/]+)/);
+    if (!match) return null;
+    const projectId = match[1];
+
+    // 3. Get SA for this project
+    const gcpConfigsData = await env.CONFIG_KV.get('gcp_configs');
+    const gcpConfigs = gcpConfigsData ? JSON.parse(gcpConfigsData) : {};
+    const saJson = gcpConfigs[projectId];
+    if (!saJson) return null;
+
+    // 4. Exchange for GCP Token
+    const gcpToken = await getGoogleAuthToken(saJson, "https://www.googleapis.com/auth/cloud-platform");
+    
+    // 5. Generate Workstation Token
+    const wsUrl = `https://workstations.googleapis.com/v1beta/${resourceName}:generateAccessToken`;
+    const wsRes = await fetch(wsUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${gcpToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    });
+
+    const wsData: any = await wsRes.json();
+    if (!wsData.accessToken) return null;
+
+    // 6. Save to cache
+    const expires = Math.floor(new Date(wsData.expireTime).getTime() / 1000);
+    await env.CONFIG_KV.put(cacheKey, JSON.stringify({ token: wsData.accessToken, expires }), { expiration: expires });
+
+    return wsData.accessToken;
+}
+
 async function fetchGithubFile(path: string, env: Env, isJson: boolean = true): Promise<any | null> {
     const url = `https://raw.githubusercontent.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/${env.GITHUB_BRANCH}/${path}`;
     const controller = new AbortController();
@@ -282,10 +371,11 @@ export default {
         if (url.pathname.startsWith('/api/') && !isAuthorized) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
         if (url.pathname === '/api/data' && request.method === 'GET') {
-            const [registryData, groupsMappingData, metaData, allKeys] = await Promise.all([
+            const [registryData, groupsMappingData, metaData, gcpConfigsData, allKeys] = await Promise.all([
                 env.CONFIG_KV.get('registry'),
                 env.CONFIG_KV.get('groups'),
                 env.CONFIG_KV.get('node_metadata'),
+                env.CONFIG_KV.get('gcp_configs'),
                 env.CONFIG_KV.list()
             ]);
             const keys = allKeys.keys.map((k: { name: string }) => k.name);
@@ -298,11 +388,36 @@ export default {
             return new Response(JSON.stringify({
                 registry: registryData ? JSON.parse(registryData) : {},
                 node_metadata: metaData ? JSON.parse(metaData) : {},
+                gcp_configs: gcpConfigsData ? JSON.parse(gcpConfigsData) : {},
                 groups: groupsMappingData ? JSON.parse(groupsMappingData) : [],
                 templates, groupConfigs, nodeConfigs, certConfigs, cloudConfigs,
                 ips: ipsData ? JSON.parse(ipsData) : {},
                 hasGlobal: keys.includes('global')
             }), { headers: { "Content-Type": "application/json" } });
+        }
+
+        if (url.pathname === '/api/gcp-config' && request.method === 'POST') {
+            try {
+                const { saJson } = await request.json() as any;
+                if (!saJson || !saJson.project_id) return new Response(JSON.stringify({ error: "Invalid SA JSON" }), { status: 400 });
+                const currentData = await env.CONFIG_KV.get('gcp_configs');
+                const configs = currentData ? JSON.parse(currentData) : {};
+                configs[saJson.project_id] = saJson;
+                await env.CONFIG_KV.put('gcp_configs', JSON.stringify(configs));
+                return new Response(JSON.stringify({ success: true }));
+            } catch (e) {
+                return new Response(JSON.stringify({ error: "Failed to save config" }), { status: 500 });
+            }
+        }
+
+        if (url.pathname === '/api/gcp-config' && request.method === 'DELETE') {
+            const projectId = url.searchParams.get('projectId');
+            if (!projectId) return new Response(JSON.stringify({ error: "Missing projectId" }), { status: 400 });
+            const currentData = await env.CONFIG_KV.get('gcp_configs');
+            const configs = currentData ? JSON.parse(currentData) : {};
+            delete configs[projectId];
+            await env.CONFIG_KV.put('gcp_configs', JSON.stringify(configs));
+            return new Response(JSON.stringify({ success: true }));
         }
 
         if (url.pathname === '/api/logs' && request.method === 'GET') {
@@ -350,22 +465,52 @@ export default {
             return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
         }
 
-        if (url.pathname === '/api/node-proxy' && request.method === 'GET') {
+        if (url.pathname === '/api/node-proxy') {
             const hostname = url.searchParams.get('hostname');
             const endpoint = url.searchParams.get('endpoint');
-            if (!hostname || !endpoint) return new Response("Missing params", { status: 400 });
+            if (!hostname || !endpoint) return new Response("Missing parameters", { status: 400 });
+
             const registryData = await env.CONFIG_KV.get('registry');
             const registry = registryData ? JSON.parse(registryData) : {};
             const host = registry[hostname];
             if (!host) return new Response("Node not found", { status: 404 });
+
+            let authHeader: Record<string, string> = { "X-API-Key": "diamon" };
+            const metaData = await env.CONFIG_KV.get('node_metadata');
+            const meta = metaData ? JSON.parse(metaData) : {};
+            const resourceName = meta[hostname]?.name;
+
+            if (resourceName) {
+                try {
+                    const wsToken = await getWorkstationToken(env, hostname, resourceName);
+                    if (wsToken) {
+                        authHeader["Authorization"] = `Bearer ${wsToken}`;
+                        authHeader["Cookie"] = `WorkstationJwtPartitioned=${wsToken}`;
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch WS token:", e);
+                }
+            }
+
+            let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+            let targetUrl = `https://${sanitizedHost}/${endpoint}`;
+
+            if (endpoint === 'nodeinfo') {
+                if (!sanitizedHost.startsWith('8080-')) sanitizedHost = '8080-' + sanitizedHost;
+                targetUrl = `https://${sanitizedHost}/`;
+            } else if (endpoint === 'logs') {
+                if (!sanitizedHost.startsWith('8080-')) sanitizedHost = '8080-' + sanitizedHost;
+                targetUrl = `https://${sanitizedHost}/logs`;
+            } else {
+                targetUrl = `https://${sanitizedHost}/${endpoint}`;
+            }
+
             try {
-                let sanitizedHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-                if (!sanitizedHost.startsWith('31465-')) sanitizedHost = '31465-' + sanitizedHost;
-                const nodeUrl = `https://${sanitizedHost}/api/${endpoint}?vm=${hostname}`;
-                if (['start', 'stop', 'reboot', 'destroy'].includes(endpoint)) await recordLog(env, `Action [${endpoint.toUpperCase()}] on node: ${hostname}`);
-                const nodeResponse = await fetch(nodeUrl, { headers: { "X-API-Key": "diamon" }, signal: AbortSignal.timeout(15000) });
-                return new Response(await nodeResponse.text(), { status: nodeResponse.status, headers: { "Content-Type": "application/json" } });
-            } catch (error: any) { return new Response(JSON.stringify({ error: error.message }), { status: 500 }); }
+                const resp = await fetch(targetUrl, { headers: authHeader });
+                return new Response(resp.body, { status: resp.status, headers: resp.headers });
+            } catch (e) {
+                return new Response("Proxy error: " + e, { status: 502 });
+            }
         }
 
         if (url.pathname === '/api/batch-check-nodes' && request.method === 'GET') {

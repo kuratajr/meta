@@ -63,6 +63,7 @@ export function showSection(id) {
     if (id === 'ip') sectionTitle = 'IP Management';
     else if (id === 'cloud') sectionTitle = 'Cloud-init Meta';
     else if (id === 'global') sectionTitle = 'Global & Security';
+    else if (id === 'gcp') sectionTitle = 'Google Cloud Workstations Auth';
     else if (id === 'logs') { sectionTitle = 'System Logs & Activity'; resetSystemLogs(); updateNodeDropdown(); }
 
     const titleEl = document.getElementById('section-title');
@@ -86,7 +87,7 @@ export function showSection(id) {
     if (refreshBtn) refreshBtn.style.display = 'block';
 
     // Conditional search visibility
-    const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs'].includes(id);
+    const hasTable = ['nodes', 'groups', 'ip', 'cloud', 'configs', 'gcp'].includes(id);
     const searchWrapper = document.getElementById('search-wrapper');
     if (searchWrapper) searchWrapper.style.display = hasTable ? 'block' : 'none';
 
@@ -172,6 +173,7 @@ export function handleSearch(val) {
 function renderUI(data) {
     groupsData = data.groups || [];
     nodeMetadata = data.node_metadata || {};
+    renderGCPConfigs(data.gcp_configs || {});
     const statNodes = document.getElementById('stat-nodes');
     if (statNodes) statNodes.innerText = Object.keys(data.registry).length.toString();
 
@@ -1187,12 +1189,119 @@ window.runNodeAction = runNodeAction;
 window.updateNodeGroup = updateNodeGroup;
 window.deleteFromRegistry = deleteFromRegistry;
 window.editKV = editKV;
+export function openGCPConfigModal() {
+    showModal({
+        title: 'Add Google Service Account',
+        message: 'Paste your Service Account JSON key here. It must have Workstation permissions.',
+        mode: 'editor'
+    });
+    const keyInput = document.getElementById('modal-key-input');
+    if (keyInput) keyInput.style.display = 'none';
+
+    const editor = document.getElementById('editor');
+    if (editor) {
+        editor.value = '';
+        editor.placeholder = '{ "type": "service_account", ... }';
+    }
+
+    const saveBtn = document.getElementById('modal-save-btn');
+    if (saveBtn) {
+        saveBtn.innerText = 'Add Account';
+        saveBtn.onclick = saveGCPConfig;
+    }
+}
+
+export async function saveGCPConfig() {
+    const editor = document.getElementById('editor');
+    const val = editor ? editor.value : '';
+    if (!val) return;
+
+    try {
+        const saJson = JSON.parse(val);
+        if (!saJson.project_id) throw new Error("Missing project_id");
+
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'block';
+
+        const res = await fetch(`/api/gcp-config?token=${TOKEN}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ saJson })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            closeModal();
+            refreshData();
+            showToast("GCP Account added!");
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch (e) {
+        alert("Invalid JSON or missing project_id: " + e.message);
+    } finally {
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
+    }
+}
+
+function renderGCPConfigs(configs) {
+    const tbody = document.querySelector('#table-gcp tbody');
+    if (!tbody) return;
+
+    let html = '';
+    for (const projectId in configs) {
+        const sa = configs[projectId];
+        html += `
+            <tr>
+                <td><code style="color:var(--accent);">${projectId}</code></td>
+                <td><span style="opacity:0.8; font-size:0.9rem;">${sa.client_email}</span></td>
+                <td style="text-align: center;">
+                    <button class="btn btn-danger btn-s" onclick="deleteGCPConfig('${projectId}')">
+                        <i data-lucide="trash-2"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+    if (Object.keys(configs).length === 0) {
+        html = '<tr><td colspan="3" style="text-align:center; opacity:0.5; padding: 2rem;">No OAuth2 accounts configured.</td></tr>';
+    }
+    tbody.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+export async function deleteGCPConfig(projectId) {
+    showModal({
+        title: 'Remove GCP Account',
+        message: `Are you sure you want to remove access for project "${projectId}"?`,
+        mode: 'confirm',
+        onConfirm: async () => {
+            const loader = document.getElementById('loader');
+            if (loader) loader.style.display = 'block';
+            try {
+                const res = await fetch(`/api/gcp-config?token=${TOKEN}&projectId=${projectId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Account removed!");
+                    refreshData();
+                }
+            } catch (e) { }
+            if (loader) loader.style.display = 'none';
+        }
+    });
+}
+
 window.openCreateModal = openCreateModal;
 window.editIP = editIP;
 window.saveData = saveData;
 window.deleteIP = deleteIP;
 window.deleteKV = deleteKV;
 window.closeModal = closeModal;
+
+window.openGCPConfigModal = openGCPConfigModal;
+window.saveGCPConfig = saveGCPConfig;
+window.deleteGCPConfig = deleteGCPConfig;
 
 // Terminal and logic
 let xterm = null;
