@@ -339,16 +339,28 @@ export default {
 
             const targetUrl = `https://${port}-${host}/${fullUrl}`;
 
-            if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-                const proxyHeaders = new Headers(request.headers);
-                proxyHeaders.set('Host', `${port}-${host}`);
-                proxyHeaders.set('Origin', `https://${port}-${host}`);
-                return fetch(targetUrl, { headers: proxyHeaders });
-            }
-
             const headers = new Headers(request.headers);
             headers.set('Host', `${port}-${host}`);
             headers.set('Origin', `https://${port}-${host}`);
+
+            // Add Workstation Token logic
+            const metaData = await env.CONFIG_KV.get('node_metadata');
+            const meta = metaData ? JSON.parse(metaData) : {};
+            if (meta[nodeHostname]?.name) {
+                try {
+                    const wsToken = await ensureWorkstationToken(env, nodeHostname);
+                    if (wsToken) {
+                        headers.set("Authorization", `Bearer ${wsToken}`);
+                        headers.set("Cookie", `WorkstationJwtPartitioned=${wsToken}`);
+                    }
+                } catch (e) {
+                    console.error("Terminal Proxy Token Error:", e);
+                }
+            }
+
+            if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+                return fetch(targetUrl, { headers });
+            }
 
             // Forward original method and body so FileBrowser API
             // receives correct POST/DELETE/PATCH requests instead
