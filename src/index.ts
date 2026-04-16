@@ -374,7 +374,7 @@ export default {
             return new Response(response.body, { status: response.status, headers: newHeaders });
         }
 
-        if (url.pathname.startsWith('/api/') && !isAuthorized) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+        if (url.pathname.startsWith('/api/') && url.pathname !== '/api/oauth-callback' && !isAuthorized) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
         if (url.pathname === '/api/data' && request.method === 'GET') {
             const [registryData, groupsMappingData, metaData, gcpConfigsData, allKeys] = await Promise.all([
