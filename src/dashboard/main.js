@@ -247,7 +247,7 @@ function renderNodes(data) {
                     ` : ''}
                 </div>
             </td>
-            <td class="cell-cloudhost copyable" onclick="copyToClipboard('${regVal}')" title="${regVal}">
+            <td class="cell-cloudhost copyable" onclick="copyToClipboard('${regVal}', '${h}')" title="${regVal}">
                 ${regVal}
             </td>
             <td style="text-align: center;">
@@ -272,7 +272,7 @@ function renderNodes(data) {
                             <div class="dropdown-scroll-area">
                                 <div class="dropdown-item" onclick="openTerminal('${h}', '${regVal}')"><i data-lucide="terminal"></i>Terminal</div>
                                 <div class="dropdown-item" onclick="fetchNodeInfo('${h}')"><i data-lucide="info"></i>Info</div>
-                                ${nodeMetadata[h]?.name ? `<div class="dropdown-item" onclick="copyToClipboard('${nodeMetadata[h].name}')"><i data-lucide="clipboard"></i>Copy Name</div>` : ''}
+                                ${nodeMetadata[h]?.name ? `<div class="dropdown-item" onclick="copyToClipboard('${nodeMetadata[h].name}', '${h}')"><i data-lucide="clipboard"></i>Copy Name</div>` : ''}
                                 <div class="dropdown-item" onclick="viewNodeLogs('${h}')"><i data-lucide="align-left"></i>Logs</div>
                                 <div class="dropdown-item" onclick="runNodeAction('${h}', 'stop')"><i data-lucide="square"></i>Stop</div>
                                 <div class="dropdown-item" onclick="runNodeAction('${h}', 'reboot')"><i data-lucide="refresh-cw"></i>Reboot</div>
@@ -861,12 +861,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 });
 
-export async function copyToClipboard(text) {
+export async function copyToClipboard(text, node) {
+    let finalPayload = text;
+    if (node && nodeMetadata[node]?.token) {
+        const token = nodeMetadata[node].token;
+        // Only append token if the text looks like a URL or hostname
+        if (typeof text === 'string' && (text.includes('.') || text.includes('://'))) {
+            const separator = text.includes('?') ? '&' : '?';
+            finalPayload = `${text}${separator}_workstationAccessToken=${token}`;
+        }
+    }
     try {
-        await navigator.clipboard.writeText(text);
-        showToast("Copied!");
+        await navigator.clipboard.writeText(finalPayload);
+        showToast(node && nodeMetadata[node]?.token ? "Copied with Token!" : "Copied!");
     } catch (err) { }
 }
+
 
 function showToast(msg) {
     const t = document.getElementById('toast');
@@ -1434,7 +1444,15 @@ export function openTerminal(h, hostUrl) {
 
     const originUrl = hostUrl.startsWith('http') ? hostUrl : "https://8877-" + hostUrl;
     const newTabBtn = document.getElementById('terminal-new-tab-btn');
-    if (newTabBtn) newTabBtn.dataset.url = originUrl;
+    if (newTabBtn) {
+        let finalUrl = originUrl;
+        if (nodeMetadata[h]?.token) {
+            const separator = finalUrl.includes('?') ? '&' : '?';
+            finalUrl += `${separator}_workstationAccessToken=${nodeMetadata[h].token}`;
+        }
+        newTabBtn.dataset.url = finalUrl;
+    }
+
 
     updateUIStatus('connecting');
     initXterm(h);
