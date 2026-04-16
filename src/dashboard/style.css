@@ -115,12 +115,14 @@ aside nav {
 /* Main Content */
 main {
     flex: 1;
-    padding: 3rem;
+    padding: 2.5rem 3rem 1rem;
     max-width: 1400px;
     transition: margin-left 0.3s ease;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     height: 100vh;
-    min-width: 0; /* Prevents flex children from overflowing */
+    overflow: hidden;
+    min-width: 0;
 }
 
 /* When logs or configs section is active, prevent main scroll */
@@ -178,7 +180,17 @@ body.terminal-active .header-right-group {
 }
 
 .section.active {
-    display: block;
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.section.active > .card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 /* Logs section - no external scroll, fit screen */
@@ -256,14 +268,10 @@ body.terminal-active .header-right-group {
     background: var(--glass);
     border: 1px solid var(--glass-border);
     border-radius: 1.5rem;
-    max-height: calc(100vh - 400px);
-    min-height: 450px;
-    /* Ensure space for dropdowns even with 1 row */
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     position: relative;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
     padding-bottom: 2rem;
 }
 
