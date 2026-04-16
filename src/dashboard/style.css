@@ -1,3 +1,4 @@
+html, body { height: 100vh; overflow: hidden; margin: 0; padding: 0; }
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&family=Ubuntu+Mono&display=swap');
 
 :root {
@@ -27,7 +28,7 @@
 body {
     background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
     color: var(--text);
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     overflow-x: hidden;
 }
