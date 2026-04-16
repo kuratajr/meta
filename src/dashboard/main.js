@@ -292,6 +292,16 @@ const getGroupOf = (node) => {
     return g ? g.config : "None";
 };
 
+function formatUptime(str) {
+    if (!str) return '';
+    return str.replace('up ', '')
+              .replace(/ days?,?/g, 'd')
+              .replace(/ hours?,?/g, 'h')
+              .replace(/ minutes?,?/g, 'm')
+              .replace(/ seconds?,?/g, 's')
+              .replace(/,/g, '');
+}
+
 function renderNodes(data) {
     const nBody = document.querySelector('#table-nodes tbody');
     if (!nBody) return;
@@ -315,7 +325,7 @@ function renderNodes(data) {
                     <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; font-weight: 500;">
                         <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"><i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(statusInfo.cpu).toFixed(2)}%</span>
                         <span title="RAM Usage" style="color: #c084fc; display: flex; align-items: center; gap: 3px;"><i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(statusInfo.ram)}%</span>
-                        ${statusInfo.uptime ? `<span title="Uptime" style="color: #10b981; display: flex; align-items: center; gap: 3px;"><i data-lucide="clock" style="width:11px;height:11px"></i> ${statusInfo.uptime}</span>` : ''}
+                        ${statusInfo.uptime ? `<span title="Uptime" style="color: #10b981; display: flex; align-items: center; gap: 3px;"><i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(statusInfo.uptime)}</span>` : ''}
                     </div>
                 ` : ''}
                 <div class="hostname-wrapper">
