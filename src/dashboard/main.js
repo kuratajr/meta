@@ -236,17 +236,18 @@ function renderNodes(data) {
 
         html += `<tr data-status="${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
             <td class="cell-hostname">
-                <span class="status-dot" data-node="${h}"></span>
-                <div style="display: flex; flex-direction: column;">
+                <div class="hostname-wrapper">
+                    <span class="status-dot" data-node="${h}"></span>
                     <span class="hostname-text">${h}</span>
-                    ${nodeMetadata[h]?.token_expires ? `
-                        <div style="font-size: 0.65rem; color: ${(nodeMetadata[h].token_expires * 1000 - Date.now()) < 7200000 ? 'var(--danger)' : 'var(--success)'}; opacity: 0.8; margin-top: 2px; white-space: nowrap;">
-                            <i data-lucide="key" style="width: 10px; height: 10px; display: inline-block; vertical-align: middle;"></i>
-                            Token expires: ${new Date(nodeMetadata[h].token_expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                    ` : ''}
                 </div>
+                ${nodeMetadata[h]?.token_expires ? `
+                    <div class="token-expiry" style="color: ${(nodeMetadata[h].token_expires * 1000 - Date.now()) < 7200000 ? 'var(--danger)' : 'var(--success)'};">
+                        <i data-lucide="key"></i>
+                        Token expires: ${new Date(nodeMetadata[h].token_expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                ` : ''}
             </td>
+
             <td class="cell-cloudhost copyable" onclick="copyToClipboard('${regVal}', '${h}')" title="${regVal}">
                 ${regVal}
             </td>

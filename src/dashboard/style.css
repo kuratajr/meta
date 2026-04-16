@@ -313,19 +313,34 @@ td {
     font-weight: 600;
     font-size: 0.85rem;
     max-width: 180px;
+    /* Remove overflow hidden here to allow wrapper flex to handle it */
+}
+
+.hostname-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.hostname-text {
+    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.hostname-text {
-    display: inline-block;
-    max-width: calc(100% - 20px);
-    overflow: hidden;
-    text-overflow: ellipsis;
+.token-expiry {
+    font-size: 0.65rem;
+    opacity: 0.8;
+    margin-top: 4px;
+    margin-left: 16px; /* Align with text after status dot */
     white-space: nowrap;
-    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
+
 
 .cell-cloudhost {
     font-size: 0.85rem;
@@ -513,11 +528,12 @@ td {
     height: 8px;
     border-radius: 50%;
     background: #475569;
-    /* grey */
-    margin-right: 8px;
+    /* margin-right removed, handled by flex gap */
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
     transition: all 0.3s;
+    flex-shrink: 0;
 }
+
 
 .status-dot.online {
     background: var(--success);
