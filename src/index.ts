@@ -386,6 +386,42 @@ export default {
 
         if (url.pathname.startsWith('/api/') && url.pathname !== '/api/oauth-callback' && !isAuthorized) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
+        if (url.pathname === '/api/heartbeat' && request.method === 'POST') {
+            try {
+                const body: any = await request.json();
+                const { hostname: h, cpu, ram, uptime } = body;
+                if (!h) return new Response("Missing hostname", { status: 400 });
+
+                // Ensure table exists
+                await env.DB.prepare(`
+                    CREATE TABLE IF NOT EXISTS node_status (
+                        hostname TEXT PRIMARY KEY,
+                        last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        ip TEXT,
+                        cpu REAL,
+                        ram REAL,
+                        uptime TEXT
+                    )
+                `).run();
+
+                const ip = request.headers.get('cf-connecting-ip') || '';
+                await env.DB.prepare(`
+                    INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, uptime)
+                    VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
+                    ON CONFLICT(hostname) DO UPDATE SET
+                        last_seen = CURRENT_TIMESTAMP,
+                        ip = excluded.ip,
+                        cpu = excluded.cpu,
+                        ram = excluded.ram,
+                        uptime = excluded.uptime
+                `).bind(h, ip, cpu || null, ram || null, uptime || null).run();
+
+                return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+            } catch (error: any) {
+                return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+            }
+        }
+
         if (url.pathname === '/api/data' && request.method === 'GET') {
             const [registryData, groupsMappingData, metaData, gcpConfigsData, allKeys] = await Promise.all([
                 env.CONFIG_KV.get('registry'),
@@ -394,6 +430,16 @@ export default {
                 env.CONFIG_KV.get('gcp_configs'),
                 env.CONFIG_KV.list()
             ]);
+
+            // Fetch statuses from D1
+            let statuses: any[] = [];
+            try {
+                const { results } = await env.DB.prepare("SELECT * FROM node_status").all();
+                statuses = results;
+            } catch (e) {
+                console.error("Failed to fetch node_status from D1:", e);
+            }
+
             const keys = allKeys.keys.map((k: { name: string }) => k.name);
             const templates = keys.filter((k: string) => k.startsWith('template:'));
             const groupConfigs = keys.filter((k: string) => k.startsWith('group:'));
@@ -401,9 +447,11 @@ export default {
             const certConfigs = keys.filter((k: string) => k.startsWith('cert:'));
             const cloudConfigs = keys.filter((k: string) => k.startsWith('cloud:'));
             const ipsData = await env.CONFIG_KV.get('ips');
+            
             return new Response(JSON.stringify({
                 registry: registryData ? JSON.parse(registryData) : {},
                 node_metadata: metaData ? JSON.parse(metaData) : {},
+                node_statuses: statuses, // New field from D1
                 gcp_configs: gcpConfigsData ? JSON.parse(gcpConfigsData) : {},
                 groups: groupsMappingData ? JSON.parse(groupsMappingData) : [],
                 templates, groupConfigs, nodeConfigs, certConfigs, cloudConfigs,

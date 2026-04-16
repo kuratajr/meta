@@ -9,6 +9,7 @@ let lastData = null;
 let currentSearch = '';
 let nodeMetadata = {};
 let previousStatuses = {};
+let nodeStatuses = {}; 
 let currentStatusFilter = 'all';
 
 // File Manager global state
@@ -173,6 +174,10 @@ export function handleSearch(val) {
 function renderUI(data) {
     groupsData = data.groups || [];
     nodeMetadata = data.node_metadata || {};
+    nodeStatuses = {};
+    if (data.node_statuses) {
+        data.node_statuses.forEach(s => { nodeStatuses[s.hostname] = s; });
+    }
     renderGCPConfigs(data.gcp_configs || {});
     const statNodes = document.getElementById('stat-nodes');
     if (statNodes) statNodes.innerText = Object.keys(data.registry).length.toString();
@@ -206,8 +211,11 @@ function updateNodeTotals() {
     let offline = 0;
 
     hostnames.forEach(h => {
-        if (previousStatuses[h] === true) online++;
-        else if (previousStatuses[h] === false) offline++;
+        const s = nodeStatuses[h];
+        const isOnline = s && (new Date() - new Date(s.last_seen.replace(' ', 'T') + 'Z') < 600000); // 10 minutes threshold
+        if (isOnline) online++;
+        else offline++;
+        previousStatuses[h] = isOnline;
     });
 
     const onlineEl = document.getElementById('stat-online');
@@ -234,12 +242,23 @@ function renderNodes(data) {
         let groupItems = `<div class="custom-dropdown-item" data-value="" data-node="${h}" onclick="selectCustomDropdownItem(event)">None</div>`;
         groupsData.forEach(g => { groupItems += `<div class="custom-dropdown-item${g.config === currentGroup ? ' selected' : ''}" data-value="${g.config}" data-node="${h}" onclick="selectCustomDropdownItem(event)">${g.config}</div>`; });
 
-        html += `<tr data-status="${previousStatuses[h] === true ? 'online' : (previousStatuses[h] === false ? 'offline' : '')}">
+        const statusInfo = nodeStatuses[h];
+        // D1 DATETIME is usually "YYYY-MM-DD HH:MM:SS" (UTC). Convert to JS Date.
+        const lastSeenDate = statusInfo ? new Date(statusInfo.last_seen.replace(' ', 'T') + 'Z') : null;
+        const isOnline = lastSeenDate && (new Date() - lastSeenDate < 600000); // 10 mins threshold
+
+        html += `<tr data-status="${isOnline ? 'online' : 'offline'}">
             <td class="cell-hostname">
                 <div class="hostname-wrapper">
-                    <span class="status-dot" data-node="${h}"></span>
+                    <span class="status-dot ${isOnline ? 'online' : 'offline'}" data-node="${h}"></span>
                     <span class="hostname-text">${h}</span>
                 </div>
+                ${statusInfo && statusInfo.cpu !== null ? `
+                    <div class="node-stats" style="font-size: 0.7rem; opacity: 0.6; margin-top: 2px;">
+                        <span title="CPU Usage"><i data-lucide="cpu" style="width:10px;height:10px"></i> ${statusInfo.cpu}%</span>
+                        <span title="RAM Usage" style="margin-left:8px;"><i data-lucide="database" style="width:10px;height:10px"></i> ${Math.round(statusInfo.ram)}%</span>
+                    </div>
+                ` : ''}
                 ${nodeMetadata[h]?.token_expires ? `
                     <div class="token-expiry" style="color: ${(nodeMetadata[h].token_expires * 1000 - Date.now()) < 7200000 ? 'var(--danger)' : 'var(--success)'};">
                         <i data-lucide="key"></i>
@@ -350,55 +369,9 @@ function renderCloudInit(data) {
 }
 
 async function refreshStatusDots() {
-    if (!lastData || !lastData.registry) return;
-    const hostnames = Object.keys(lastData.registry);
-    const batchSize = 40;
-    const total = hostnames.length;
-
-    const promises = [];
-    for (let i = 0; i < total; i += batchSize) {
-        promises.push(
-            fetch(`/api/batch-check-nodes?token=${TOKEN}&offset=${i}&limit=${batchSize}&_=${Date.now()}`)
-                .then(r => r.json())
-                .catch(() => ({}))
-        );
-    }
-
-    try {
-        const results = await Promise.all(promises);
-        const allStatuses = Object.assign({}, ...results);
-
-        for (const node of hostnames) {
-            const newStatus = allStatuses[node];
-            const prevStatus = previousStatuses[node];
-
-            if (prevStatus !== undefined && newStatus !== prevStatus) {
-                const msg = `Node [${node}] is now ${newStatus ? 'ONLINE' : 'OFFLINE'}`;
-                fetch(`/api/record-log?token=${TOKEN}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ msg, node })
-                }).catch(() => { });
-                if (document.getElementById('section-logs')?.classList.contains('active')) fetchSystemLogs();
-            }
-            previousStatuses[node] = newStatus;
-        }
-
-        document.querySelectorAll('.status-dot').forEach(dot => {
-            const node = dot.getAttribute('data-node');
-            if (!node) return;
-            const row = dot.closest('tr');
-            if (allStatuses[node] === true) {
-                dot.className = 'status-dot online';
-                if (row) row.setAttribute('data-status', 'online');
-            }
-            else if (allStatuses[node] === false) {
-                dot.className = 'status-dot offline';
-                if (row) row.setAttribute('data-status', 'offline');
-            }
-        });
-        updateNodeTotals();
-    } catch (e) { }
+    // With Heartbeat model, statuses are updated via refreshData() -> renderUI()
+    // No active batch-probing needed here.
+    updateNodeTotals();
 }
 
 export async function fetchSystemLogs(append = false) {
