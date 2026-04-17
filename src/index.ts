@@ -17,6 +17,7 @@ export class HubConnector {
     hubWs: WebSocket | null = null;
     sessions: Set<WebSocket> = new Set();
     latestData: Record<string, any> = {};
+    lastError: string | null = null;
 
     constructor(state: DurableObjectState, env: Env) {
         this.state = state;
@@ -46,7 +47,11 @@ export class HubConnector {
         }
 
         if (url.pathname.endsWith("/latest")) {
-            return new Response(JSON.stringify(this.latestData), { 
+            return new Response(JSON.stringify({
+                data: this.latestData,
+                error: this.lastError,
+                lastUpdate: new Date().toISOString()
+            }), { 
                 headers: { "Content-Type": "application/json" } 
             });
         }
@@ -78,8 +83,10 @@ export class HubConnector {
         
         // Convert WebSocket URL to HTTP
         let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
-        // Ensure path is /nodes
-        target = target.replace(/\/stream$/, '').replace(/\/$/, '') + '/nodes';
+        
+        // Robust URL normalization: Ensure it ends with /nodes but once
+        target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
+        target += '/nodes';
         
         const separator = target.includes('?') ? '&' : '?';
         target += `${separator}secret=${encodeURIComponent(secret)}`;
@@ -91,11 +98,14 @@ export class HubConnector {
             });
             
             if (!resp.ok) {
-                console.error(`Hub Poll Failed: ${resp.status} ${await resp.text()}`);
+                const err = await resp.text();
+                this.lastError = `Hub Error (${resp.status}): ${err}`;
+                console.error(this.lastError);
                 return;
             }
 
             const incoming: Record<string, any> = await resp.json();
+            this.lastError = null; // Clear error on success
             
             // Check for changes (simple string comparison for performance)
             const incomingStr = JSON.stringify(incoming);
@@ -133,6 +143,7 @@ export class HubConnector {
                 this.broadcast(incomingStr);
             }
         } catch (e: any) {
+            this.lastError = `Network Error: ${e.message}`;
             console.error("HubConnector poll error:", e.message);
         }
     }
@@ -141,7 +152,10 @@ export class HubConnector {
         ws.accept();
         this.sessions.add(ws);
         // Send current snapshot immediately
-        ws.send(JSON.stringify(this.latestData));
+        ws.send(JSON.stringify({
+            data: this.latestData,
+            error: this.lastError
+        }));
         ws.addEventListener("close", () => {
             this.sessions.delete(ws);
         });
@@ -597,8 +611,14 @@ export default {
 
             // Test the REAL websocket-upgrade path (same as HubConnector),
             // not a plain HTTP GET (which would correctly return 400 on many WS servers).
+            // Convert WebSocket URL to HTTP
+            let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+            
+            // Robust URL normalization
+            target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
+            target += '/nodes';
+
             const separator = target.includes('?') ? '&' : '?';
-            target = target.replace(/\/stream$/, '').replace(/\/$/, '') + '/nodes';
             target += `${separator}secret=${encodeURIComponent(secret)}`;
 
             try {

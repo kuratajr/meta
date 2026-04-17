@@ -229,7 +229,15 @@ function initHubWebSocket() {
     
     hubSocket.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data);
+            const msg = JSON.parse(event.data);
+            const data = msg.data || msg; // Handle both direct map and wrapped object
+            
+            if (msg.error) {
+                updateHubStatusUI(true, msg.error);
+            } else {
+                updateHubStatusUI(true);
+            }
+
             // Data is a map of hostname -> NodeInfo
             Object.keys(data).forEach(h => {
                 nodeStatuses[h] = data[h];
@@ -248,9 +256,16 @@ function initHubWebSocket() {
     };
 }
 
-function updateHubStatusUI(connected) {
+function updateHubStatusUI(connected, error = null) {
     const el = document.getElementById('hub-connection-status');
     if (!el) return;
+    
+    if (error) {
+        el.innerText = `● HUB ERROR: ${error}`;
+        el.style.color = 'var(--danger)';
+        return;
+    }
+
     el.innerText = connected ? '● HUB REAL-TIME ACTIVE' : '● HUB DISCONNECTED';
     el.style.color = connected ? 'var(--success)' : 'var(--danger)';
 }
