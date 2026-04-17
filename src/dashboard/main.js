@@ -2296,3 +2296,11 @@ document.getElementById('fm-settings-save')?.addEventListener('click', () => {
 });
 
 window.handleNodeSelect = handleNodeSelect;
+window.handleStatusFilter = handleStatusFilter;
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;
+window.refreshData = refreshData;
+window.handleSearch = handleSearch;
+window.saveHubConfig = saveHubConfig;
+window.reconnectHub = reconnectHub;
+
