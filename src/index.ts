@@ -89,20 +89,32 @@ export class HubConnector {
         }
         const { url: hubUrl, secret } = config;
         
-        // Convert WebSocket URL to HTTP
-        let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
-        
-        // Robust URL normalization: Ensure it ends with /nodes but once
-        target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
-        target += '/nodes';
-        
-        const separator = target.includes('?') ? '&' : '?';
-        const finalUrl = `${target}${separator}secret=${encodeURIComponent(secret)}`;
+        let finalUrl = '';
+        try {
+            // Convert WebSocket URL to HTTP if needed
+            let httpUrl = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+            const urlObj = new URL(httpUrl);
+            
+            // Normalize Path: Remove any existing /nodes or /stream suffixes
+            let path = urlObj.pathname.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
+            urlObj.pathname = path + '/nodes';
+            
+            // Add secret to query params
+            urlObj.searchParams.set('secret', secret);
+            finalUrl = urlObj.toString();
+            target = urlObj.origin + urlObj.pathname; // For logging/returning
+        } catch (e) {
+            return { success: false, error: "Invalid Hub URL structure" };
+        }
 
         const start = Date.now();
         try {
             const resp = await fetch(finalUrl, {
-                headers: { "X-Hub-Secret": secret },
+                headers: { 
+                    "X-Hub-Secret": secret,
+                    "X-Hub-Sync": "true" 
+                },
+                redirect: 'follow', // Match Test Connection behavior
                 signal: AbortSignal.timeout(10000)
             });
             
