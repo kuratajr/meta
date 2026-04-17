@@ -21,22 +21,32 @@ export class HubConnector {
     constructor(state: DurableObjectState, env: Env) {
         this.state = state;
         this.env = env;
+        // Load persisted state if any
+        this.state.blockConcurrencyWhile(async () => {
+            const stored = await this.state.storage.get<Record<string, any>>("latestData");
+            if (stored) this.latestData = stored;
+        });
     }
 
     async fetch(request: Request) {
         const url = new URL(request.url);
-        if (url.pathname === "/connect-hub") {
+        // Normalize routing within the DO
+        if (url.pathname.endsWith("/connect-hub")) {
             return this.setupHubConnection();
         }
 
         if (request.headers.get("Upgrade") === "websocket") {
+            // Auto-trigger connection if not active
+            if (!this.hubWs) {
+                this.setupHubConnection().catch(e => console.error("Auto-connect failed:", e));
+            }
             const pair = new WebSocketPair();
             const [client, server] = Object.values(pair);
             this.handleSession(server);
             return new Response(null, { status: 101, webSocket: client });
         }
 
-        return new Response("HubConnector active", { status: 200 });
+        return new Response(`HubConnector active. Path: ${url.pathname}`, { status: 200 });
     }
 
     async setupHubConnection() {
@@ -68,6 +78,8 @@ export class HubConnector {
                     const incoming = JSON.parse(msg.data as string);
                     // Merge into state
                     Object.assign(this.latestData, incoming);
+                    // Persist state
+                    this.state.storage.put("latestData", this.latestData);
                     // Broadcast the update ONLY (efficient)
                     this.broadcast(msg.data as string);
                 } catch (e) {
@@ -261,7 +273,7 @@ export default {
         if (url.pathname === '/api/reconnect-hub' && isAuthorized) {
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
-            return stub.fetch(new Request(`${url.origin}/connect-hub`));
+            return stub.fetch(new Request("http://hub/connect-hub"));
         }
 
         if (url.pathname === '/' && request.method === 'GET') {

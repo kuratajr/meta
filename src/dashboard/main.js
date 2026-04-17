@@ -327,10 +327,31 @@ export async function saveHubConfig() {
 }
 
 export async function reconnectHub() {
-    updateHubStatusUI(false);
-    await fetch(`/api/reconnect-hub?token=${TOKEN}`);
-    // Wait a bit then retry WS
-    setTimeout(() => initHubWebSocket(), 2000);
+    const statusEl = document.getElementById('hub-connection-status');
+    if (statusEl) {
+        statusEl.innerText = '● CONNECTING...';
+        statusEl.style.color = 'var(--accent)';
+    }
+
+    try {
+        const resp = await fetch(`/api/reconnect-hub?token=${TOKEN}`);
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            if (statusEl) {
+                statusEl.innerText = `● ERROR: ${errorText}`;
+                statusEl.style.color = 'var(--danger)';
+            }
+            return;
+        }
+        
+        // Wait a bit for the DO to establish the Hub connection then retry WS
+        setTimeout(() => initHubWebSocket(), 2000);
+    } catch (e) {
+        if (statusEl) {
+            statusEl.innerText = `● ERROR: ${e.message}`;
+            statusEl.style.color = 'var(--danger)';
+        }
+    }
 }
 
 function renderSystemSettings(data) {
