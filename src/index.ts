@@ -32,8 +32,13 @@ export class HubConnector {
         const url = new URL(request.url);
         // Normalize routing within the DO
         if (url.pathname.endsWith("/connect-hub")) {
-            return this.setupHubConnection();
+            let configOverride = null;
+            if (request.method === "POST") {
+                try { configOverride = await request.json(); } catch (e) {}
+            }
+            return this.setupHubConnection(configOverride);
         }
+        // ... rest of fetch remains similar
 
         if (request.headers.get("Upgrade") === "websocket") {
             // Auto-trigger connection if not active
@@ -49,10 +54,14 @@ export class HubConnector {
         return new Response(`HubConnector active. Path: ${url.pathname}`, { status: 200 });
     }
 
-    async setupHubConnection() {
-        const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
-        if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
-        const { url, secret } = JSON.parse(hubConfigStr);
+    async setupHubConnection(configOverride?: any) {
+        let config = configOverride;
+        if (!config) {
+            const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
+            if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
+            config = JSON.parse(hubConfigStr);
+        }
+        const { url, secret } = config;
 
         // Cloudflare fetch() requires http/https scheme even for WebSocket upgrades
         let targetUrl = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
@@ -76,7 +85,7 @@ export class HubConnector {
                 if (resp.status === 403 && errorText.includes("1003")) {
                     hint = " Tip: Try using a hostname (e.g. .nip.io) instead of a direct IP.";
                 }
-                return new Response(`Hub Connection Failed (${resp.status}): ${errorText || "Not a WebSocket endpoint"}. Target: ${targetUrl}.${hint}`, { status: 500 });
+                return new Response(`[Target: ${targetUrl}] Hub Connection Failed (${resp.status}): ${errorText || "Not a WebSocket endpoint"}.${hint}`, { status: 500 });
             }
 
             ws.accept();
@@ -280,9 +289,13 @@ export default {
         }
 
         if (url.pathname === '/api/reconnect-hub' && isAuthorized) {
+            const hubConfigStr = await env.CONFIG_KV.get('hub_config');
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
-            return stub.fetch(new Request("http://hub/connect-hub"));
+            return stub.fetch(new Request("http://hub/connect-hub", {
+                method: "POST",
+                body: hubConfigStr
+            }));
         }
 
         if (url.pathname === '/' && request.method === 'GET') {
