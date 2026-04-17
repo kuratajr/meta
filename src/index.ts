@@ -103,8 +103,7 @@ export class HubConnector {
                     "X-Hub-Test": "true",
                     "X-Hub-Secret": secret,
                 },
-                redirect: 'follow',
-                signal: AbortSignal.timeout(10000)
+                redirect: 'follow'
             });
             
             const duration = `${Date.now() - start}ms`;
@@ -117,6 +116,8 @@ export class HubConnector {
 
             const incoming: Record<string, any> = JSON.parse(bodyText);
             this.lastError = null; 
+            this.latestData = this.latestData || {}; 
+            this.lastSaved = this.lastSaved || {};
 
             // Get offline threshold for time-based sync (default 10m)
             const thresholdMinutes = parseInt(await this.env.CONFIG_KV.get('offline_threshold') || "10");
@@ -702,10 +703,26 @@ export default {
                 const body = await resp.text();
                 const isJson = resp.headers.get("Content-Type")?.includes("application/json");
                 
+                let syncStatus = "";
+                if (resp.ok && isJson) {
+                    try {
+                        // Forward the command to the DO for processing and D1 update
+                        const id = env.HUB_CONNECTOR.idFromName("global");
+                        const stub = env.HUB_CONNECTOR.get(id);
+                        await stub.fetch(new Request("http://hub/connect-hub", {
+                            method: "POST",
+                            body: hubConfigStr // Use the raw string from KV
+                        }));
+                        syncStatus = " (Synced to D1 via DO)";
+                    } catch (e) {
+                        syncStatus = " (Sync error: " + e.message + ")";
+                    }
+                }
+
                 return new Response(JSON.stringify({
                     success: resp.ok && isJson,
                     status: resp.status,
-                    statusText: resp.statusText,
+                    statusText: resp.statusText + syncStatus,
                     duration: `${duration}ms`,
                     target: target,
                     bodySnapshot: (body || "").substring(0, 500),
