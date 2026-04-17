@@ -131,10 +131,11 @@ export class HubConnector {
                 const old = this.latestData[hostname];
                 const lastSavedTime = this.lastSaved[hostname] || 0;
                 
-                let isSignificant = false;
+                let isSignificant = (configOverride && configOverride.forceSync === true);
+                
                 if (!old) {
                     isSignificant = true; // New node
-                } else {
+                } else if (!isSignificant) {
                     // 1. Time-based: If it's been too long since last D1 update
                     if (now - lastSavedTime > thresholdMs) {
                         isSignificant = true;
@@ -151,8 +152,6 @@ export class HubConnector {
                     else if (old.ip !== info.ip) {
                         isSignificant = true;
                     }
-                    // 4. Status change: If it was previously marked differently (UI logic helper)
-                    // (last_seen is always updated in current batch, so we primarily check if stats moved)
                 }
 
                 if (isSignificant) {
@@ -393,9 +392,13 @@ export default {
             const hubConfigStr = await env.CONFIG_KV.get('hub_config');
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
+            const hubConfig = hubConfigStr ? JSON.parse(hubConfigStr) : {};
+            // Force save to D1 on manual trigger
+            hubConfig.forceSync = true;
+            
             const resp = await stub.fetch(new Request("http://hub/connect-hub", {
                 method: "POST",
-                body: hubConfigStr
+                body: JSON.stringify(hubConfig)
             }));
             return new Response(resp.body, { 
                 status: resp.status, 
@@ -641,7 +644,7 @@ export default {
                 const { hostname: h, cpu, ram, uptime } = body;
                 if (!h) return new Response("Missing hostname", { status: 400 });
 
-                // Ensure table exists
+                // Ensure table and all columns exist
                 await env.DB.prepare(`
                     CREATE TABLE IF NOT EXISTS node_status (
                         hostname TEXT PRIMARY KEY,
@@ -653,6 +656,11 @@ export default {
                         uptime TEXT
                     )
                 `).run();
+                
+                // Check if disk column exists, if not add it
+                try {
+                    await env.DB.prepare(`ALTER TABLE node_status ADD COLUMN disk REAL`).run();
+                } catch (e) {}
 
                 const ip = request.headers.get('cf-connecting-ip') || '';
                 await env.DB.prepare(`
@@ -709,9 +717,12 @@ export default {
                         // Forward the command to the DO for processing and D1 update
                         const id = env.HUB_CONNECTOR.idFromName("global");
                         const stub = env.HUB_CONNECTOR.get(id);
+                        const hubConfig = hubConfigStr ? JSON.parse(hubConfigStr) : {};
+                        hubConfig.forceSync = true;
+                        
                         await stub.fetch(new Request("http://hub/connect-hub", {
                             method: "POST",
-                            body: hubConfigStr // Use the raw string from KV
+                            body: JSON.stringify(hubConfig)
                         }));
                         syncStatus = " (Synced to D1 via DO)";
                     } catch (e) {
