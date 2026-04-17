@@ -12,8 +12,12 @@ export interface Env {
 }
 
 function sqliteDateTime(dateStr?: string) {
-    const d = dateStr ? new Date(dateStr) : new Date();
+    // Attempt to parse the date, falling back to "now" if invalid
+    let d = dateStr ? new Date(dateStr) : new Date();
+    if (isNaN(d.getTime())) d = new Date();
+    
     try {
+        // Return UTC format: YYYY-MM-DD HH:MM:SS
         return d.toISOString().replace('T', ' ').replace(/\..+/, '');
     } catch (e) {
         return new Date().toISOString().replace('T', ' ').replace(/\..+/, '');
@@ -218,8 +222,11 @@ export class HubConnector {
                 ]);
             }
 
-            // Always broadcast to WS so UI is real-time even for minor changes
-            this.broadcast(bodyText);
+            // Broadcast latest state to all connected clients
+            this.broadcast(JSON.stringify({
+                data: this.latestData,
+                error: this.lastError
+            }));
 
             return { 
                 success: true, 

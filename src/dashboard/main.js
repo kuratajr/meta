@@ -257,6 +257,13 @@ function initHubWebSocket() {
             });
             updateNodeTotals();
             updateLiveTelemetry();
+            
+            // Visual feedback that data arrived
+            const liveDot = document.getElementById('live-dot');
+            if (liveDot) {
+                liveDot.style.transform = 'scale(1.3)';
+                setTimeout(() => liveDot.style.transform = 'scale(1)', 300);
+            }
         } catch (e) {
             console.error("Hub WS Error:", e);
         }
@@ -271,16 +278,25 @@ function initHubWebSocket() {
 
 function updateHubStatusUI(connected, error = null) {
     const el = document.getElementById('hub-connection-status');
-    if (!el) return;
-    
-    if (error) {
-        el.innerText = `● HUB ERROR: ${error}`;
-        el.style.color = 'var(--danger)';
-        return;
+    const liveText = document.getElementById('live-text');
+    const liveDot = document.getElementById('live-dot');
+
+    if (el) {
+        if (error) {
+            el.innerText = `● HUB ERROR: ${error}`;
+            el.style.color = 'var(--danger)';
+        } else {
+            el.innerText = connected ? '● HUB REAL-TIME ACTIVE' : '● HUB DISCONNECTED';
+            el.style.color = connected ? 'var(--success)' : 'var(--danger)';
+        }
     }
 
-    el.innerText = connected ? '● HUB REAL-TIME ACTIVE' : '● HUB DISCONNECTED';
-    el.style.color = connected ? 'var(--success)' : 'var(--danger)';
+    if (liveText) liveText.innerText = connected ? 'Live: On' : 'Live: Off';
+    if (liveDot) {
+        liveDot.className = connected ? 'live-dot active' : 'live-dot';
+        if (connected) liveDot.style.background = 'var(--success)';
+        else liveDot.style.background = 'var(--danger)';
+    }
 }
 
 function updateLiveTelemetry() {
@@ -289,14 +305,19 @@ function updateLiveTelemetry() {
     if (!activeSection || activeSection.id !== 'section-nodes') return;
     
     Object.keys(nodeStatuses).forEach(h => {
-        const statsArea = document.querySelector(`tr[data-node="${h}"] .node-stats`);
-        if (!statsArea) return;
-        
+        const row = document.querySelector(`tr[data-node="${h}"]`);
+        if (!row) return;
+
         const info = nodeStatuses[h];
-        if (info.last_seen) {
-            const statusDot = document.querySelector(`tr[data-node="${h}"] .status-dot`);
-            if (statusDot) statusDot.className = 'status-dot online';
-        }
+        const isOnline = isNodeOnline(info);
+        
+        // Update Status Dot and Row Attribute
+        const statusDot = row.querySelector('.status-dot');
+        if (statusDot) statusDot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
+        row.setAttribute('data-status', isOnline ? 'online' : 'offline');
+
+        const statsArea = row.querySelector('.node-stats');
+        if (!statsArea) return;
         
         // Update CPU, RAM, Disk, Uptime
         const cpuEl = statsArea.querySelector('span[title="CPU Usage"]');
@@ -310,6 +331,25 @@ function updateLiveTelemetry() {
         if (uptimeEl) uptimeEl.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(info.uptime)}`;
     });
     if (window.lucide) lucide.createIcons();
+}
+
+function isNodeOnline(info) {
+    if (!info || !info.last_seen) return false;
+    try {
+        // Handle SQLite format (YYYY-MM-DD HH:MM:SS) and standard ISO
+        const cleanLastSeen = info.last_seen.includes(' ') ? info.last_seen.replace(' ', 'T') + 'Z' : info.last_seen;
+        const isoBase = cleanLastSeen.split('.')[0];
+        // Ensure we always have 'Z' for UTC if no timezone offset is present
+        const hasTimezone = cleanLastSeen.includes('Z') || /[+-]\d{2}:\d{2}$/.test(cleanLastSeen);
+        const lastSeenDate = new Date(isoBase + (hasTimezone ? '' : 'Z'));
+
+        if (!lastSeenDate || isNaN(lastSeenDate.getTime())) return false;
+        
+        const diffMs = new Date() - lastSeenDate;
+        return diffMs < offlineThresholdMinutes * 60 * 1000;
+    } catch (e) {
+        return false;
+    }
 }
 
 function renderHubSettings() {
@@ -575,17 +615,7 @@ function updateNodeTotals() {
 
     hostnames.forEach(h => {
         const s = nodeStatuses[h];
-        let isOnline = false;
-        if (s && s.last_seen) {
-            // Firefox fails on ISO strings with more than 3 fractional digits (nanoseconds)
-            // We truncate to milliseconds (3 digits) or seconds (0 digits)
-            const cleanLastSeen = s.last_seen.includes(' ') ? s.last_seen.replace(' ', 'T') + 'Z' : s.last_seen;
-            const isoBase = cleanLastSeen.split('.')[0];
-            const suffix = cleanLastSeen.includes('Z') ? 'Z' : (cleanLastSeen.match(/[+-]\d{2}:\d{2}$/) || [''])[0];
-            const lastSeenDate = new Date(isoBase + suffix);
-
-            isOnline = (lastSeenDate && !isNaN(lastSeenDate) && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000));
-        }
+        const isOnline = isNodeOnline(s);
         if (isOnline) online++;
         else offline++;
         previousStatuses[h] = isOnline;
@@ -626,15 +656,7 @@ function renderNodes(data) {
         groupsData.forEach(g => { groupItems += `<div class="custom-dropdown-item${g.config === currentGroup ? ' selected' : ''}" data-value="${g.config}" data-node="${h}" onclick="selectCustomDropdownItem(event)">${g.config}</div>`; });
 
         const statusInfo = nodeStatuses[h];
-        let isOnline = false;
-        if (statusInfo && statusInfo.last_seen) {
-            const cleanLastSeen = statusInfo.last_seen.includes(' ') ? statusInfo.last_seen.replace(' ', 'T') + 'Z' : statusInfo.last_seen;
-            const isoBase = cleanLastSeen.split('.')[0];
-            const suffix = cleanLastSeen.includes('Z') ? 'Z' : (cleanLastSeen.match(/[+-]\d{2}:\d{2}$/) || [''])[0];
-            const lastSeenDate = new Date(isoBase + suffix);
-
-            isOnline = (lastSeenDate && !isNaN(lastSeenDate) && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000));
-        }
+        const isOnline = isNodeOnline(statusInfo);
 
         html += `<tr data-status="${isOnline ? 'online' : 'offline'}" data-node="${h}">
             <td class="cell-hostname">
