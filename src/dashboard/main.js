@@ -400,8 +400,13 @@ function updateNodeTotals() {
         const s = nodeStatuses[h];
         let isOnline = false;
         if (s && s.last_seen) {
-            const lastSeenStr = s.last_seen.includes(' ') ? s.last_seen.replace(' ', 'T') + 'Z' : s.last_seen;
-            const lastSeenDate = new Date(lastSeenStr);
+            // Firefox fails on ISO strings with more than 3 fractional digits (nanoseconds)
+            // We truncate to milliseconds (3 digits) or seconds (0 digits)
+            const cleanLastSeen = s.last_seen.includes(' ') ? s.last_seen.replace(' ', 'T') + 'Z' : s.last_seen;
+            const isoBase = cleanLastSeen.split('.')[0];
+            const suffix = cleanLastSeen.includes('Z') ? 'Z' : (cleanLastSeen.match(/[+-]\d{2}:\d{2}$/) || [''])[0];
+            const lastSeenDate = new Date(isoBase + suffix);
+
             isOnline = (lastSeenDate && !isNaN(lastSeenDate) && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000));
         }
         if (isOnline) online++;
@@ -446,12 +451,15 @@ function renderNodes(data) {
         const statusInfo = nodeStatuses[h];
         let isOnline = false;
         if (statusInfo && statusInfo.last_seen) {
-            const lastSeenStr = statusInfo.last_seen.includes(' ') ? statusInfo.last_seen.replace(' ', 'T') + 'Z' : statusInfo.last_seen;
-            const lastSeenDate = new Date(lastSeenStr);
+            const cleanLastSeen = statusInfo.last_seen.includes(' ') ? statusInfo.last_seen.replace(' ', 'T') + 'Z' : statusInfo.last_seen;
+            const isoBase = cleanLastSeen.split('.')[0];
+            const suffix = cleanLastSeen.includes('Z') ? 'Z' : (cleanLastSeen.match(/[+-]\d{2}:\d{2}$/) || [''])[0];
+            const lastSeenDate = new Date(isoBase + suffix);
+
             isOnline = (lastSeenDate && !isNaN(lastSeenDate) && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000));
         }
 
-        html += `<tr data-status="${isOnline ? 'online' : 'offline'}">
+        html += `<tr data-status="${isOnline ? 'online' : 'offline'}" data-node="${h}">
             <td class="cell-hostname">
                 ${statusInfo && statusInfo.cpu !== null ? `
                     <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; font-weight: 500;">

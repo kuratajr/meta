@@ -76,7 +76,7 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 
 				// 1.2 Update Internal State
 				info.IP = remoteAddr.IP.String()
-				info.LastSeen = time.Now()
+				info.LastSeen = time.Now().UTC().Truncate(time.Second)
 				info.Secret = "" // Don't forward secret to worker
 				
 				nodesMu.Lock()
