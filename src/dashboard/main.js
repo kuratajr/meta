@@ -474,11 +474,15 @@ export async function reconnectHub() {
             return;
         }
         
+        if (statusEl) {
+            statusEl.innerText = `● SYNC SUCCESS: Saved ${data.syncCount || 0} nodes.`;
+            statusEl.style.color = 'var(--success)';
+        }
+        
         if (logEl) {
             let log = `● Hub Synchronized Successfully!\n`;
-            log += `Target: ${data.target}\n`;
-            log += `Status: ${data.status} OK\n`;
-            log += `Nodes found: ${data.count}\n`;
+            log += `Nodes found: ${data.totalCount || 0}\n`;
+            log += `Saved to D1: ${data.syncCount || 0}\n`;
             log += `Latency: ${data.duration}\n\n`;
             
             if (data.bodySnapshot) {

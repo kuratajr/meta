@@ -11,6 +11,15 @@ export interface Env {
     HUB_CONNECTOR: DurableObjectNamespace;
 }
 
+function sqliteDateTime(dateStr?: string) {
+    const d = dateStr ? new Date(dateStr) : new Date();
+    try {
+        return d.toISOString().replace('T', ' ').replace(/\..+/, '');
+    } catch (e) {
+        return new Date().toISOString().replace('T', ' ').replace(/\..+/, '');
+    }
+}
+
 export class HubConnector {
     state: DurableObjectState;
     env: Env;
@@ -128,6 +137,20 @@ export class HubConnector {
             let syncCount = 0;
 
             for (const [hostname, info] of Object.entries(incoming)) {
+                // Ensure table and columns exist before each batch sync
+                await this.env.DB.prepare(`
+                    CREATE TABLE IF NOT EXISTS node_status (
+                        hostname TEXT PRIMARY KEY,
+                        last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        ip TEXT,
+                        cpu REAL,
+                        ram REAL,
+                        disk REAL,
+                        uptime TEXT
+                    )
+                `).run();
+                try { await this.env.DB.prepare(`ALTER TABLE node_status ADD COLUMN disk REAL`).run(); } catch(e) {}
+
                 const old = this.latestData[hostname];
                 const lastSavedTime = this.lastSaved[hostname] || 0;
                 
@@ -155,33 +178,36 @@ export class HubConnector {
                 }
 
                 if (isSignificant) {
-                    hasSignificantChanges = true;
-                    syncCount++;
-                    
-                    // Update baseline and timestamp
-                    this.latestData[hostname] = info;
-                    this.lastSaved[hostname] = now;
+                    try {
+                        // Sync this specific node to D1
+                        await this.env.DB.prepare(`
+                            INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(hostname) DO UPDATE SET
+                                last_seen = excluded.last_seen,
+                                ip = excluded.ip,
+                                cpu = excluded.cpu,
+                                ram = excluded.ram,
+                                disk = excluded.disk,
+                                uptime = excluded.uptime
+                        `).bind(
+                            hostname,
+                            sqliteDateTime(info.last_seen),
+                            info.ip || '',
+                            info.cpu || 0,
+                            info.ram || 0,
+                            info.disk || 0,
+                            info.uptime || ''
+                        ).run();
 
-                    // Sync this specific node to D1
-                    await this.env.DB.prepare(`
-                        INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(hostname) DO UPDATE SET
-                            last_seen = excluded.last_seen,
-                            ip = excluded.ip,
-                            cpu = excluded.cpu,
-                            ram = excluded.ram,
-                            disk = excluded.disk,
-                            uptime = excluded.uptime
-                    `).bind(
-                        hostname,
-                        info.last_seen || new Date().toISOString(),
-                        info.ip || '',
-                        info.cpu || 0,
-                        info.ram || 0,
-                        info.disk || 0,
-                        info.uptime || ''
-                    ).run();
+                        hasSignificantChanges = true;
+                        syncCount++;
+                        // Update baseline and timestamp
+                        this.latestData[hostname] = info;
+                        this.lastSaved[hostname] = now;
+                    } catch (dbErr: any) {
+                        this.lastError = `D1 Error (${hostname}): ${dbErr.message}`;
+                    }
                 }
             }
 
@@ -198,11 +224,10 @@ export class HubConnector {
             return { 
                 success: true, 
                 status: resp.status, 
-                target: target, 
-                count: Object.keys(incoming).length, 
-                synced: syncCount,
+                syncCount,
+                totalCount: Object.keys(incoming).length,
                 duration,
-                bodySnapshot: bodyText.substring(0, 500)
+                error: this.lastError
             };
 
         } catch (e: any) {
@@ -400,7 +425,8 @@ export default {
                 method: "POST",
                 body: JSON.stringify(hubConfig)
             }));
-            return new Response(resp.body, { 
+            const syncData: any = await resp.json();
+            return new Response(JSON.stringify(syncData), { 
                 status: resp.status, 
                 headers: { "Content-Type": "application/json" } 
             });
@@ -720,11 +746,12 @@ export default {
                         const hubConfig = hubConfigStr ? JSON.parse(hubConfigStr) : {};
                         hubConfig.forceSync = true;
                         
-                        await stub.fetch(new Request("http://hub/connect-hub", {
+                        const syncResp = await stub.fetch(new Request("http://hub/connect-hub", {
                             method: "POST",
                             body: JSON.stringify(hubConfig)
                         }));
-                        syncStatus = " (Synced to D1 via DO)";
+                        const syncData: any = await syncResp.json();
+                        syncStatus = ` (Saved ${syncData.syncCount || 0} nodes to D1)`;
                     } catch (e) {
                         syncStatus = " (Sync error: " + e.message + ")";
                     }
