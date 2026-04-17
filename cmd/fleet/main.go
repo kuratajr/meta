@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 )
 
 // --- Shared Types ---
@@ -35,9 +34,6 @@ type NodeInfo struct {
 var (
 	nodes     = make(map[string]NodeInfo)
 	nodesMu   sync.Mutex
-	upgrader  = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
-	clients   = make(map[*websocket.Conn]bool)
-	clientsMu sync.Mutex
 )
 
 func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debug bool) {
@@ -82,9 +78,6 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 				nodesMu.Lock()
 				nodes[info.Hostname] = info
 				nodesMu.Unlock()
-
-				// 1.3 IMMEDIATE BROADCAST (Real-time efficiency)
-				broadcastNode(info)
 			}
 		}
 	}()
@@ -103,7 +96,7 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 		fmt.Fprintf(w, "Meta Hub Active\nNodes: %d\nTime: %s", len(nodes), time.Now().Format(time.RFC3339))
 	})
 
-	mux.HandleFunc("/stream", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/nodes", func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("X-Hub-Secret")
 		if token == "" {
 			token = r.URL.Query().Get("secret")
@@ -114,34 +107,18 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 			http.Error(w, "Unauthorized", 401)
 			return
 		}
-		ws, err := upgrader.Upgrade(w, r, nil)
+
+		nodesMu.Lock()
+		data, err := json.Marshal(nodes)
+		nodesMu.Unlock()
+
 		if err != nil {
-			log.Printf("Upgrade Error: %v", err)
+			http.Error(w, "Internal Server Error", 500)
 			return
 		}
-		
-		clientsMu.Lock()
-		clients[ws] = true
-		clientsMu.Unlock()
 
-		log.Printf("Dashboard Worker connected: %s", r.RemoteAddr)
-
-		// Send full latest data immediately
-		nodesMu.Lock()
-		initData, _ := json.Marshal(nodes)
-		nodesMu.Unlock()
-		ws.WriteMessage(websocket.TextMessage, initData)
-
-		for {
-			if _, _, err := ws.ReadMessage(); err != nil {
-				clientsMu.Lock()
-				delete(clients, ws)
-				clientsMu.Unlock()
-				log.Printf("Dashboard Worker disconnected: %s", r.RemoteAddr)
-				break
-			}
-		}
-		ws.Close()
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
 	})
 
 	// Logging Middleware
@@ -177,19 +154,6 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", httpPort), logger))
 }
 
-func broadcastNode(info NodeInfo) {
-	// Send single node update as a map to maintain compatibility
-	data, _ := json.Marshal(map[string]NodeInfo{info.Hostname: info})
-	
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-	for client := range clients {
-		if err := client.WriteMessage(websocket.TextMessage, data); err != nil {
-			client.Close()
-			delete(clients, client)
-		}
-	}
-}
 
 func maskSecret(s string) string {
 	if len(s) <= 2 { return "***" }
@@ -333,7 +297,7 @@ func main() {
 	
 	// Hub flags
 	udpPort := flag.Int("udp", 9999, "HUB: UDP port for heartbeats")
-	httpPort := flag.Int("http", 8080, "HUB: HTTP port for WebSockets")
+	httpPort := flag.Int("http", 8080, "HUB: HTTP port for Telemetry")
 	hubSecret := flag.String("secret", "diamon", "HUB: Secret for Worker connection")
 	agentSecret := flag.String("agent-secret", "diamon", "HUB: Expected secret from Agents")
 	

@@ -10,7 +10,6 @@ let currentSearch = '';
 let nodeMetadata = {};
 let previousStatuses = {};
 let nodeStatuses = {}; 
-let hubSocket = null;
 let currentStatusFilter = 'all';
 let offlineThresholdMinutes = 10;
 let hubConfig = { url: '', secret: '' };
@@ -122,7 +121,7 @@ export function showSection(id) {
     }
 }
 
-export async function refreshData() {
+export async function refreshData(silent = false) {
     if (!TOKEN) {
         const authWarning = document.getElementById('auth-warning');
         if (authWarning) authWarning.style.display = 'block';
@@ -130,12 +129,14 @@ export async function refreshData() {
     }
 
     const loader = document.getElementById('loader');
-    if (loader) loader.style.display = 'block';
+    if (loader && !silent) loader.style.display = 'block';
 
     const connStatus = document.getElementById('connection-status');
     if (connStatus) {
-        connStatus.innerText = '● Syncing...';
-        connStatus.style.color = 'var(--accent)';
+        if (!silent) {
+            connStatus.innerText = '● Syncing...';
+            connStatus.style.color = 'var(--accent)';
+        }
     }
 
     try {
@@ -144,7 +145,7 @@ export async function refreshData() {
         lastData = data;
         hubConfig = data.hub_config ? JSON.parse(data.hub_config) : { url: '', secret: '' };
         renderUI(data);
-        initHubWebSocket();
+        startHubPolling();
 
         if (window.lucide) lucide.createIcons();
         if (connStatus) {
@@ -214,44 +215,23 @@ function renderUI(data) {
     if (window.lucide) lucide.createIcons();
 }
 
-function initHubWebSocket() {
-    if (hubSocket) hubSocket.close();
+function startHubPolling() {
+    if (window.hubPollInterval) return; // Already running
     
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/ws-hub?token=${TOKEN}`;
+    updateHubStatusUI(true);
     
-    hubSocket = new WebSocket(wsUrl);
-    
-    hubSocket.onopen = () => {
-        updateHubStatusUI(true);
-    };
-    
-    hubSocket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            // Data is a map of hostname -> NodeInfo
-            Object.keys(data).forEach(h => {
-                nodeStatuses[h] = data[h];
-            });
-            updateNodeTotals();
-            updateLiveTelemetry();
-        } catch (e) {
-            console.error("Hub WS Error:", e);
-        }
-    };
-    
-    hubSocket.onclose = () => {
-        updateHubStatusUI(false);
-        // Retry connection every 10s
-        setTimeout(() => initHubWebSocket(), 10000);
-    };
+    window.hubPollInterval = setInterval(() => {
+        // optimization: skip poll if document is hidden
+        if (document.hidden) return;
+        refreshData(true);
+    }, 15000);
 }
 
-function updateHubStatusUI(connected) {
+function updateHubStatusUI(active) {
     const el = document.getElementById('hub-connection-status');
     if (!el) return;
-    el.innerText = connected ? '● HUB CONNECTED' : '● HUB DISCONNECTED';
-    el.style.color = connected ? 'var(--success)' : 'var(--danger)';
+    el.innerText = active ? '● HUB POLLING ACTIVE' : '● HUB POLLING STOPPED';
+    el.style.color = active ? 'var(--success)' : 'var(--danger)';
 }
 
 function updateLiveTelemetry() {
@@ -288,13 +268,13 @@ function renderHubSettings() {
     if (!area) return;
     area.innerHTML = `
         <div class="card" style="margin-top: 1.5rem;">
-            <h3 style="margin-bottom:1.5rem; opacity:0.8; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="share-2" style="width:1.2rem; height:1.2rem; color:var(--accent);"></i> Real-time WebSocket Hub</h3>
+            <h3 style="margin-bottom:1.5rem; opacity:0.8; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="share-2" style="width:1.2rem; height:1.2rem; color:var(--accent);"></i> Real-time Telemetry Hub (Pull Mode)</h3>
             <div style="display:flex; flex-direction:column; gap:1.2rem;">
-                <div id="hub-connection-status" style="font-size:0.8rem; font-weight:700; color:var(--danger);">● HUB DISCONNECTED</div>
+                <div id="hub-connection-status" style="font-size:0.8rem; font-weight:700; color:var(--danger);">● HUB POLLING STOPPED</div>
                 
                 <div class="form-group">
-                    <label>Hub WebSocket URL</label>
-                    <input type="text" id="input-hub-url" placeholder="ws://YOUR_HUB_IP:8080/stream" value="${hubConfig.url || ''}">
+                    <label>Hub API URL (HTTP)</label>
+                    <input type="text" id="input-hub-url" placeholder="http://YOUR_HUB_IP:8080/nodes" value="${hubConfig.url || ''}">
                 </div>
                 
                 <div class="form-group">
@@ -303,8 +283,8 @@ function renderHubSettings() {
                 </div>
                 
                 <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                    <button class="btn btn-p" onclick="saveHubConfig()">Save & Connect</button>
-                    <button class="btn btn-s" onclick="reconnectHub()">Force Reconnect</button>
+                    <button class="btn btn-p" onclick="saveHubConfig()">Save & Sync</button>
+                    <button class="btn btn-s" onclick="reconnectHub()">Force Poll</button>
                     <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);" onclick="testHubConnection()">Test Connection</button>
                 </div>
                 <div id="hub-test-log" style="font-size:0.75rem; font-family:monospace; background:rgba(0,0,0,0.3); padding:0.8rem; border-radius:0.5rem; display:none; white-space:pre-wrap; border:1px solid var(--glass-border);"></div>

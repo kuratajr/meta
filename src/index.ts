@@ -15,7 +15,6 @@ export class HubConnector {
     state: DurableObjectState;
     env: Env;
     hubWs: WebSocket | null = null;
-    sessions: Set<WebSocket> = new Set();
     latestData: Record<string, any> = {};
 
     constructor(state: DurableObjectState, env: Env) {
@@ -36,106 +35,88 @@ export class HubConnector {
             if (request.method === "POST") {
                 try { configOverride = await request.json(); } catch (e) {}
             }
-            return this.setupHubConnection(configOverride);
-        }
-        // ... rest of fetch remains similar
-
-        if (request.headers.get("Upgrade") === "websocket") {
-            // Auto-trigger connection if not active
-            if (!this.hubWs) {
-                this.setupHubConnection().catch(e => console.error("Auto-connect failed:", e));
+            await this.pollHub(configOverride);
+            // Schedule regular alarms for polling
+            const currentAlarm = await this.state.storage.getAlarm();
+            if (currentAlarm === null) {
+                await this.state.storage.setAlarm(Date.now() + 10000);
             }
-            const pair = new WebSocketPair();
-            const [client, server] = Object.values(pair);
-            this.handleSession(server);
-            return new Response(null, { status: 101, webSocket: client });
+            return new Response("Hub polling initialized", { status: 200 });
+        }
+
+        if (url.pathname.endsWith("/latest")) {
+            return new Response(JSON.stringify(this.latestData), { 
+                headers: { "Content-Type": "application/json" } 
+            });
         }
 
         return new Response(`HubConnector active. Path: ${url.pathname}`, { status: 200 });
     }
 
-    async setupHubConnection(configOverride?: any) {
+    async alarm() {
+        await this.pollHub();
+        // Schedule next poll in 15 seconds
+        await this.state.storage.setAlarm(Date.now() + 15000);
+    }
+
+    async pollHub(configOverride?: any) {
         let config = configOverride;
         if (!config) {
             const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
-            if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
+            if (!hubConfigStr) return;
             config = JSON.parse(hubConfigStr);
         }
-        const { url, secret } = config;
-
-        // Cloudflare fetch() requires http/https scheme even for WebSocket upgrades
-        let targetUrl = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+        const { url: hubUrl, secret } = config;
         
-        // Append secret as query param for robustness
-        const separator = targetUrl.includes('?') ? '&' : '?';
-        targetUrl += `${separator}secret=${encodeURIComponent(secret)}`;
+        // Convert WebSocket URL to HTTP
+        let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+        // Ensure path is /nodes
+        target = target.replace(/\/stream$/, '').replace(/\/$/, '') + '/nodes';
+        
+        const separator = target.includes('?') ? '&' : '?';
+        target += `${separator}secret=${encodeURIComponent(secret)}`;
 
         try {
-            const resp = await fetch(targetUrl, {
-                headers: {
-                    "Upgrade": "websocket",
-                    "X-Hub-Secret": secret // Keep header for backward compatibility
-                }
+            const resp = await fetch(target, {
+                headers: { "X-Hub-Secret": secret },
+                signal: AbortSignal.timeout(10000)
             });
-            const ws = resp.webSocket;
-            if (!ws) {
-                const errorText = await resp.text();
-                // Check if it's Cloudflare Error 1003 (Direct IP Access Forbidden)
-                let hint = "";
-                if (resp.status === 403 && errorText.includes("1003")) {
-                    hint = " Tip: Try using a hostname (e.g. .nip.io) instead of a direct IP.";
-                }
-                return new Response(`[Target: ${targetUrl}] Hub Connection Failed (${resp.status}): ${errorText || "Not a WebSocket endpoint"}.${hint}`, { status: 500 });
-            }
-
-            ws.accept();
-            this.hubWs = ws;
             
-            ws.addEventListener("message", (msg) => {
-                try {
-                    const incoming = JSON.parse(msg.data as string);
-                    // Merge into state
-                    Object.assign(this.latestData, incoming);
-                    // Persist state
-                    this.state.storage.put("latestData", this.latestData);
-                    // Broadcast the update ONLY (efficient)
-                    this.broadcast(msg.data as string);
-                } catch (e) {
-                    console.error("HubConnector parse error:", e);
-                }
-            });
-
-            ws.addEventListener("close", () => {
-                this.hubWs = null;
-                // Auto-reconnect after 5s
-                setTimeout(() => this.setupHubConnection(), 5000);
-            });
-
-            return new Response("Connected to Hub", { status: 200 });
-        } catch (e: any) {
-            return new Response("Hub Connection Error: " + e.message, { status: 500 });
-        }
-    }
-
-    handleSession(ws: WebSocket) {
-        ws.accept();
-        this.sessions.add(ws);
-        
-        // Send full latest data immediately to new sessions
-        ws.send(JSON.stringify(this.latestData));
-
-        ws.addEventListener("close", () => {
-            this.sessions.delete(ws);
-        });
-    }
-
-    broadcast(data: string) {
-        for (const session of this.sessions) {
-            try {
-                session.send(data);
-            } catch (e) {
-                this.sessions.delete(session);
+            if (!resp.ok) {
+                console.error(`Hub Poll Failed: ${resp.status} ${await resp.text()}`);
+                return;
             }
+
+            const incoming: Record<string, any> = await resp.json();
+            
+            // Merge into internal state
+            Object.assign(this.latestData, incoming);
+            await this.state.storage.put("latestData", this.latestData);
+
+            // Sync to D1
+            for (const [hostname, info] of Object.entries(incoming)) {
+                await this.env.DB.prepare(`
+                    INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(hostname) DO UPDATE SET
+                        last_seen = excluded.last_seen,
+                        ip = excluded.ip,
+                        cpu = excluded.cpu,
+                        ram = excluded.ram,
+                        disk = excluded.disk,
+                        uptime = excluded.uptime
+                `).bind(
+                    hostname,
+                    info.last_seen || new Date().toISOString(),
+                    info.ip || '',
+                    info.cpu || 0,
+                    info.ram || 0,
+                    info.disk || 0,
+                    info.uptime || ''
+                ).run();
+            }
+        } catch (e: any) {
+            console.error("HubConnector poll error:", e.message);
         }
     }
 }
@@ -285,7 +266,9 @@ export default {
         if (url.pathname === '/api/ws-hub') {
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
-            return stub.fetch(request);
+            // Return latest data from DO memory
+            const resp = await stub.fetch(new Request("http://hub/latest"));
+            return new Response(resp.body, { headers: { "Content-Type": "application/json" } });
         }
 
         if (url.pathname === '/api/reconnect-hub' && isAuthorized) {
@@ -544,21 +527,23 @@ export default {
                         ip TEXT,
                         cpu REAL,
                         ram REAL,
+                        disk REAL,
                         uptime TEXT
                     )
                 `).run();
 
                 const ip = request.headers.get('cf-connecting-ip') || '';
                 await env.DB.prepare(`
-                    INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, uptime)
-                    VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
+                    INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
+                    VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
                     ON CONFLICT(hostname) DO UPDATE SET
                         last_seen = CURRENT_TIMESTAMP,
                         ip = excluded.ip,
                         cpu = excluded.cpu,
                         ram = excluded.ram,
+                        disk = excluded.disk,
                         uptime = excluded.uptime
-                `).bind(h, ip, cpu || null, ram || null, uptime || null).run();
+                `).bind(h, ip, cpu || null, ram || null, body.disk || null, uptime || null).run();
 
                 return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
             } catch (error: any) {
@@ -570,27 +555,34 @@ export default {
             const hubConfigStr = await env.CONFIG_KV.get('hub_config');
             if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
             const { url: hubUrl, secret } = JSON.parse(hubConfigStr);
-            const target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+
+            // Test the REAL websocket-upgrade path (same as HubConnector),
+            // not a plain HTTP GET (which would correctly return 400 on many WS servers).
+            const separator = target.includes('?') ? '&' : '?';
+            target = target.replace(/\/stream$/, '').replace(/\/$/, '') + '/nodes';
+            target += `${separator}secret=${encodeURIComponent(secret)}`;
 
             try {
                 const start = Date.now();
                 const resp = await fetch(target, {
-                    headers: { "X-Hub-Test": "true", "X-Hub-Secret": secret },
+                    headers: {
+                        "X-Hub-Test": "true",
+                        "X-Hub-Secret": secret,
+                    },
                     redirect: 'follow'
                 });
                 const duration = Date.now() - start;
                 const body = await resp.text();
-                const headers: any = {};
-                resp.headers.forEach((v, k) => { headers[k] = v; });
-
+                const isJson = resp.headers.get("Content-Type")?.includes("application/json");
+                
                 return new Response(JSON.stringify({
-                    success: resp.ok,
+                    success: resp.ok && isJson,
                     status: resp.status,
                     statusText: resp.statusText,
                     duration: `${duration}ms`,
                     target: target,
-                    headers: headers,
-                    bodySnapshot: body.substring(0, 500)
+                    bodySnapshot: (body || "").substring(0, 500),
+                    isJson: isJson
                 }), { headers: { "Content-Type": "application/json" } });
             } catch (e: any) {
                 return new Response(JSON.stringify({
