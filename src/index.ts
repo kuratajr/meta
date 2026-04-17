@@ -42,7 +42,10 @@ export class HubConnector {
     async setupHubConnection() {
         const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
         if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
-        const { url, secret } = JSON.parse(hubConfigStr);
+        let { url, secret } = JSON.parse(hubConfigStr);
+
+        // Cloudflare fetch() requires http/https scheme even for WebSocket upgrades
+        url = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
 
         try {
             const resp = await fetch(url, {
