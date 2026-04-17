@@ -357,22 +357,22 @@ export async function testHubConnection() {
         const res = await fetch(`/api/test-hub?token=${TOKEN}`);
         const data = await res.json();
         
-        let log = `Target: ${data.target}\n`;
-        log += `Status: ${data.status} ${data.statusText || ''}\n`;
-        log += `Duration: ${data.duration || 'N/A'}\n\n`;
+        let log = `● Connection Test Results\n`;
+        log += `Target: ${data.target}\n`;
+        log += `Status: ${data.status} ${data.statusText || 'OK'}\n`;
         
-        if (data.headers) {
-            log += `--- Response Headers ---\n`;
-            Object.keys(data.headers).forEach(k => {
-                log += `${k}: ${data.headers[k]}\n`;
-            });
-        }
-        
-        if (data.bodySnapshot) {
-            log += `\n--- Body Preview ---\n${data.bodySnapshot}\n`;
-        }
-        
-        if (data.error) {
+        if (data.success) {
+            log += `Nodes Found: ${data.totalCount || 0}\n`;
+            log += `Saved to D1: ${data.syncCount || 0}\n`;
+            log += `Latency: ${data.duration || 'N/A'}ms\n\n`;
+            
+            const statusEl = document.getElementById('hub-connection-status');
+            if (statusEl) {
+                statusEl.innerText = `● SYNC SUCCESS: Saved ${data.syncCount || 0} nodes.`;
+                statusEl.style.color = 'var(--success)';
+            }
+            if (window.refreshNodes) window.refreshNodes();
+        } else if (data.error) {
             log += `\nError: ${data.error}`;
         }
         
@@ -423,7 +423,7 @@ export async function saveHubConfig() {
         if (logEl) {
             logEl.innerText += '● Configuration saved successfully.\n';
             logEl.innerText += '● Secret extracted: ' + (secret ? 'Yes' : 'No') + '\n';
-            logEl.innerText += '● Click "Force Poll (Sync)" to update data.\n';
+            logEl.innerText += '● Click "Test Connection" to sync data.\n';
             logEl.style.borderColor = 'var(--success)';
         }
     } catch (e) {
@@ -435,84 +435,6 @@ export async function saveHubConfig() {
     }
 }
 
-export async function reconnectHub() {
-    const statusEl = document.getElementById('hub-connection-status');
-    const logEl = document.getElementById('hub-test-log');
-
-    if (statusEl) {
-        statusEl.innerText = '● CONNECTING...';
-        statusEl.style.color = 'var(--accent)';
-    }
-    
-    if (logEl) {
-        if (logEl.style.display === 'none') logEl.style.display = 'block';
-        logEl.innerText += '● Triggering Hub Sync & Reconnect...\n';
-    }
-
-    try {
-        const resp = await fetch(`/api/reconnect-hub?token=${TOKEN}`);
-        let data;
-        const contentType = resp.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            data = await resp.json();
-        } else {
-            const text = await resp.text();
-            data = { success: false, error: text.substring(0, 200) };
-        }
-        
-        if (!resp.ok || !data.success) {
-            const errorText = data.error || (data.status ? `Sync Error (${data.status})` : 'Unknown error');
-            if (statusEl) {
-                statusEl.innerText = `● ERROR: ${errorText}`;
-                statusEl.style.color = 'var(--danger)';
-            }
-            if (logEl) {
-                logEl.innerText += `● Sync Failed: ${errorText}\n`;
-                if (data.target) logEl.innerText += `Target: ${data.target}\n`;
-                logEl.style.borderColor = 'var(--danger)';
-            }
-            return;
-        }
-        
-        if (statusEl) {
-            statusEl.innerText = `● SYNC SUCCESS: Saved ${data.syncCount || 0} nodes.`;
-            statusEl.style.color = 'var(--success)';
-        }
-        
-        if (logEl) {
-            let log = `● Hub Synchronized Successfully!\n`;
-            log += `Nodes found: ${data.totalCount || 0}\n`;
-            log += `Saved to D1: ${data.syncCount || 0}\n`;
-            log += `Latency: ${data.duration}\n\n`;
-            
-            if (data.bodySnapshot) {
-                log += `--- Data Preview ---\n${data.bodySnapshot}\n`;
-            }
-            logEl.innerText += log;
-            logEl.style.borderColor = 'var(--success)';
-            // Auto scroll to bottom
-            logEl.scrollTop = logEl.scrollHeight;
-        }
-
-        // Reset countdown if auto-sync is on to prevent double-poll
-        if (isHubAutoSync) {
-            hubSyncCountdown = hubSyncIntervalSeconds;
-            updateHubSyncUI();
-        }
-
-        // Wait a bit for the DO to establish the Hub connection then retry WS
-        setTimeout(() => initHubWebSocket(), 2000);
-    } catch (e) {
-        if (statusEl) {
-            statusEl.innerText = `● ERROR: ${e.message}`;
-            statusEl.style.color = 'var(--danger)';
-        }
-        if (logEl) {
-            logEl.innerText += `● Error: ${e.message}\n`;
-            logEl.style.borderColor = 'var(--danger)';
-        }
-    }
-}
 
 function renderSystemSettings(data) {
     const area = document.getElementById('system-settings-area');
@@ -2576,6 +2498,5 @@ window.showSection = showSection;
 window.refreshData = refreshData;
 window.handleSearch = handleSearch;
 window.saveHubConfig = saveHubConfig;
-window.reconnectHub = reconnectHub;
 window.testHubConnection = testHubConnection;
 

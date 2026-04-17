@@ -413,24 +413,6 @@ export default {
             return new Response(resp.body, { headers: { "Content-Type": "application/json" } });
         }
 
-        if (url.pathname === '/api/reconnect-hub' && isAuthorized) {
-            const hubConfigStr = await env.CONFIG_KV.get('hub_config');
-            const id = env.HUB_CONNECTOR.idFromName("global");
-            const stub = env.HUB_CONNECTOR.get(id);
-            const hubConfig = hubConfigStr ? JSON.parse(hubConfigStr) : {};
-            // Force save to D1 on manual trigger
-            hubConfig.forceSync = true;
-            
-            const resp = await stub.fetch(new Request("http://hub/connect-hub", {
-                method: "POST",
-                body: JSON.stringify(hubConfig)
-            }));
-            const syncData: any = await resp.json();
-            return new Response(JSON.stringify(syncData), { 
-                status: resp.status, 
-                headers: { "Content-Type": "application/json" } 
-            });
-        }
 
         if (url.pathname === '/' && request.method === 'GET') {
             const html = await fetchGithubFile('index.html', env, false);
@@ -712,66 +694,70 @@ export default {
             if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
             const { url: hubUrl, secret } = JSON.parse(hubConfigStr);
 
-            // Test the REAL websocket-upgrade path (same as HubConnector),
-            // not a plain HTTP GET (which would correctly return 400 on many WS servers).
-            // Convert WebSocket URL to HTTP
             let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
-            
-            // Robust URL normalization
-            target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
-            target += '/nodes';
-
+            target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '') + '/nodes';
             const separator = target.includes('?') ? '&' : '?';
             target += `${separator}secret=${encodeURIComponent(secret)}`;
 
             try {
                 const start = Date.now();
                 const resp = await fetch(target, {
-                    headers: {
-                        "X-Hub-Test": "true",
-                        "X-Hub-Secret": secret,
-                    },
+                    headers: { "X-Hub-Test": "true", "X-Hub-Secret": secret },
                     redirect: 'follow'
                 });
-                const duration = Date.now() - start;
-                const body = await resp.text();
-                const isJson = resp.headers.get("Content-Type")?.includes("application/json");
                 
-                let syncStatus = "";
-                if (resp.ok && isJson) {
+                const bodyText = await resp.text();
+                if (!resp.ok) return new Response(bodyText, { status: resp.status });
+
+                const incoming: Record<string, any> = JSON.parse(bodyText);
+                let syncCount = 0;
+
+                // Ensure table and all columns exist
+                await env.DB.prepare(`
+                    CREATE TABLE IF NOT EXISTS node_status (
+                        hostname TEXT PRIMARY KEY,
+                        last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        ip TEXT, cpu REAL, ram REAL, disk REAL, uptime TEXT
+                    )
+                `).run();
+                try { await env.DB.prepare(`ALTER TABLE node_status ADD COLUMN disk REAL`).run(); } catch(e) {}
+
+                // Sequential sync to D1 for simplicity in manual test
+                for (const [hostname, info] of Object.entries(incoming)) {
                     try {
-                        // Forward the command to the DO for processing and D1 update
-                        const id = env.HUB_CONNECTOR.idFromName("global");
-                        const stub = env.HUB_CONNECTOR.get(id);
-                        const hubConfig = hubConfigStr ? JSON.parse(hubConfigStr) : {};
-                        hubConfig.forceSync = true;
-                        
-                        const syncResp = await stub.fetch(new Request("http://hub/connect-hub", {
-                            method: "POST",
-                            body: JSON.stringify(hubConfig)
-                        }));
-                        const syncData: any = await syncResp.json();
-                        syncStatus = ` (Saved ${syncData.syncCount || 0} nodes to D1)`;
-                    } catch (e) {
-                        syncStatus = " (Sync error: " + e.message + ")";
+                        await env.DB.prepare(`
+                            INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(hostname) DO UPDATE SET
+                                last_seen = excluded.last_seen, ip = excluded.ip,
+                                cpu = excluded.cpu, ram = excluded.ram,
+                                disk = excluded.disk, uptime = excluded.uptime
+                        `).bind(
+                            hostname,
+                            sqliteDateTime(info.last_seen),
+                            info.ip || '',
+                            info.cpu || 0,
+                            info.ram || 0,
+                            info.disk || 0,
+                            info.uptime || ''
+                        ).run();
+                        syncCount++;
+                    } catch (dbErr) {
+                        console.error(`D1 Sync Error (${hostname}):`, dbErr);
                     }
                 }
 
                 return new Response(JSON.stringify({
-                    success: resp.ok && isJson,
-                    status: resp.status,
-                    statusText: resp.statusText + syncStatus,
-                    duration: `${duration}ms`,
-                    target: target,
-                    bodySnapshot: (body || "").substring(0, 500),
-                    isJson: isJson
-                }), { headers: { "Content-Type": "application/json" } });
-            } catch (e: any) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: e.message,
+                    success: true,
+                    status: 200,
+                    syncCount,
+                    totalCount: Object.keys(incoming).length,
+                    duration: `${Date.now() - start}ms`,
                     target: target
-                }), { status: 500, headers: { "Content-Type": "application/json" } });
+                }), { headers: { "Content-Type": "application/json" } });
+
+            } catch (e: any) {
+                return new Response(JSON.stringify({ success: false, error: e.message }), { status: 500 });
             }
         }
 
