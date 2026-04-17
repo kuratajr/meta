@@ -315,6 +315,7 @@ function renderHubSettings() {
 }
 
 export async function testHubConnection() {
+    window.testHubConnection = testHubConnection;
     const logEl = document.getElementById('hub-test-log');
     if (!logEl) return;
     
@@ -355,8 +356,8 @@ export async function testHubConnection() {
 }
 
 export async function saveHubConfig() {
-    const url = document.getElementById('input-hub-url').value;
-    const secret = document.getElementById('input-hub-secret').value;
+    const url = document.getElementById('input-hub-url').value.trim();
+    const secret = document.getElementById('input-hub-secret').value.trim();
     
     hubConfig = { url, secret };
     await fetch(`/api/save?token=${TOKEN}`, {
@@ -2385,4 +2386,5 @@ window.refreshData = refreshData;
 window.handleSearch = handleSearch;
 window.saveHubConfig = saveHubConfig;
 window.reconnectHub = reconnectHub;
+window.testHubConnection = testHubConnection;
 
