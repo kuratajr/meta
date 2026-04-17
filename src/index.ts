@@ -87,25 +87,15 @@ export class HubConnector {
             if (!hubConfigStr) return { success: false, error: "Hub config missing" };
             config = JSON.parse(hubConfigStr);
         }
-        const { url: hubUrl, secret } = config;
+        // Literal copy of logic from /api/test-hub that works
+        let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
         
-        let finalUrl = '';
-        try {
-            // Convert WebSocket URL to HTTP if needed
-            let httpUrl = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
-            const urlObj = new URL(httpUrl);
-            
-            // Normalize Path: Remove any existing /nodes or /stream suffixes
-            let path = urlObj.pathname.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
-            urlObj.pathname = path + '/nodes';
-            
-            // Add secret to query params
-            urlObj.searchParams.set('secret', secret);
-            finalUrl = urlObj.toString();
-            target = urlObj.origin + urlObj.pathname; // For logging/returning
-        } catch (e) {
-            return { success: false, error: "Invalid Hub URL structure" };
-        }
+        // Robust URL normalization
+        target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
+        target += '/nodes';
+
+        const separator = target.includes('?') ? '&' : '?';
+        const finalUrl = `${target}${separator}secret=${encodeURIComponent(secret)}`;
 
         const start = Date.now();
         try {
