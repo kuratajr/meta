@@ -14,10 +14,12 @@ let hubSocket = null;
 let currentStatusFilter = 'all';
 let offlineThresholdMinutes = 10;
 let hubSyncIntervalSeconds = 60;
+let telemetryThresholdCpu = 2;
+let telemetryThresholdRam = 1;
 let hubConfig = { url: '', secret: '' };
 
 const HUB_SYNC_ENABLED_KEY = 'meta_hub_sync_enabled';
-let isHubAutoSync = localStorage.getItem(HUB_SYNC_ENABLED_KEY) === 'true';
+let isHubAutoSync = false;
 let hubSyncCountdown = 60;
 let hubSyncTimer = null;
 
@@ -152,7 +154,10 @@ export async function refreshData(silent = false) {
         lastData = data;
         hubConfig = data.hub_config ? JSON.parse(data.hub_config) : { url: '', secret: '' };
         offlineThresholdMinutes = data.offline_threshold || 10;
-        hubSyncIntervalSeconds = data.hub_sync_interval || 60;
+        hubSyncIntervalSeconds = parseInt(data.hub_sync_interval || "60");
+        telemetryThresholdCpu = parseFloat(data.telemetry_threshold_cpu || "2");
+        telemetryThresholdRam = parseFloat(data.telemetry_threshold_ram || "1");
+        isHubAutoSync = data.hub_auto_sync_enabled === 'true';
         
         renderUI(data);
         initHubWebSocket();
@@ -160,7 +165,10 @@ export async function refreshData(silent = false) {
         // Initialize Auto-Sync if enabled
         if (isHubAutoSync) {
             startHubAutoSync();
+        } else {
+            stopHubAutoSync();
         }
+        updateHubSyncUI();
 
         if (window.lucide) lucide.createIcons();
         if (connStatus) {
@@ -367,14 +375,8 @@ function renderHubSettings() {
                 </div>
                 
                 <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items: center;">
-                    <button class="btn btn-p" onclick="saveHubConfig()">Save Settings</button>
-                    <button class="btn btn-s" onclick="reconnectHub()">Force Poll (Sync)</button>
-                    <button class="btn btn-s" style="background:rgba(255,255,255,0.1); border:1px solid var(--glass-border);" id="btn-hub-auto-sync" onclick="toggleHubAutoSync()">
-                        ${isHubAutoSync ? 'Disable Auto-Sync' : 'Enable Auto-Sync'}
-                    </button>
-                    <div id="hub-sync-countdown" style="font-size: 0.85rem; opacity: 0.6; font-family: 'JetBrains Mono', monospace; ${isHubAutoSync ? '' : 'display:none;'}">
-                        Syncing in ${hubSyncCountdown}s
-                    </div>
+                    <button class="btn btn-p" onclick="saveHubConfig()">Save Hub Config</button>
+                    <button class="btn btn-s" onclick="reconnectHub()">Force Poll (Sync Now)</button>
                     <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); margin-left: auto;" onclick="testHubConnection()">Test Connection</button>
                 </div>
                 <div id="hub-test-log" class="hub-log-terminal" style="display:none;"></div>
@@ -505,6 +507,21 @@ function renderSystemSettings(data) {
                     </div>
                 </div>
 
+                <!-- Telemetry Filtering -->
+                <div style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-weight:600; font-size:0.95rem; margin-bottom: 1rem; color: var(--accent);">Telemetry Change Filtering</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-size:0.85rem; opacity:0.8;">CPU Threshold (%)</div>
+                            <input type="number" step="0.1" id="input-telemetry-cpu" class="btn-s" style="width:70px; text-align:center; background:rgba(0,0,0,0.1); border:1px solid var(--glass-border); color:white;" value="${telemetryThresholdCpu}">
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-size:0.85rem; opacity:0.8;">RAM Threshold (%)</div>
+                            <input type="number" step="0.1" id="input-telemetry-ram" class="btn-s" style="width:70px; text-align:center; background:rgba(0,0,0,0.1); border:1px solid var(--glass-border); color:white;" value="${telemetryThresholdRam}">
+                        </div>
+                    </div>
+                </div>
+
                 <div style="display:flex; justify-content: flex-end; margin-top: 0.5rem;">
                     <button class="btn btn-p" onclick="updateSystemSettings()">Save All Settings</button>
                 </div>
@@ -517,17 +534,24 @@ function renderSystemSettings(data) {
 export async function updateSystemSettings() {
     const offlineInp = document.getElementById('input-offline-threshold');
     const syncInp = document.getElementById('input-hub-sync-interval');
-    if (!offlineInp || !syncInp) return;
-
+    const cpuInp = document.getElementById('input-telemetry-cpu');
+    const ramInp = document.getElementById('input-telemetry-ram');
+    
+    if (!offlineInp || !syncInp || !cpuInp || !ramInp) return;
+ 
     const offlineVal = parseInt(offlineInp.value);
     const syncVal = parseInt(syncInp.value);
-
+    const cpuVal = parseFloat(cpuInp.value);
+    const ramVal = parseFloat(ramInp.value);
+ 
     if (isNaN(offlineVal) || offlineVal < 1) return alert("Invalid Offline Threshold");
     if (isNaN(syncVal) || syncVal < 5) return alert("Sync Interval must be at least 5 seconds");
-
+    if (isNaN(cpuVal) || cpuVal < 0) return alert("Invalid CPU Threshold");
+    if (isNaN(ramVal) || ramVal < 0) return alert("Invalid RAM Threshold");
+ 
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'block';
-
+ 
     try {
         await Promise.all([
             fetch(`/api/save?token=${TOKEN}`, {
@@ -539,17 +563,31 @@ export async function updateSystemSettings() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key: 'hub_sync_interval', value: syncVal.toString() })
+            }),
+            fetch(`/api/save?token=${TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'telemetry_threshold_cpu', value: cpuVal.toString() })
+            }),
+            fetch(`/api/save?token=${TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'telemetry_threshold_ram', value: ramVal.toString() })
             })
         ]);
         
         offlineThresholdMinutes = offlineVal;
         hubSyncIntervalSeconds = syncVal;
+        telemetryThresholdCpu = cpuVal;
+        telemetryThresholdRam = ramVal;
         
         if (isHubAutoSync) {
             hubSyncCountdown = Math.min(hubSyncCountdown, hubSyncIntervalSeconds);
             updateHubSyncUI();
+            // Prompt DO to pick up new interval by re-triggering poll
+            fetch(`/api/test-hub?token=${TOKEN}`).catch(() => {});
         }
-
+ 
         showToast("System settings updated!");
         refreshData();
     } catch (e) {
@@ -560,9 +598,18 @@ export async function updateSystemSettings() {
 }
 window.updateSystemSettings = updateSystemSettings;
 
-export function toggleHubAutoSync() {
+export async function toggleHubAutoSync() {
     isHubAutoSync = !isHubAutoSync;
-    localStorage.setItem(HUB_SYNC_ENABLED_KEY, isHubAutoSync.toString());
+    
+    // Persist to server
+    fetch(`/api/save?token=${TOKEN}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'hub_auto_sync_enabled', value: isHubAutoSync.toString() })
+    }).then(() => {
+        // Trigger immediate DO action to start/stop the alarm cycle
+        fetch(`/api/test-hub?token=${TOKEN}`).catch(() => {});
+    });
     
     if (isHubAutoSync) {
         startHubAutoSync();
@@ -593,6 +640,7 @@ function stopHubAutoSync() {
 }
 
 function updateHubSyncUI() {
+    // 1. Update Settings Tab elements (if they exist)
     const btn = document.getElementById('btn-hub-auto-sync');
     const txt = document.getElementById('hub-sync-countdown');
     if (btn) {
@@ -602,6 +650,25 @@ function updateHubSyncUI() {
     if (txt) {
         txt.style.display = isHubAutoSync ? 'block' : 'none';
         txt.innerText = `Syncing in ${hubSyncCountdown}s`;
+    }
+
+    // 2. Update Global Header indicator
+    const headerDot = document.getElementById('hub-sync-dot');
+    const headerTxt = document.getElementById('hub-sync-header-text');
+    const headerContainer = document.getElementById('hub-sync-indicator');
+
+    if (headerDot) {
+        headerDot.style.background = isHubAutoSync ? 'var(--success)' : 'var(--danger)';
+        if (isHubAutoSync) headerDot.classList.add('active'); // Pulse effect
+        else headerDot.classList.remove('active');
+    }
+
+    if (headerTxt) {
+        headerTxt.innerText = isHubAutoSync ? `Syncing: ${hubSyncCountdown}s` : 'Auto-Sync: Off';
+    }
+
+    if (headerContainer) {
+        headerContainer.style.borderColor = isHubAutoSync ? 'rgba(var(--accent-rgb), 0.4)' : 'var(--glass-border)';
     }
 }
 

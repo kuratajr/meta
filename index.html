@@ -76,6 +76,12 @@
                     <input type="text" id="table-search" placeholder="Search entries..."
                         oninput="handleSearch(this.value)">
                 </div>
+                <div class="live-indicator" id="hub-sync-indicator"
+                    style="cursor: pointer; background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: 2rem; border: 1px solid var(--glass-border);"
+                    onclick="toggleHubAutoSync()">
+                    <div class="live-dot" id="hub-sync-dot" style="background: var(--danger);"></div>
+                    <span id="hub-sync-header-text" style="font-size: 0.85rem; font-weight: 600;">Sync: Off</span>
+                </div>
                 <div class="live-indicator" id="live-indicator">
                     <div class="live-dot" id="live-dot"></div>
                     <span id="live-text">Live: Off</span>
@@ -522,7 +528,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-    <script type="module" src="./src/dashboard/main.js?v=4.7"></script>
+    <script type="module" src="./src/dashboard/main.js?v=4.8"></script>
 </body>
 
 </html>

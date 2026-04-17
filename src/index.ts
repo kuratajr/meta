@@ -88,9 +88,21 @@ export class HubConnector {
     }
 
     async alarm() {
-        await this.pollHub();
-        // Schedule next poll in 15 seconds
-        await this.state.storage.setAlarm(Date.now() + 15000);
+        // Read auto-sync status and interval from KV
+        const [autoSync, intervalStr] = await Promise.all([
+            this.env.CONFIG_KV.get('hub_auto_sync_enabled'),
+            this.env.CONFIG_KV.get('hub_sync_interval')
+        ]);
+
+        const interval = parseInt(intervalStr || "60");
+        
+        if (autoSync === 'true') {
+            await this.pollHub();
+            // Schedule next poll based on interval (convert seconds to ms)
+            await this.state.storage.setAlarm(Date.now() + (interval * 1000));
+        } else {
+            console.log("Hub Auto-Sync is disabled. Alarm stopped.");
+        }
     }
 
     async pollHub(configOverride?: any) {
@@ -116,7 +128,8 @@ export class HubConnector {
                     "X-Hub-Test": "true",
                     "X-Hub-Secret": secret,
                 },
-                redirect: 'follow'
+                redirect: 'follow',
+                signal: AbortSignal.timeout(15000)
             });
             
             const duration = `${Date.now() - start}ms`;
@@ -132,29 +145,37 @@ export class HubConnector {
             this.latestData = this.latestData || {}; 
             this.lastSaved = this.lastSaved || {};
 
-            // Get offline threshold for time-based sync (default 10m)
-            const thresholdMinutes = parseInt(await this.env.CONFIG_KV.get('offline_threshold') || "10");
-            const thresholdMs = thresholdMinutes * 60 * 1000;
+            // Fetch dynamic thresholds and keep-alive settings
+            const [offlineThresholdStr, thresholdCpuStr, thresholdRamStr] = await Promise.all([
+                this.env.CONFIG_KV.get('offline_threshold'),
+                this.env.CONFIG_KV.get('telemetry_threshold_cpu'),
+                this.env.CONFIG_KV.get('telemetry_threshold_ram')
+            ]);
+
+            const offlineThresholdMin = parseInt(offlineThresholdStr || "10");
+            const thresholdCpu = parseFloat(thresholdCpuStr || "2");
+            const thresholdRam = parseFloat(thresholdRamStr || "1");
+            const keepAliveMs = (offlineThresholdMin - 1) * 60 * 1000; // Update 1m before offline
             const now = Date.now();
+
+            // Ensure table and columns exist once per poll
+            await this.env.DB.prepare(`
+                CREATE TABLE IF NOT EXISTS node_status (
+                    hostname TEXT PRIMARY KEY,
+                    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    ip TEXT,
+                    cpu REAL,
+                    ram REAL,
+                    disk REAL,
+                    uptime TEXT
+                )
+            `).run();
+            try { await this.env.DB.prepare(`ALTER TABLE node_status ADD COLUMN disk REAL`).run(); } catch(e) {}
 
             let hasSignificantChanges = false;
             let syncCount = 0;
 
             for (const [hostname, info] of Object.entries(incoming)) {
-                // Ensure table and columns exist before each batch sync
-                await this.env.DB.prepare(`
-                    CREATE TABLE IF NOT EXISTS node_status (
-                        hostname TEXT PRIMARY KEY,
-                        last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        ip TEXT,
-                        cpu REAL,
-                        ram REAL,
-                        disk REAL,
-                        uptime TEXT
-                    )
-                `).run();
-                try { await this.env.DB.prepare(`ALTER TABLE node_status ADD COLUMN disk REAL`).run(); } catch(e) {}
-
                 const old = this.latestData[hostname];
                 const lastSavedTime = this.lastSaved[hostname] || 0;
                 
@@ -163,16 +184,14 @@ export class HubConnector {
                 if (!old) {
                     isSignificant = true; // New node
                 } else if (!isSignificant) {
-                    // 1. Time-based: If it's been too long since last D1 update
-                    if (now - lastSavedTime > thresholdMs) {
+                    // 1. Keep-Alive: Force update if near offline threshold
+                    if (now - lastSavedTime > keepAliveMs) {
                         isSignificant = true;
                     } 
-                    // 2. Telemetry thresholds: CPU > 2%, RAM > 1%, Disk > 1%
-                    else if (Math.abs((old.cpu || 0) - (info.cpu || 0)) > 2) {
+                    // 2. Custom Telemetry thresholds
+                    else if (Math.abs((old.cpu || 0) - (info.cpu || 0)) >= thresholdCpu) {
                         isSignificant = true;
-                    } else if (Math.abs((old.ram || 0) - (info.ram || 0)) > 1) {
-                        isSignificant = true;
-                    } else if (Math.abs((old.disk || 0) - (info.disk || 0)) > 1) {
+                    } else if (Math.abs((old.ram || 0) - (info.ram || 0)) >= thresholdRam) {
                         isSignificant = true;
                     }
                     // 3. Critical fields: IP change
@@ -183,7 +202,7 @@ export class HubConnector {
 
                 if (isSignificant) {
                     try {
-                        // Sync this specific node to D1
+                        // Ensure table exists (though usually handled at init)
                         await this.env.DB.prepare(`
                             INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -206,13 +225,13 @@ export class HubConnector {
 
                         hasSignificantChanges = true;
                         syncCount++;
-                        // Update baseline and timestamp
-                        this.latestData[hostname] = info;
                         this.lastSaved[hostname] = now;
                     } catch (dbErr: any) {
                         this.lastError = `D1 Error (${hostname}): ${dbErr.message}`;
                     }
                 }
+                // Always update the DO's in-memory telemetry for real-time broadcast
+                this.latestData[hostname] = info;
             }
 
             if (hasSignificantChanges) {
@@ -806,6 +825,10 @@ export default {
                 ips: ipsData ? JSON.parse(ipsData) : {},
                 hasGlobal: keys.includes('global'),
                 offline_threshold: offlineThresholdData ? parseInt(offlineThresholdData) : 10,
+                hub_auto_sync_enabled: await env.CONFIG_KV.get('hub_auto_sync_enabled') || 'false',
+                hub_sync_interval: await env.CONFIG_KV.get('hub_sync_interval') || '60',
+                telemetry_threshold_cpu: await env.CONFIG_KV.get('telemetry_threshold_cpu') || '2',
+                telemetry_threshold_ram: await env.CONFIG_KV.get('telemetry_threshold_ram') || '1',
                 hub_config: hubConfigData || null
             }), { headers: { "Content-Type": "application/json" } });
         }
