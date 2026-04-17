@@ -13,7 +13,13 @@ let nodeStatuses = {};
 let hubSocket = null;
 let currentStatusFilter = 'all';
 let offlineThresholdMinutes = 10;
+let hubSyncIntervalSeconds = 60;
 let hubConfig = { url: '', secret: '' };
+
+const HUB_SYNC_ENABLED_KEY = 'meta_hub_sync_enabled';
+let isHubAutoSync = localStorage.getItem(HUB_SYNC_ENABLED_KEY) === 'true';
+let hubSyncCountdown = 60;
+let hubSyncTimer = null;
 
 // File Manager global state
 const explorer = new FileExplorer('file-list');
@@ -145,8 +151,16 @@ export async function refreshData(silent = false) {
         const data = await res.json();
         lastData = data;
         hubConfig = data.hub_config ? JSON.parse(data.hub_config) : { url: '', secret: '' };
+        offlineThresholdMinutes = data.offline_threshold || 10;
+        hubSyncIntervalSeconds = data.hub_sync_interval || 60;
+        
         renderUI(data);
         initHubWebSocket();
+
+        // Initialize Auto-Sync if enabled
+        if (isHubAutoSync) {
+            startHubAutoSync();
+        }
 
         if (window.lucide) lucide.createIcons();
         if (connStatus) {
@@ -179,7 +193,6 @@ export function handleSearch(val) {
 }
 
 function renderUI(data) {
-    offlineThresholdMinutes = data.offline_threshold || 10;
     groupsData = data.groups || [];
     nodeMetadata = data.node_metadata || {};
     nodeStatuses = {};
@@ -313,10 +326,16 @@ function renderHubSettings() {
                     <input type="text" id="input-hub-full-url" placeholder="http://YOUR_HUB_IP:8080/nodes?secret=abc123" value="${hubConfig.url ? (hubConfig.url + (hubConfig.secret ? (hubConfig.url.includes('?') ? '&' : '?') + 'secret=' + hubConfig.secret : '')) : ''}">
                 </div>
                 
-                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items: center;">
                     <button class="btn btn-p" onclick="saveHubConfig()">Save Settings</button>
                     <button class="btn btn-s" onclick="reconnectHub()">Force Poll (Sync)</button>
-                    <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);" onclick="testHubConnection()">Test Connection</button>
+                    <button class="btn btn-s" style="background:rgba(255,255,255,0.1); border:1px solid var(--glass-border);" id="btn-hub-auto-sync" onclick="toggleHubAutoSync()">
+                        ${isHubAutoSync ? 'Disable Auto-Sync' : 'Enable Auto-Sync'}
+                    </button>
+                    <div id="hub-sync-countdown" style="font-size: 0.85rem; opacity: 0.6; font-family: 'JetBrains Mono', monospace; ${isHubAutoSync ? '' : 'display:none;'}">
+                        Syncing in ${hubSyncCountdown}s
+                    </div>
+                    <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); margin-left: auto;" onclick="testHubConnection()">Test Connection</button>
                 </div>
                 <div id="hub-test-log" class="hub-log-terminal" style="display:none;"></div>
             </div>
@@ -464,6 +483,12 @@ export async function reconnectHub() {
             logEl.scrollTop = logEl.scrollHeight;
         }
 
+        // Reset countdown if auto-sync is on to prevent double-poll
+        if (isHubAutoSync) {
+            hubSyncCountdown = hubSyncIntervalSeconds;
+            updateHubSyncUI();
+        }
+
         // Wait a bit for the DO to establish the Hub connection then retry WS
         setTimeout(() => initHubWebSocket(), 2000);
     } catch (e) {
@@ -485,15 +510,30 @@ function renderSystemSettings(data) {
         <div class="card" style="margin-top: 2rem;">
             <h3 style="margin-bottom:1.5rem; opacity:0.8; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="settings" style="width:1.2rem; height:1.2rem; color:var(--accent);"></i> System Settings</h3>
             <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <!-- Offline Threshold -->
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                     <div>
-                        <div style="font-weight:600; font-size:0.95rem;">Offline Threshold</div>
-                        <div style="font-size:0.8rem; opacity:0.6;">Minutes before a node is marked as offline.</div>
+                        <div style="font-weight:600; font-size:0.95rem;">Node Offline Threshold</div>
+                        <div style="font-size:0.8rem; opacity:0.6;">Minutes before a node is marked as offline in registry.</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.8rem;">
                         <input type="number" id="input-offline-threshold" class="btn-s" style="width:80px; text-align:center; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); color:white; padding:0.5rem; border-radius:0.5rem;" value="${offlineThresholdMinutes}">
-                        <button class="btn btn-p" onclick="updateOfflineThreshold()">Save</button>
                     </div>
+                </div>
+
+                <!-- Hub Sync Interval -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div>
+                        <div style="font-weight:600; font-size:0.95rem;">Hub Auto-Sync Interval</div>
+                        <div style="font-size:0.8rem; opacity:0.6;">Seconds between automatic hub polls.</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.8rem;">
+                        <input type="number" id="input-hub-sync-interval" class="btn-s" style="width:80px; text-align:center; background:rgba(0,0,0,0.2); border:1px solid var(--glass-border); color:white; padding:0.5rem; border-radius:0.5rem;" value="${hubSyncIntervalSeconds}">
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content: flex-end; margin-top: 0.5rem;">
+                    <button class="btn btn-p" onclick="updateSystemSettings()">Save All Settings</button>
                 </div>
             </div>
         </div>
@@ -501,39 +541,98 @@ function renderSystemSettings(data) {
     if (window.lucide) lucide.createIcons();
 }
 
-export async function updateOfflineThreshold() {
-    const input = document.getElementById('input-offline-threshold');
-    if (!input) return;
-    const val = parseInt(input.value);
-    if (isNaN(val) || val < 1) {
-        alert("Please enter a valid number of minutes (minimum 1).");
-        return;
-    }
+export async function updateSystemSettings() {
+    const offlineInp = document.getElementById('input-offline-threshold');
+    const syncInp = document.getElementById('input-hub-sync-interval');
+    if (!offlineInp || !syncInp) return;
+
+    const offlineVal = parseInt(offlineInp.value);
+    const syncVal = parseInt(syncInp.value);
+
+    if (isNaN(offlineVal) || offlineVal < 1) return alert("Invalid Offline Threshold");
+    if (isNaN(syncVal) || syncVal < 5) return alert("Sync Interval must be at least 5 seconds");
 
     const loader = document.getElementById('loader');
     if (loader) loader.style.display = 'block';
 
     try {
-        const res = await fetch(`/api/save?token=${TOKEN}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: 'offline_threshold', value: val.toString() })
-        });
-        const data = await res.json();
-        if (data.success) {
-            offlineThresholdMinutes = val;
-            alert("Threshold updated successfully!");
-            refreshData();
-        } else {
-            alert("Failed to update threshold: " + (data.error || "Unknown error"));
+        await Promise.all([
+            fetch(`/api/save?token=${TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'offline_threshold', value: offlineVal.toString() })
+            }),
+            fetch(`/api/save?token=${TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'hub_sync_interval', value: syncVal.toString() })
+            })
+        ]);
+        
+        offlineThresholdMinutes = offlineVal;
+        hubSyncIntervalSeconds = syncVal;
+        
+        if (isHubAutoSync) {
+            hubSyncCountdown = Math.min(hubSyncCountdown, hubSyncIntervalSeconds);
+            updateHubSyncUI();
         }
+
+        showToast("System settings updated!");
+        refreshData();
     } catch (e) {
         alert("Error: " + e.message);
     } finally {
         if (loader) loader.style.display = 'none';
     }
 }
-window.updateOfflineThreshold = updateOfflineThreshold;
+window.updateSystemSettings = updateSystemSettings;
+
+export function toggleHubAutoSync() {
+    isHubAutoSync = !isHubAutoSync;
+    localStorage.setItem(HUB_SYNC_ENABLED_KEY, isHubAutoSync.toString());
+    
+    if (isHubAutoSync) {
+        startHubAutoSync();
+    } else {
+        stopHubAutoSync();
+    }
+    updateHubSyncUI();
+}
+
+function startHubAutoSync() {
+    stopHubAutoSync();
+    hubSyncCountdown = hubSyncIntervalSeconds;
+    hubSyncTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            hubSyncCountdown--;
+            if (hubSyncCountdown <= 0) {
+                reconnectHub();
+                hubSyncCountdown = hubSyncIntervalSeconds;
+            }
+            updateHubSyncUI();
+        }
+    }, 1000);
+}
+
+function stopHubAutoSync() {
+    if (hubSyncTimer) clearInterval(hubSyncTimer);
+    hubSyncTimer = null;
+}
+
+function updateHubSyncUI() {
+    const btn = document.getElementById('btn-hub-auto-sync');
+    const txt = document.getElementById('hub-sync-countdown');
+    if (btn) {
+        btn.innerText = isHubAutoSync ? 'Disable Auto-Sync' : 'Enable Auto-Sync';
+        btn.style.background = isHubAutoSync ? 'rgba(var(--accent-rgb), 0.2)' : 'rgba(255,255,255,0.1)';
+    }
+    if (txt) {
+        txt.style.display = isHubAutoSync ? 'block' : 'none';
+        txt.innerText = `Syncing in ${hubSyncCountdown}s`;
+    }
+}
+
+window.toggleHubAutoSync = toggleHubAutoSync;
 
 function updateNodeTotals() {
     if (!lastData || !lastData.registry) return;
