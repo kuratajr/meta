@@ -309,18 +309,13 @@ function renderHubSettings() {
                 <div id="hub-connection-status" style="font-size:0.8rem; font-weight:700; color:var(--danger);">● HUB POLLING STOPPED</div>
                 
                 <div class="form-group">
-                    <label>Hub API URL (HTTP)</label>
-                    <input type="text" id="input-hub-url" placeholder="http://YOUR_HUB_IP:8080/nodes" value="${hubConfig.url || ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label>Hub Secret Key</label>
-                    <input type="password" id="input-hub-secret" placeholder="Secret for Cloudflare connection" value="${hubConfig.secret || ''}">
+                    <label>Full Hub API URL (with secret)</label>
+                    <input type="text" id="input-hub-full-url" placeholder="http://YOUR_HUB_IP:8080/nodes?secret=abc123" value="${hubConfig.url ? (hubConfig.url + (hubConfig.secret ? (hubConfig.url.includes('?') ? '&' : '?') + 'secret=' + hubConfig.secret : '')) : ''}">
                 </div>
                 
                 <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                    <button class="btn btn-p" onclick="saveHubConfig()">Save & Sync</button>
-                    <button class="btn btn-s" onclick="reconnectHub()">Force Poll</button>
+                    <button class="btn btn-p" onclick="saveHubConfig()">Save Settings</button>
+                    <button class="btn btn-s" onclick="reconnectHub()">Force Poll (Sync)</button>
                     <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);" onclick="testHubConnection()">Test Connection</button>
                 </div>
                 <div id="hub-test-log" style="font-size:0.75rem; font-family:monospace; background:rgba(0,0,0,0.3); padding:0.8rem; border-radius:0.5rem; display:none; white-space:pre-wrap; border:1px solid var(--glass-border); max-height: 200px; overflow-y: auto;"></div>
@@ -374,14 +369,29 @@ export async function testHubConnection() {
 }
 
 export async function saveHubConfig() {
-    const url = document.getElementById('input-hub-url').value.trim();
-    const secret = document.getElementById('input-hub-secret').value.trim();
+    const fullUrl = document.getElementById('input-hub-full-url').value.trim();
     
     const logEl = document.getElementById('hub-test-log');
     if (logEl) {
         logEl.style.display = 'block';
-        logEl.innerText = '● Saving configuration to KV...\n';
+        logEl.innerText = '● Processing synchronization settings...\n';
         logEl.style.borderColor = 'var(--glass-border)';
+    }
+
+    let url = fullUrl;
+    let secret = '';
+
+    try {
+        if (fullUrl) {
+            const urlObj = new URL(fullUrl);
+            secret = urlObj.searchParams.get('secret') || '';
+            // Remove secret from URL for storage cleanliness
+            urlObj.searchParams.delete('secret');
+            url = urlObj.origin + urlObj.pathname;
+            if (urlObj.search) url += urlObj.search;
+        }
+    } catch (e) {
+        // Not a valid URL, maybe just an IP/host, we'll try to use it as is
     }
 
     hubConfig = { url, secret };
@@ -391,7 +401,12 @@ export async function saveHubConfig() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key: 'hub_config', value: JSON.stringify(hubConfig) })
         });
-        if (logEl) logEl.innerText += '● Configuration saved successfully.\n';
+        if (logEl) {
+            logEl.innerText += '● Configuration saved successfully.\n';
+            logEl.innerText += '● Secret extracted: ' + (secret ? 'Yes' : 'No') + '\n';
+            logEl.innerText += '● Click "Force Poll (Sync)" to update data.\n';
+            logEl.style.borderColor = 'var(--success)';
+        }
     } catch (e) {
         if (logEl) {
             logEl.innerText += `● Save failed: ${e.message}\n`;
@@ -399,8 +414,6 @@ export async function saveHubConfig() {
         }
         return;
     }
-    
-    await reconnectHub();
 }
 
 export async function reconnectHub() {
