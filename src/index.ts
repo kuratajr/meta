@@ -16,7 +16,7 @@ export class HubConnector {
     env: Env;
     hubWs: WebSocket | null = null;
     sessions: Set<WebSocket> = new Set();
-    latestData: string = "{}";
+    latestData: Record<string, any> = {};
 
     constructor(state: DurableObjectState, env: Env) {
         this.state = state;
@@ -42,13 +42,13 @@ export class HubConnector {
     async setupHubConnection() {
         const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
         if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
-        let { url, secret } = JSON.parse(hubConfigStr);
+        const { url, secret } = JSON.parse(hubConfigStr);
 
         // Cloudflare fetch() requires http/https scheme even for WebSocket upgrades
-        url = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+        const targetUrl = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
 
         try {
-            const resp = await fetch(url, {
+            const resp = await fetch(targetUrl, {
                 headers: {
                     "Upgrade": "websocket",
                     "X-Hub-Secret": secret
@@ -61,8 +61,15 @@ export class HubConnector {
             this.hubWs = ws;
             
             ws.addEventListener("message", (msg) => {
-                this.latestData = msg.data as string;
-                this.broadcast(this.latestData);
+                try {
+                    const incoming = JSON.parse(msg.data as string);
+                    // Merge into state
+                    Object.assign(this.latestData, incoming);
+                    // Broadcast the update ONLY (efficient)
+                    this.broadcast(msg.data as string);
+                } catch (e) {
+                    console.error("HubConnector parse error:", e);
+                }
             });
 
             ws.addEventListener("close", () => {
@@ -81,8 +88,8 @@ export class HubConnector {
         ws.accept();
         this.sessions.add(ws);
         
-        // Send latest data immediately
-        ws.send(this.latestData);
+        // Send full latest data immediately to new sessions
+        ws.send(JSON.stringify(this.latestData));
 
         ws.addEventListener("close", () => {
             this.sessions.delete(ws);

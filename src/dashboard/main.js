@@ -269,13 +269,15 @@ function updateLiveTelemetry() {
             if (statusDot) statusDot.className = 'status-dot online';
         }
         
-        // Update CPU, RAM, Uptime
+        // Update CPU, RAM, Disk, Uptime
         const cpuEl = statsArea.querySelector('span[title="CPU Usage"]');
         const ramEl = statsArea.querySelector('span[title="RAM Usage"]');
+        const diskEl = statsArea.querySelector('span[title="Disk Usage"]');
         const uptimeEl = statsArea.querySelector('span[title="Uptime"]');
         
         if (cpuEl) cpuEl.innerHTML = `<i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(info.cpu).toFixed(2)}%`;
         if (ramEl) ramEl.innerHTML = `<i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(info.ram)}%`;
+        if (diskEl) diskEl.innerHTML = `<i data-lucide="hard-drive" style="width:11px;height:11px"></i> ${Math.round(info.disk || 0)}%`;
         if (uptimeEl) uptimeEl.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(info.uptime)}`;
     });
     if (window.lucide) lucide.createIcons();
@@ -447,6 +449,7 @@ function renderNodes(data) {
                     <div class="node-stats" style="font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; font-weight: 500;">
                         <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"><i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(statusInfo.cpu).toFixed(2)}%</span>
                         <span title="RAM Usage" style="color: #c084fc; display: flex; align-items: center; gap: 3px;"><i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(statusInfo.ram)}%</span>
+                        <span title="Disk Usage" style="color: #fbbf24; display: flex; align-items: center; gap: 3px;"><i data-lucide="hard-drive" style="width:11px;height:11px"></i> ${Math.round(statusInfo.disk || 0)}%</span>
                         ${statusInfo.uptime ? `<span title="Uptime" style="color: #10b981; display: flex; align-items: center; gap: 3px;"><i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(statusInfo.uptime)}</span>` : ''}
                     </div>
                 ` : ''}

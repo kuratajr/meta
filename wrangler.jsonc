@@ -33,7 +33,7 @@
 	},
 	"migrations": [
 		{
-			"tag": "v1",
+			"tag": "hub_v1_initial",
 			"new_classes": [
 				"HubConnector"
 			]
