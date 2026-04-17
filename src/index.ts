@@ -17,6 +17,7 @@ export class HubConnector {
     hubWs: WebSocket | null = null;
     sessions: Set<WebSocket> = new Set();
     latestData: Record<string, any> = {};
+    lastSaved: Record<string, number> = {}; // Unix timestamps of last D1 sync per node
     lastError: string | null = null;
 
     constructor(state: DurableObjectState, env: Env) {
@@ -24,8 +25,12 @@ export class HubConnector {
         this.env = env;
         // Load persisted state if any
         this.state.blockConcurrencyWhile(async () => {
-            const stored = await this.state.storage.get<Record<string, any>>("latestData");
-            if (stored) this.latestData = stored;
+            const [data, saved] = await Promise.all([
+                this.state.storage.get<Record<string, any>>("latestData"),
+                this.state.storage.get<Record<string, number>>("lastSaved")
+            ]);
+            if (data) this.latestData = data;
+            if (saved) this.lastSaved = saved;
         });
     }
 
@@ -112,19 +117,53 @@ export class HubConnector {
 
             const bodyText = await resp.text();
             const incoming: Record<string, any> = JSON.parse(bodyText);
-            this.lastError = null; // Clear error on success
-            
-            // Check for changes (simple string comparison for performance)
-            const incomingStr = JSON.stringify(incoming);
-            const latestStr = JSON.stringify(this.latestData);
+            this.lastError = null; 
 
-            if (incomingStr !== latestStr) {
-                // Merge into internal state
-                Object.assign(this.latestData, incoming);
-                await this.state.storage.put("latestData", this.latestData);
+            // Get offline threshold for time-based sync (default 10m)
+            const thresholdMinutes = parseInt(await this.env.CONFIG_KV.get('offline_threshold') || "10");
+            const thresholdMs = thresholdMinutes * 60 * 1000;
+            const now = Date.now();
 
-                // Sync to D1
-                for (const [hostname, info] of Object.entries(incoming)) {
+            let hasSignificantChanges = false;
+            let syncCount = 0;
+
+            for (const [hostname, info] of Object.entries(incoming)) {
+                const old = this.latestData[hostname];
+                const lastSavedTime = this.lastSaved[hostname] || 0;
+                
+                let isSignificant = false;
+                if (!old) {
+                    isSignificant = true; // New node
+                } else {
+                    // 1. Time-based: If it's been too long since last D1 update
+                    if (now - lastSavedTime > thresholdMs) {
+                        isSignificant = true;
+                    } 
+                    // 2. Telemetry thresholds: CPU > 2%, RAM > 1%, Disk > 1%
+                    else if (Math.abs((old.cpu || 0) - (info.cpu || 0)) > 2) {
+                        isSignificant = true;
+                    } else if (Math.abs((old.ram || 0) - (info.ram || 0)) > 1) {
+                        isSignificant = true;
+                    } else if (Math.abs((old.disk || 0) - (info.disk || 0)) > 1) {
+                        isSignificant = true;
+                    }
+                    // 3. Critical fields: IP change
+                    else if (old.ip !== info.ip) {
+                        isSignificant = true;
+                    }
+                    // 4. Status change: If it was previously marked differently (UI logic helper)
+                    // (last_seen is always updated in current batch, so we primarily check if stats moved)
+                }
+
+                if (isSignificant) {
+                    hasSignificantChanges = true;
+                    syncCount++;
+                    
+                    // Update baseline and timestamp
+                    this.latestData[hostname] = info;
+                    this.lastSaved[hostname] = now;
+
+                    // Sync this specific node to D1
                     await this.env.DB.prepare(`
                         INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -145,16 +184,24 @@ export class HubConnector {
                         info.uptime || ''
                     ).run();
                 }
-
-                // Broadcast change to browsers
-                this.broadcast(incomingStr);
             }
+
+            if (hasSignificantChanges) {
+                await Promise.all([
+                    this.state.storage.put("latestData", this.latestData),
+                    this.state.storage.put("lastSaved", this.lastSaved)
+                ]);
+            }
+
+            // Always broadcast to WS so UI is real-time even for minor changes
+            this.broadcast(bodyText);
 
             return { 
                 success: true, 
                 status: resp.status, 
                 target: target, 
                 count: Object.keys(incoming).length, 
+                synced: syncCount,
                 duration,
                 bodySnapshot: bodyText.substring(0, 500)
             };
