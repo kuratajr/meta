@@ -398,7 +398,12 @@ function updateNodeTotals() {
 
     hostnames.forEach(h => {
         const s = nodeStatuses[h];
-        const isOnline = s && (new Date() - new Date(s.last_seen.replace(' ', 'T') + 'Z') < offlineThresholdMinutes * 60 * 1000);
+        let isOnline = false;
+        if (s && s.last_seen) {
+            const lastSeenStr = s.last_seen.includes(' ') ? s.last_seen.replace(' ', 'T') + 'Z' : s.last_seen;
+            const lastSeenDate = new Date(lastSeenStr);
+            isOnline = (lastSeenDate && !isNaN(lastSeenDate) && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000));
+        }
         if (isOnline) online++;
         else offline++;
         previousStatuses[h] = isOnline;
@@ -439,9 +444,12 @@ function renderNodes(data) {
         groupsData.forEach(g => { groupItems += `<div class="custom-dropdown-item${g.config === currentGroup ? ' selected' : ''}" data-value="${g.config}" data-node="${h}" onclick="selectCustomDropdownItem(event)">${g.config}</div>`; });
 
         const statusInfo = nodeStatuses[h];
-        // D1 DATETIME is usually "YYYY-MM-DD HH:MM:SS" (UTC). Convert to JS Date.
-        const lastSeenDate = statusInfo ? new Date(statusInfo.last_seen.replace(' ', 'T') + 'Z') : null;
-        const isOnline = lastSeenDate && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000);
+        let isOnline = false;
+        if (statusInfo && statusInfo.last_seen) {
+            const lastSeenStr = statusInfo.last_seen.includes(' ') ? statusInfo.last_seen.replace(' ', 'T') + 'Z' : statusInfo.last_seen;
+            const lastSeenDate = new Date(lastSeenStr);
+            isOnline = (lastSeenDate && !isNaN(lastSeenDate) && (new Date() - lastSeenDate < offlineThresholdMinutes * 60 * 1000));
+        }
 
         html += `<tr data-status="${isOnline ? 'online' : 'offline'}">
             <td class="cell-hostname">

@@ -530,13 +530,14 @@ export default {
         }
 
         if (url.pathname === '/api/data' && request.method === 'GET') {
-            const [registryData, groupsMappingData, metaData, gcpConfigsData, allKeys, offlineThresholdData] = await Promise.all([
+            const [registryData, groupsMappingData, metaData, gcpConfigsData, allKeys, offlineThresholdData, hubConfigData] = await Promise.all([
                 env.CONFIG_KV.get('registry'),
                 env.CONFIG_KV.get('groups'),
                 env.CONFIG_KV.get('node_metadata'),
                 env.CONFIG_KV.get('gcp_configs'),
                 env.CONFIG_KV.list(),
-                env.CONFIG_KV.get('offline_threshold')
+                env.CONFIG_KV.get('offline_threshold'),
+                env.CONFIG_KV.get('hub_config')
             ]);
 
             // Fetch statuses from D1
@@ -565,7 +566,8 @@ export default {
                 templates, groupConfigs, nodeConfigs, certConfigs, cloudConfigs,
                 ips: ipsData ? JSON.parse(ipsData) : {},
                 hasGlobal: keys.includes('global'),
-                offline_threshold: offlineThresholdData ? parseInt(offlineThresholdData) : 10
+                offline_threshold: offlineThresholdData ? parseInt(offlineThresholdData) : 10,
+                hub_config: hubConfigData || null
             }), { headers: { "Content-Type": "application/json" } });
         }
 
