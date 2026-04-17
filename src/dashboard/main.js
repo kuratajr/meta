@@ -318,7 +318,7 @@ function renderHubSettings() {
                     <button class="btn btn-s" onclick="reconnectHub()">Force Poll (Sync)</button>
                     <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);" onclick="testHubConnection()">Test Connection</button>
                 </div>
-                <div id="hub-test-log" style="font-size:0.75rem; font-family:monospace; background:rgba(0,0,0,0.3); padding:0.8rem; border-radius:0.5rem; display:none; white-space:pre-wrap; border:1px solid var(--glass-border); max-height: 200px; overflow-y: auto;"></div>
+                <div id="hub-test-log" class="hub-log-terminal" style="display:none;"></div>
             </div>
         </div>
     `;

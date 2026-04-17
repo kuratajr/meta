@@ -2592,3 +2592,31 @@ body.terminal-active .file-manager-panel {
 .configs-list::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
 }
+
+.hub-log-terminal {
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Ubuntu Mono', monospace;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1rem;
+    border-radius: 1rem;
+    margin-top: 1rem;
+    white-space: pre-wrap;
+    border: 1px solid var(--glass-border);
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+}
+
+.hub-log-terminal::-webkit-scrollbar {
+    width: 6px;
+}
+
+.hub-log-terminal::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 10px;
+}
+
+.hub-log-terminal::-webkit-scrollbar-track {
+    background: transparent;
+}
