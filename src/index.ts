@@ -87,6 +87,8 @@ export class HubConnector {
             if (!hubConfigStr) return { success: false, error: "Hub config missing" };
             config = JSON.parse(hubConfigStr);
         }
+        const { url: hubUrl, secret } = config;
+
         // Literal copy of logic from /api/test-hub that works
         let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
         

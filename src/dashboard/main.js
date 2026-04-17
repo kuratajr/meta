@@ -451,7 +451,14 @@ export async function reconnectHub() {
 
     try {
         const resp = await fetch(`/api/reconnect-hub?token=${TOKEN}`);
-        const data = await resp.json();
+        let data;
+        const contentType = resp.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            data = await resp.json();
+        } else {
+            const text = await resp.text();
+            data = { success: false, error: text.substring(0, 200) };
+        }
         
         if (!resp.ok || !data.success) {
             const errorText = data.error || (data.status ? `Sync Error (${data.status})` : 'Unknown error');
