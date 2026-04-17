@@ -218,7 +218,7 @@ function initHubWebSocket() {
     if (hubSocket) hubSocket.close();
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/ws-hub`;
+    const wsUrl = `${protocol}//${window.location.host}/api/ws-hub?token=${TOKEN}`;
     
     hubSocket = new WebSocket(wsUrl);
     
