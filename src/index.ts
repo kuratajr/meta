@@ -55,7 +55,10 @@ export class HubConnector {
                 }
             });
             const ws = resp.webSocket;
-            if (!ws) return new Response("Failed to upgrade to WebSocket", { status: 500 });
+            if (!ws) {
+                const errorText = await resp.text();
+                return new Response(`Hub Connection Failed (${resp.status}): ${errorText || "Not a WebSocket endpoint"}`, { status: 500 });
+            }
 
             ws.accept();
             this.hubWs = ws;
