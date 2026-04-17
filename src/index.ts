@@ -91,35 +91,30 @@ export class HubConnector {
 
         // Literal copy of logic from /api/test-hub that works
         let target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
-        
-        // Robust URL normalization
         target = target.replace(/\/nodes$/, '').replace(/\/stream$/, '').replace(/\/$/, '');
         target += '/nodes';
-
         const separator = target.includes('?') ? '&' : '?';
-        const finalUrl = `${target}${separator}secret=${encodeURIComponent(secret)}`;
+        target += `${separator}secret=${encodeURIComponent(secret)}`;
 
         const start = Date.now();
         try {
-            const resp = await fetch(finalUrl, {
-                headers: { 
+            const resp = await fetch(target, {
+                headers: {
+                    "X-Hub-Test": "true",
                     "X-Hub-Secret": secret,
-                    "X-Hub-Sync": "true" 
                 },
-                redirect: 'follow', // Match Test Connection behavior
+                redirect: 'follow',
                 signal: AbortSignal.timeout(10000)
             });
             
             const duration = `${Date.now() - start}ms`;
+            const bodyText = await resp.text();
             
             if (!resp.ok) {
-                const err = await resp.text();
-                this.lastError = `Hub Error (${resp.status}): ${err}`;
-                console.error(this.lastError);
-                return { success: false, status: resp.status, error: err, target: target, duration };
+                this.lastError = `Hub Error (${resp.status}): ${bodyText.substring(0, 500)}`;
+                return { success: false, status: resp.status, error: bodyText, target: target, duration };
             }
 
-            const bodyText = await resp.text();
             const incoming: Record<string, any> = JSON.parse(bodyText);
             this.lastError = null; 
 
