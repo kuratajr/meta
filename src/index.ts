@@ -1,8 +1,4 @@
 /// <reference types="@cloudflare/workers-types" />
-// @ts-ignore
-declare const HTMLRewriter: any;
-// @ts-ignore
-declare const WebSocketPair: any;
 
 export interface Env {
     GITHUB_OWNER: string;
@@ -239,6 +235,10 @@ export default {
         const url = new URL(request.url);
         const hostname = url.searchParams.get('hostname');
 
+        const authHeader = request.headers.get('Authorization');
+        const queryToken = url.searchParams.get('token');
+        const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
+
         if (url.pathname === '/api/ws-hub') {
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
@@ -412,9 +412,7 @@ export default {
             }
         }
 
-        const authHeader = request.headers.get('Authorization');
-        const queryToken = url.searchParams.get('token');
-        const isAuthorized = (env.ADMIN_TOKEN && (authHeader === env.ADMIN_TOKEN || queryToken === env.ADMIN_TOKEN));
+
 
         if (url.pathname.startsWith('/terminal-proxy/')) {
             const parts = url.pathname.split('/');
