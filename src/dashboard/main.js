@@ -302,14 +302,56 @@ function renderHubSettings() {
                     <input type="password" id="input-hub-secret" placeholder="Secret for Cloudflare connection" value="${hubConfig.secret || ''}">
                 </div>
                 
-                <div style="display:flex; gap:1rem;">
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
                     <button class="btn btn-p" onclick="saveHubConfig()">Save & Connect</button>
                     <button class="btn btn-s" onclick="reconnectHub()">Force Reconnect</button>
+                    <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);" onclick="testHubConnection()">Test Connection</button>
                 </div>
+                <div id="hub-test-log" style="font-size:0.75rem; font-family:monospace; background:rgba(0,0,0,0.3); padding:0.8rem; border-radius:0.5rem; display:none; white-space:pre-wrap; border:1px solid var(--glass-border);"></div>
             </div>
         </div>
     `;
     if (window.lucide) lucide.createIcons();
+}
+
+export async function testHubConnection() {
+    const logEl = document.getElementById('hub-test-log');
+    if (!logEl) return;
+    
+    logEl.style.display = 'block';
+    logEl.innerText = 'Testing connectivity via Worker...\n';
+    logEl.style.borderColor = 'var(--glass-border)';
+    
+    try {
+        const res = await fetch(`/api/test-hub?token=${TOKEN}`);
+        const data = await res.json();
+        
+        let log = `Target: ${data.target}\n`;
+        log += `Status: ${data.status} ${data.statusText || ''}\n`;
+        log += `Duration: ${data.duration || 'N/A'}\n\n`;
+        
+        if (data.headers) {
+            log += `--- Response Headers ---\n`;
+            Object.keys(data.headers).forEach(k => {
+                log += `${k}: ${data.headers[k]}\n`;
+            });
+        }
+        
+        if (data.bodySnapshot) {
+            log += `\n--- Body Preview ---\n${data.bodySnapshot}\n`;
+        }
+        
+        if (data.error) {
+            log += `\nError: ${data.error}`;
+        }
+        
+        logEl.innerText = log;
+        logEl.style.borderColor = data.success ? 'var(--success)' : 'var(--danger)';
+        
+    } catch (e) {
+        logEl.innerText += `\nClient Error: ${e.message}`;
+        logEl.style.borderColor = 'var(--danger)';
+    }
 }
 
 export async function saveHubConfig() {

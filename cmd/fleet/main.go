@@ -90,8 +90,26 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 	}()
 
 	// 2. WebSocket Handler
-	http.HandleFunc("/stream", func(w http.ResponseWriter, r *http.Request) {
-		if hubSecret != "" && r.Header.Get("X-Hub-Secret") != hubSecret {
+	mux := http.NewServeMux()
+	
+	// Root handler for health check
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			log.Printf("404: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "Meta Hub Active\nNodes: %d\nTime: %s", len(nodes), time.Now().Format(time.RFC3339))
+	})
+
+	mux.HandleFunc("/stream", func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("X-Hub-Secret")
+		if token == "" {
+			token = r.URL.Query().Get("secret")
+		}
+
+		if hubSecret != "" && token != hubSecret {
 			log.Printf("Unauthorized connection attempt from %s", r.RemoteAddr)
 			http.Error(w, "Unauthorized", 401)
 			return
@@ -108,7 +126,7 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 
 		log.Printf("Dashboard Worker connected: %s", r.RemoteAddr)
 
-		// Send full initial state
+		// Send full latest data immediately
 		nodesMu.Lock()
 		initData, _ := json.Marshal(nodes)
 		nodesMu.Unlock()
@@ -124,6 +142,12 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 			}
 		}
 		ws.Close()
+	})
+
+	// Logging Middleware
+	logger := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+		mux.ServeHTTP(w, r)
 	})
 
 	// 3. Periodic Cleanup
@@ -150,7 +174,7 @@ func runHub(udpPort, httpPort, interval int, hubSecret, agentSecret string, debu
 		}
 	}()
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", httpPort), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", httpPort), logger))
 }
 
 func broadcastNode(info NodeInfo) {

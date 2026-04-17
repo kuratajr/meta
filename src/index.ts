@@ -55,19 +55,28 @@ export class HubConnector {
         const { url, secret } = JSON.parse(hubConfigStr);
 
         // Cloudflare fetch() requires http/https scheme even for WebSocket upgrades
-        const targetUrl = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+        let targetUrl = url.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+        
+        // Append secret as query param for robustness
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        targetUrl += `${separator}secret=${encodeURIComponent(secret)}`;
 
         try {
             const resp = await fetch(targetUrl, {
                 headers: {
                     "Upgrade": "websocket",
-                    "X-Hub-Secret": secret
+                    "X-Hub-Secret": secret // Keep header for backward compatibility
                 }
             });
             const ws = resp.webSocket;
             if (!ws) {
                 const errorText = await resp.text();
-                return new Response(`Hub Connection Failed (${resp.status}): ${errorText || "Not a WebSocket endpoint"}`, { status: 500 });
+                // Check if it's Cloudflare Error 1003 (Direct IP Access Forbidden)
+                let hint = "";
+                if (resp.status === 403 && errorText.includes("1003")) {
+                    hint = " Tip: Try using a hostname (e.g. .nip.io) instead of a direct IP.";
+                }
+                return new Response(`Hub Connection Failed (${resp.status}): ${errorText || "Not a WebSocket endpoint"}. Target: ${targetUrl}.${hint}`, { status: 500 });
             }
 
             ws.accept();
@@ -541,6 +550,41 @@ export default {
                 return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
             } catch (error: any) {
                 return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+            }
+        }
+
+        if (url.pathname === '/api/test-hub' && isAuthorized) {
+            const hubConfigStr = await env.CONFIG_KV.get('hub_config');
+            if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
+            const { url: hubUrl, secret } = JSON.parse(hubConfigStr);
+            const target = hubUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+
+            try {
+                const start = Date.now();
+                const resp = await fetch(target, {
+                    headers: { "X-Hub-Test": "true", "X-Hub-Secret": secret },
+                    redirect: 'follow'
+                });
+                const duration = Date.now() - start;
+                const body = await resp.text();
+                const headers: any = {};
+                resp.headers.forEach((v, k) => { headers[k] = v; });
+
+                return new Response(JSON.stringify({
+                    success: resp.ok,
+                    status: resp.status,
+                    statusText: resp.statusText,
+                    duration: `${duration}ms`,
+                    target: target,
+                    headers: headers,
+                    bodySnapshot: body.substring(0, 500)
+                }), { headers: { "Content-Type": "application/json" } });
+            } catch (e: any) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: e.message,
+                    target: target
+                }), { status: 500, headers: { "Content-Type": "application/json" } });
             }
         }
 
