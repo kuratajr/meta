@@ -12,6 +12,93 @@ export interface Env {
     CONFIG_KV: KVNamespace; // Binding for Cloudflare KV
     DB: any;          // Binding for Cloudflare D1 (SQL)
     ADMIN_TOKEN?: string;   // Optional admin token for dashboard
+    HUB_CONNECTOR: DurableObjectNamespace;
+}
+
+export class HubConnector {
+    state: DurableObjectState;
+    env: Env;
+    hubWs: WebSocket | null = null;
+    sessions: Set<WebSocket> = new Set();
+    latestData: string = "{}";
+
+    constructor(state: DurableObjectState, env: Env) {
+        this.state = state;
+        this.env = env;
+    }
+
+    async fetch(request: Request) {
+        const url = new URL(request.url);
+        if (url.pathname === "/connect-hub") {
+            return this.setupHubConnection();
+        }
+
+        if (request.headers.get("Upgrade") === "websocket") {
+            const pair = new WebSocketPair();
+            const [client, server] = Object.values(pair);
+            this.handleSession(server);
+            return new Response(null, { status: 101, webSocket: client });
+        }
+
+        return new Response("HubConnector active", { status: 200 });
+    }
+
+    async setupHubConnection() {
+        const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
+        if (!hubConfigStr) return new Response("Hub config missing", { status: 400 });
+        const { url, secret } = JSON.parse(hubConfigStr);
+
+        try {
+            const resp = await fetch(url, {
+                headers: {
+                    "Upgrade": "websocket",
+                    "X-Hub-Secret": secret
+                }
+            });
+            const ws = resp.webSocket;
+            if (!ws) return new Response("Failed to upgrade to WebSocket", { status: 500 });
+
+            ws.accept();
+            this.hubWs = ws;
+            
+            ws.addEventListener("message", (msg) => {
+                this.latestData = msg.data as string;
+                this.broadcast(this.latestData);
+            });
+
+            ws.addEventListener("close", () => {
+                this.hubWs = null;
+                // Auto-reconnect after 5s
+                setTimeout(() => this.setupHubConnection(), 5000);
+            });
+
+            return new Response("Connected to Hub", { status: 200 });
+        } catch (e: any) {
+            return new Response("Hub Connection Error: " + e.message, { status: 500 });
+        }
+    }
+
+    handleSession(ws: WebSocket) {
+        ws.accept();
+        this.sessions.add(ws);
+        
+        // Send latest data immediately
+        ws.send(this.latestData);
+
+        ws.addEventListener("close", () => {
+            this.sessions.delete(ws);
+        });
+    }
+
+    broadcast(data: string) {
+        for (const session of this.sessions) {
+            try {
+                session.send(data);
+            } catch (e) {
+                this.sessions.delete(session);
+            }
+        }
+    }
 }
 
 async function recordLog(env: Env, msg: string, node?: string) {
@@ -151,6 +238,18 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
         const hostname = url.searchParams.get('hostname');
+
+        if (url.pathname === '/api/ws-hub') {
+            const id = env.HUB_CONNECTOR.idFromName("global");
+            const stub = env.HUB_CONNECTOR.get(id);
+            return stub.fetch(request);
+        }
+
+        if (url.pathname === '/api/reconnect-hub' && isAuthorized) {
+            const id = env.HUB_CONNECTOR.idFromName("global");
+            const stub = env.HUB_CONNECTOR.get(id);
+            return stub.fetch(new Request(`${url.origin}/connect-hub`));
+        }
 
         if (url.pathname === '/' && request.method === 'GET') {
             const html = await fetchGithubFile('index.html', env, false);

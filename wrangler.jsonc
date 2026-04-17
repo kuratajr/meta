@@ -23,6 +23,22 @@
 	"observability": {
 		"enabled": true
 	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "HUB_CONNECTOR",
+				"class_name": "HubConnector"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": [
+				"HubConnector"
+			]
+		}
+	],
 	"rules": [
 		{
 			"type": "Text",

@@ -10,8 +10,10 @@ let currentSearch = '';
 let nodeMetadata = {};
 let previousStatuses = {};
 let nodeStatuses = {}; 
+let hubSocket = null;
 let currentStatusFilter = 'all';
 let offlineThresholdMinutes = 10;
+let hubConfig = { url: '', secret: '' };
 
 // File Manager global state
 const explorer = new FileExplorer('file-list');
@@ -140,7 +142,9 @@ export async function refreshData() {
         const res = await fetch(`/api/data?token=${TOKEN}`);
         const data = await res.json();
         lastData = data;
+        hubConfig = data.hub_config ? JSON.parse(data.hub_config) : { url: '', secret: '' };
         renderUI(data);
+        initHubWebSocket();
 
         if (window.lucide) lucide.createIcons();
         if (connStatus) {
@@ -205,8 +209,126 @@ function renderUI(data) {
     }
 
     renderSystemSettings(data);
+    renderHubSettings();
 
     if (window.lucide) lucide.createIcons();
+}
+
+function initHubWebSocket() {
+    if (hubSocket) hubSocket.close();
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/ws-hub`;
+    
+    hubSocket = new WebSocket(wsUrl);
+    
+    hubSocket.onopen = () => {
+        updateHubStatusUI(true);
+    };
+    
+    hubSocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            // Data is a map of hostname -> NodeInfo
+            Object.keys(data).forEach(h => {
+                nodeStatuses[h] = data[h];
+            });
+            updateNodeTotals();
+            updateLiveTelemetry();
+        } catch (e) {
+            console.error("Hub WS Error:", e);
+        }
+    };
+    
+    hubSocket.onclose = () => {
+        updateHubStatusUI(false);
+        // Retry connection every 10s
+        setTimeout(() => initHubWebSocket(), 10000);
+    };
+}
+
+function updateHubStatusUI(connected) {
+    const el = document.getElementById('hub-connection-status');
+    if (!el) return;
+    el.innerText = connected ? '● HUB CONNECTED' : '● HUB DISCONNECTED';
+    el.style.color = connected ? 'var(--success)' : 'var(--danger)';
+}
+
+function updateLiveTelemetry() {
+    // Efficiently update visible telemetry
+    const activeSection = document.querySelector('.section.active');
+    if (!activeSection || activeSection.id !== 'section-nodes') return;
+    
+    Object.keys(nodeStatuses).forEach(h => {
+        const statsArea = document.querySelector(`tr[data-node="${h}"] .node-stats`);
+        if (!statsArea) return;
+        
+        const info = nodeStatuses[h];
+        if (info.last_seen) {
+            const statusDot = document.querySelector(`tr[data-node="${h}"] .status-dot`);
+            if (statusDot) statusDot.className = 'status-dot online';
+        }
+        
+        // Update CPU, RAM, Uptime
+        const cpuEl = statsArea.querySelector('span[title="CPU Usage"]');
+        const ramEl = statsArea.querySelector('span[title="RAM Usage"]');
+        const uptimeEl = statsArea.querySelector('span[title="Uptime"]');
+        
+        if (cpuEl) cpuEl.innerHTML = `<i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(info.cpu).toFixed(2)}%`;
+        if (ramEl) ramEl.innerHTML = `<i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(info.ram)}%`;
+        if (uptimeEl) uptimeEl.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(info.uptime)}`;
+    });
+    if (window.lucide) lucide.createIcons();
+}
+
+function renderHubSettings() {
+    const area = document.getElementById('hub-settings-area');
+    if (!area) return;
+    area.innerHTML = `
+        <div class="card" style="margin-top: 1.5rem;">
+            <h3 style="margin-bottom:1.5rem; opacity:0.8; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="share-2" style="width:1.2rem; height:1.2rem; color:var(--accent);"></i> Real-time WebSocket Hub</h3>
+            <div style="display:flex; flex-direction:column; gap:1.2rem;">
+                <div id="hub-connection-status" style="font-size:0.8rem; font-weight:700; color:var(--danger);">● HUB DISCONNECTED</div>
+                
+                <div class="form-group">
+                    <label>Hub WebSocket URL</label>
+                    <input type="text" id="input-hub-url" placeholder="ws://YOUR_HUB_IP:8080/stream" value="${hubConfig.url || ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label>Hub Secret Key</label>
+                    <input type="password" id="input-hub-secret" placeholder="Secret for Cloudflare connection" value="${hubConfig.secret || ''}">
+                </div>
+                
+                <div style="display:flex; gap:1rem;">
+                    <button class="btn btn-p" onclick="saveHubConfig()">Save & Connect</button>
+                    <button class="btn btn-s" onclick="reconnectHub()">Force Reconnect</button>
+                </div>
+            </div>
+        </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+}
+
+export async function saveHubConfig() {
+    const url = document.getElementById('input-hub-url').value;
+    const secret = document.getElementById('input-hub-secret').value;
+    
+    hubConfig = { url, secret };
+    await fetch(`/api/save?token=${TOKEN}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'hub_config', value: JSON.stringify(hubConfig) })
+    });
+    
+    await reconnectHub();
+}
+
+export async function reconnectHub() {
+    updateHubStatusUI(false);
+    await fetch(`/api/reconnect-hub?token=${TOKEN}`);
+    // Wait a bit then retry WS
+    setTimeout(() => initHubWebSocket(), 2000);
 }
 
 function renderSystemSettings(data) {
