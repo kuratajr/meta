@@ -317,6 +317,7 @@ function updateLiveTelemetry() {
         if (!row) return;
 
         const info = nodeStatuses[h];
+        if (!info) return;
         const isOnline = isNodeOnline(info);
         
         // Update Status Dot and Row Attribute
@@ -324,7 +325,24 @@ function updateLiveTelemetry() {
         if (statusDot) statusDot.className = `status-dot ${isOnline ? 'online' : 'offline'}`;
         row.setAttribute('data-status', isOnline ? 'online' : 'offline');
 
-        const statsArea = row.querySelector('.node-stats');
+        let statsArea = row.querySelector('.node-stats');
+        const hostnameCell = row.querySelector('.cell-hostname');
+        
+        // If data exists but UI container is missing, create it on the fly
+        if (!statsArea && hostnameCell && info.cpu !== null) {
+            statsArea = document.createElement('div');
+            statsArea.className = 'node-stats';
+            statsArea.style = "font-size: 0.7rem; margin-bottom: 4px; display: flex; gap: 8px; flex-wrap: wrap; font-weight: 500;";
+            statsArea.innerHTML = `
+                <span title="CPU Usage" style="color: #38bdf8; display: flex; align-items: center; gap: 3px;"></span>
+                <span title="RAM Usage" style="color: #c084fc; display: flex; align-items: center; gap: 3px;"></span>
+                <span title="Disk Usage" style="color: #fbbf24; display: flex; align-items: center; gap: 3px;"></span>
+                <span title="Uptime" style="color: #10b981; display: flex; align-items: center; gap: 3px;"></span>
+            `;
+            // Insert at the top of the hostname cell
+            hostnameCell.insertBefore(statsArea, hostnameCell.firstChild);
+        }
+
         if (!statsArea) return;
         
         // Update CPU, RAM, Disk, Uptime
@@ -336,7 +354,14 @@ function updateLiveTelemetry() {
         if (cpuEl) cpuEl.innerHTML = `<i data-lucide="cpu" style="width:11px;height:11px"></i> ${Number(info.cpu).toFixed(2)}%`;
         if (ramEl) ramEl.innerHTML = `<i data-lucide="database" style="width:11px;height:11px"></i> ${Math.round(info.ram)}%`;
         if (diskEl) diskEl.innerHTML = `<i data-lucide="hard-drive" style="width:11px;height:11px"></i> ${Math.round(info.disk || 0)}%`;
-        if (uptimeEl) uptimeEl.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(info.uptime)}`;
+        if (uptimeEl) {
+            if (info.uptime) {
+                uptimeEl.style.display = 'flex';
+                uptimeEl.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px"></i> ${formatUptime(info.uptime)}`;
+            } else {
+                uptimeEl.style.display = 'none';
+            }
+        }
     });
     if (window.lucide) lucide.createIcons();
 }
@@ -624,10 +649,11 @@ function startHubAutoSync() {
     hubSyncCountdown = hubSyncIntervalSeconds;
     hubSyncTimer = setInterval(() => {
         if (document.visibilityState === 'visible') {
-            hubSyncCountdown--;
             if (hubSyncCountdown <= 0) {
                 reconnectHub();
                 hubSyncCountdown = hubSyncIntervalSeconds;
+            } else {
+                hubSyncCountdown--;
             }
             updateHubSyncUI();
         }
@@ -673,6 +699,16 @@ function updateHubSyncUI() {
 }
 
 window.toggleHubAutoSync = toggleHubAutoSync;
+
+export async function reconnectHub() {
+    try {
+        // Silently trigger backend DO to poll Hub VPS immediately
+        await fetch(`/api/test-hub?token=${TOKEN}`);
+    } catch (e) {
+        console.error("Auto-Sync trigger failed:", e);
+    }
+}
+window.reconnectHub = reconnectHub;
 
 function updateNodeTotals() {
     if (!lastData || !lastData.registry) return;
