@@ -323,7 +323,7 @@ function renderHubSettings() {
                     <button class="btn btn-s" onclick="reconnectHub()">Force Poll</button>
                     <button class="btn btn-s" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);" onclick="testHubConnection()">Test Connection</button>
                 </div>
-                <div id="hub-test-log" style="font-size:0.75rem; font-family:monospace; background:rgba(0,0,0,0.3); padding:0.8rem; border-radius:0.5rem; display:none; white-space:pre-wrap; border:1px solid var(--glass-border);"></div>
+                <div id="hub-test-log" style="font-size:0.75rem; font-family:monospace; background:rgba(0,0,0,0.3); padding:0.8rem; border-radius:0.5rem; display:none; white-space:pre-wrap; border:1px solid var(--glass-border); max-height: 200px; overflow-y: auto;"></div>
             </div>
         </div>
     `;
@@ -364,10 +364,12 @@ export async function testHubConnection() {
         
         logEl.innerText = log;
         logEl.style.borderColor = data.success ? 'var(--success)' : 'var(--danger)';
+        logEl.scrollTop = logEl.scrollHeight;
         
     } catch (e) {
         logEl.innerText += `\nClient Error: ${e.message}`;
         logEl.style.borderColor = 'var(--danger)';
+        logEl.scrollTop = logEl.scrollHeight;
     }
 }
 
@@ -375,40 +377,90 @@ export async function saveHubConfig() {
     const url = document.getElementById('input-hub-url').value.trim();
     const secret = document.getElementById('input-hub-secret').value.trim();
     
+    const logEl = document.getElementById('hub-test-log');
+    if (logEl) {
+        logEl.style.display = 'block';
+        logEl.innerText = '● Saving configuration to KV...\n';
+        logEl.style.borderColor = 'var(--glass-border)';
+    }
+
     hubConfig = { url, secret };
-    await fetch(`/api/save?token=${TOKEN}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'hub_config', value: JSON.stringify(hubConfig) })
-    });
+    try {
+        await fetch(`/api/save?token=${TOKEN}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'hub_config', value: JSON.stringify(hubConfig) })
+        });
+        if (logEl) logEl.innerText += '● Configuration saved successfully.\n';
+    } catch (e) {
+        if (logEl) {
+            logEl.innerText += `● Save failed: ${e.message}\n`;
+            logEl.style.borderColor = 'var(--danger)';
+        }
+        return;
+    }
     
     await reconnectHub();
 }
 
 export async function reconnectHub() {
     const statusEl = document.getElementById('hub-connection-status');
+    const logEl = document.getElementById('hub-test-log');
+
     if (statusEl) {
         statusEl.innerText = '● CONNECTING...';
         statusEl.style.color = 'var(--accent)';
     }
+    
+    if (logEl) {
+        if (logEl.style.display === 'none') logEl.style.display = 'block';
+        logEl.innerText += '● Triggering Hub Sync & Reconnect...\n';
+    }
 
     try {
         const resp = await fetch(`/api/reconnect-hub?token=${TOKEN}`);
-        if (!resp.ok) {
-            const errorText = await resp.text();
+        const data = await resp.json();
+        
+        if (!resp.ok || !data.success) {
+            const errorText = data.error || (data.status ? `Sync Error (${data.status})` : 'Unknown error');
             if (statusEl) {
                 statusEl.innerText = `● ERROR: ${errorText}`;
                 statusEl.style.color = 'var(--danger)';
             }
+            if (logEl) {
+                logEl.innerText += `● Sync Failed: ${errorText}\n`;
+                if (data.target) logEl.innerText += `Target: ${data.target}\n`;
+                logEl.style.borderColor = 'var(--danger)';
+            }
             return;
         }
         
+        if (logEl) {
+            let log = `● Hub Synchronized Successfully!\n`;
+            log += `Target: ${data.target}\n`;
+            log += `Status: ${data.status} OK\n`;
+            log += `Nodes found: ${data.count}\n`;
+            log += `Latency: ${data.duration}\n\n`;
+            
+            if (data.bodySnapshot) {
+                log += `--- Data Preview ---\n${data.bodySnapshot}\n`;
+            }
+            logEl.innerText += log;
+            logEl.style.borderColor = 'var(--success)';
+            // Auto scroll to bottom
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
         // Wait a bit for the DO to establish the Hub connection then retry WS
         setTimeout(() => initHubWebSocket(), 2000);
     } catch (e) {
         if (statusEl) {
             statusEl.innerText = `● ERROR: ${e.message}`;
             statusEl.style.color = 'var(--danger)';
+        }
+        if (logEl) {
+            logEl.innerText += `● Error: ${e.message}\n`;
+            logEl.style.borderColor = 'var(--danger)';
         }
     }
 }

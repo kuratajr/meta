@@ -37,13 +37,16 @@ export class HubConnector {
             if (request.method === "POST") {
                 try { configOverride = await request.json(); } catch (e) {}
             }
-            await this.pollHub(configOverride);
+            const result = await this.pollHub(configOverride);
             // Schedule regular alarms for polling
             const currentAlarm = await this.state.storage.getAlarm();
             if (currentAlarm === null) {
                 await this.state.storage.setAlarm(Date.now() + 10000);
             }
-            return new Response("Hub polling initialized", { status: 200 });
+            return new Response(JSON.stringify(result), { 
+                status: 200, 
+                headers: { "Content-Type": "application/json" } 
+            });
         }
 
         if (url.pathname.endsWith("/latest")) {
@@ -76,7 +79,7 @@ export class HubConnector {
         let config = configOverride;
         if (!config) {
             const hubConfigStr = await this.env.CONFIG_KV.get('hub_config');
-            if (!hubConfigStr) return;
+            if (!hubConfigStr) return { success: false, error: "Hub config missing" };
             config = JSON.parse(hubConfigStr);
         }
         const { url: hubUrl, secret } = config;
@@ -89,22 +92,26 @@ export class HubConnector {
         target += '/nodes';
         
         const separator = target.includes('?') ? '&' : '?';
-        target += `${separator}secret=${encodeURIComponent(secret)}`;
+        const finalUrl = `${target}${separator}secret=${encodeURIComponent(secret)}`;
 
+        const start = Date.now();
         try {
-            const resp = await fetch(target, {
+            const resp = await fetch(finalUrl, {
                 headers: { "X-Hub-Secret": secret },
                 signal: AbortSignal.timeout(10000)
             });
+            
+            const duration = `${Date.now() - start}ms`;
             
             if (!resp.ok) {
                 const err = await resp.text();
                 this.lastError = `Hub Error (${resp.status}): ${err}`;
                 console.error(this.lastError);
-                return;
+                return { success: false, status: resp.status, error: err, target: target, duration };
             }
 
-            const incoming: Record<string, any> = await resp.json();
+            const bodyText = await resp.text();
+            const incoming: Record<string, any> = JSON.parse(bodyText);
             this.lastError = null; // Clear error on success
             
             // Check for changes (simple string comparison for performance)
@@ -142,9 +149,20 @@ export class HubConnector {
                 // Broadcast change to browsers
                 this.broadcast(incomingStr);
             }
+
+            return { 
+                success: true, 
+                status: resp.status, 
+                target: target, 
+                count: Object.keys(incoming).length, 
+                duration,
+                bodySnapshot: bodyText.substring(0, 500)
+            };
+
         } catch (e: any) {
             this.lastError = `Network Error: ${e.message}`;
             console.error("HubConnector poll error:", e.message);
+            return { success: false, error: e.message, target: target, duration: `${Date.now() - start}ms` };
         }
     }
 
@@ -328,10 +346,14 @@ export default {
             const hubConfigStr = await env.CONFIG_KV.get('hub_config');
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
-            return stub.fetch(new Request("http://hub/connect-hub", {
+            const resp = await stub.fetch(new Request("http://hub/connect-hub", {
                 method: "POST",
                 body: hubConfigStr
             }));
+            return new Response(resp.body, { 
+                status: resp.status, 
+                headers: { "Content-Type": "application/json" } 
+            });
         }
 
         if (url.pathname === '/' && request.method === 'GET') {
