@@ -15,6 +15,7 @@ export class HubConnector {
     state: DurableObjectState;
     env: Env;
     hubWs: WebSocket | null = null;
+    sessions: Set<WebSocket> = new Set();
     latestData: Record<string, any> = {};
 
     constructor(state: DurableObjectState, env: Env) {
@@ -48,6 +49,13 @@ export class HubConnector {
             return new Response(JSON.stringify(this.latestData), { 
                 headers: { "Content-Type": "application/json" } 
             });
+        }
+
+        if (request.headers.get("Upgrade") === "websocket") {
+            const pair = new WebSocketPair();
+            const [client, server] = Object.values(pair);
+            this.handleSession(server);
+            return new Response(null, { status: 101, webSocket: client });
         }
 
         return new Response(`HubConnector active. Path: ${url.pathname}`, { status: 200 });
@@ -89,34 +97,63 @@ export class HubConnector {
 
             const incoming: Record<string, any> = await resp.json();
             
-            // Merge into internal state
-            Object.assign(this.latestData, incoming);
-            await this.state.storage.put("latestData", this.latestData);
+            // Check for changes (simple string comparison for performance)
+            const incomingStr = JSON.stringify(incoming);
+            const latestStr = JSON.stringify(this.latestData);
 
-            // Sync to D1
-            for (const [hostname, info] of Object.entries(incoming)) {
-                await this.env.DB.prepare(`
-                    INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(hostname) DO UPDATE SET
-                        last_seen = excluded.last_seen,
-                        ip = excluded.ip,
-                        cpu = excluded.cpu,
-                        ram = excluded.ram,
-                        disk = excluded.disk,
-                        uptime = excluded.uptime
-                `).bind(
-                    hostname,
-                    info.last_seen || new Date().toISOString(),
-                    info.ip || '',
-                    info.cpu || 0,
-                    info.ram || 0,
-                    info.disk || 0,
-                    info.uptime || ''
-                ).run();
+            if (incomingStr !== latestStr) {
+                // Merge into internal state
+                Object.assign(this.latestData, incoming);
+                await this.state.storage.put("latestData", this.latestData);
+
+                // Sync to D1
+                for (const [hostname, info] of Object.entries(incoming)) {
+                    await this.env.DB.prepare(`
+                        INSERT INTO node_status (hostname, last_seen, ip, cpu, ram, disk, uptime)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(hostname) DO UPDATE SET
+                            last_seen = excluded.last_seen,
+                            ip = excluded.ip,
+                            cpu = excluded.cpu,
+                            ram = excluded.ram,
+                            disk = excluded.disk,
+                            uptime = excluded.uptime
+                    `).bind(
+                        hostname,
+                        info.last_seen || new Date().toISOString(),
+                        info.ip || '',
+                        info.cpu || 0,
+                        info.ram || 0,
+                        info.disk || 0,
+                        info.uptime || ''
+                    ).run();
+                }
+
+                // Broadcast change to browsers
+                this.broadcast(incomingStr);
             }
         } catch (e: any) {
             console.error("HubConnector poll error:", e.message);
+        }
+    }
+
+    handleSession(ws: WebSocket) {
+        ws.accept();
+        this.sessions.add(ws);
+        // Send current snapshot immediately
+        ws.send(JSON.stringify(this.latestData));
+        ws.addEventListener("close", () => {
+            this.sessions.delete(ws);
+        });
+    }
+
+    broadcast(data: string) {
+        for (const session of this.sessions) {
+            try {
+                session.send(data);
+            } catch (e) {
+                this.sessions.delete(session);
+            }
         }
     }
 }
@@ -266,7 +303,9 @@ export default {
         if (url.pathname === '/api/ws-hub') {
             const id = env.HUB_CONNECTOR.idFromName("global");
             const stub = env.HUB_CONNECTOR.get(id);
-            // Return latest data from DO memory
+            if (request.headers.get("Upgrade") === "websocket") {
+                return stub.fetch(request);
+            }
             const resp = await stub.fetch(new Request("http://hub/latest"));
             return new Response(resp.body, { headers: { "Content-Type": "application/json" } });
         }

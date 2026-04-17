@@ -10,6 +10,7 @@ let currentSearch = '';
 let nodeMetadata = {};
 let previousStatuses = {};
 let nodeStatuses = {}; 
+let hubSocket = null;
 let currentStatusFilter = 'all';
 let offlineThresholdMinutes = 10;
 let hubConfig = { url: '', secret: '' };
@@ -145,7 +146,7 @@ export async function refreshData(silent = false) {
         lastData = data;
         hubConfig = data.hub_config ? JSON.parse(data.hub_config) : { url: '', secret: '' };
         renderUI(data);
-        startHubPolling();
+        initHubWebSocket();
 
         if (window.lucide) lucide.createIcons();
         if (connStatus) {
@@ -215,23 +216,43 @@ function renderUI(data) {
     if (window.lucide) lucide.createIcons();
 }
 
-function startHubPolling() {
-    if (window.hubPollInterval) return; // Already running
+function initHubWebSocket() {
+    if (hubSocket && hubSocket.readyState === WebSocket.OPEN) return;
+    if (hubSocket) hubSocket.close();
     
     updateHubStatusUI(true);
     
-    window.hubPollInterval = setInterval(() => {
-        // optimization: skip poll if document is hidden
-        if (document.hidden) return;
-        refreshData(true);
-    }, 15000);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/ws-hub?token=${TOKEN}`;
+    
+    hubSocket = new WebSocket(wsUrl);
+    
+    hubSocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            // Data is a map of hostname -> NodeInfo
+            Object.keys(data).forEach(h => {
+                nodeStatuses[h] = data[h];
+            });
+            updateNodeTotals();
+            updateLiveTelemetry();
+        } catch (e) {
+            console.error("Hub WS Error:", e);
+        }
+    };
+    
+    hubSocket.onclose = () => {
+        updateHubStatusUI(false);
+        // Retry connection every 10s
+        setTimeout(() => initHubWebSocket(), 10000);
+    };
 }
 
-function updateHubStatusUI(active) {
+function updateHubStatusUI(connected) {
     const el = document.getElementById('hub-connection-status');
     if (!el) return;
-    el.innerText = active ? '● HUB POLLING ACTIVE' : '● HUB POLLING STOPPED';
-    el.style.color = active ? 'var(--success)' : 'var(--danger)';
+    el.innerText = connected ? '● HUB REAL-TIME ACTIVE' : '● HUB DISCONNECTED';
+    el.style.color = connected ? 'var(--success)' : 'var(--danger)';
 }
 
 function updateLiveTelemetry() {
