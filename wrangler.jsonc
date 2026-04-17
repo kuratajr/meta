@@ -34,7 +34,7 @@
 	"migrations": [
 		{
 			"tag": "hub_v1_initial",
-			"new_classes": [
+			"new_sqlite_classes": [
 				"HubConnector"
 			]
 		}
